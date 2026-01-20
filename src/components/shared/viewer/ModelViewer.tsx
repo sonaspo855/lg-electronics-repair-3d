@@ -3,6 +3,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils";
+import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 import "./ModelViewer.css";
 
 const DEFAULT_MODEL = "/models/M-Next3.glb";
@@ -138,7 +139,7 @@ function ModelContent({
     onLoaded?.();
   }, [clonedScene, onSceneReady, onLoaded]);
 
-  return <primitive object={clonedScene} />;
+  return <primitive object={clonedScene} onClick={removeClickedNode} />;
 }
 
 function CameraManager({
@@ -233,7 +234,7 @@ export default function ModelViewer({
   useEffect(() => {
     setIsLoading(Boolean(modelUrl));
   }, [modelUrl]);
-  
+
   useEffect(() => {
     return () => {
       if (modelUrl) {
@@ -374,7 +375,7 @@ export default function ModelViewer({
       setupDoorHingePivot(leftDoor);
       const bucketNode = findNodeByName(sceneRoot, BUCKET_NODE_NAME);
       if (bucketNode && pivotsRef.current.left) {
-        bucketNode.updateWorldMatrix(true, true);
+        (bucketNode as THREE.Object3D).updateWorldMatrix(true, true);
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore three.js has Object3D.attach in typings
         pivotsRef.current.left.attach(bucketNode);
