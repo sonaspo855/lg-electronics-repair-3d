@@ -768,7 +768,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
     return null;
   }
 
-  // Execute multiple animation commands sequentially
+  // Execute multiple animation commands
   private async executeAnimationCommands(commands: AnimationCommand[]): Promise<LLMResponse> {
     if (!this.doorControls) {
       return {
@@ -778,35 +778,77 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
     }
 
     try {
-      // Execute commands sequentially
-      for (const command of commands) {
-        const degrees = command.degrees || 90;
-        const speed = command.speed || 1;
+      // Check if commands are damper commands (need simultaneous execution)
+      const isDamperCommands = commands.length === 2 &&
+        ((commands.some(cmd => cmd.door === DoorType.TOP_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
+          commands.some(cmd => cmd.door === DoorType.BOTTOM_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3)) ||
+          (commands.some(cmd => cmd.door === DoorType.TOP_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
+            commands.some(cmd => cmd.door === DoorType.BOTTOM_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3)));
 
-        if (command.action === AnimationAction.OPEN) {
-          if (command.door === DoorType.TOP_LEFT) {
-            this.doorControls.openByDegrees(degrees, speed);
-          } else if (command.door === DoorType.TOP_RIGHT) {
-            this.doorControls.openRightByDegrees(degrees, speed);
-          } else if (command.door === DoorType.BOTTOM_LEFT) {
-            this.doorControls.openLowerLeftByDegrees(degrees, speed);
-          } else if (command.door === DoorType.BOTTOM_RIGHT) {
-            this.doorControls.openLowerRightByDegrees(degrees, speed);
+      if (isDamperCommands) {
+        // Execute all damper commands simultaneously
+        let maxSpeed = 0;
+        commands.forEach(command => {
+          const degrees = command.degrees || 90;
+          const speed = command.speed || 1;
+          maxSpeed = Math.max(maxSpeed, speed);
+
+          if (command.action === AnimationAction.OPEN) {
+            if (command.door === DoorType.TOP_LEFT) {
+              this.doorControls.openByDegrees(degrees, speed);
+            } else if (command.door === DoorType.TOP_RIGHT) {
+              this.doorControls.openRightByDegrees(degrees, speed);
+            } else if (command.door === DoorType.BOTTOM_LEFT) {
+              this.doorControls.openLowerLeftByDegrees(degrees, speed);
+            } else if (command.door === DoorType.BOTTOM_RIGHT) {
+              this.doorControls.openLowerRightByDegrees(degrees, speed);
+            }
+          } else if (command.action === AnimationAction.CLOSE) {
+            if (command.door === DoorType.TOP_LEFT) {
+              this.doorControls.close(speed);
+            } else if (command.door === DoorType.TOP_RIGHT) {
+              this.doorControls.closeRight(speed);
+            } else if (command.door === DoorType.BOTTOM_LEFT) {
+              this.doorControls.closeLowerLeft(speed);
+            } else if (command.door === DoorType.BOTTOM_RIGHT) {
+              this.doorControls.closeLowerRight(speed);
+            }
           }
-        } else if (command.action === AnimationAction.CLOSE) {
-          if (command.door === DoorType.TOP_LEFT) {
-            this.doorControls.close(speed);
-          } else if (command.door === DoorType.TOP_RIGHT) {
-            this.doorControls.closeRight(speed);
-          } else if (command.door === DoorType.BOTTOM_LEFT) {
-            this.doorControls.closeLowerLeft(speed);
-          } else if (command.door === DoorType.BOTTOM_RIGHT) {
-            this.doorControls.closeLowerRight(speed);
+        });
+
+        // Wait for the longest animation to complete
+        await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
+      } else {
+        // Execute commands sequentially for non-damper commands
+        for (const command of commands) {
+          const degrees = command.degrees || 90;
+          const speed = command.speed || 1;
+
+          if (command.action === AnimationAction.OPEN) {
+            if (command.door === DoorType.TOP_LEFT) {
+              this.doorControls.openByDegrees(degrees, speed);
+            } else if (command.door === DoorType.TOP_RIGHT) {
+              this.doorControls.openRightByDegrees(degrees, speed);
+            } else if (command.door === DoorType.BOTTOM_LEFT) {
+              this.doorControls.openLowerLeftByDegrees(degrees, speed);
+            } else if (command.door === DoorType.BOTTOM_RIGHT) {
+              this.doorControls.openLowerRightByDegrees(degrees, speed);
+            }
+          } else if (command.action === AnimationAction.CLOSE) {
+            if (command.door === DoorType.TOP_LEFT) {
+              this.doorControls.close(speed);
+            } else if (command.door === DoorType.TOP_RIGHT) {
+              this.doorControls.closeRight(speed);
+            } else if (command.door === DoorType.BOTTOM_LEFT) {
+              this.doorControls.closeLowerLeft(speed);
+            } else if (command.door === DoorType.BOTTOM_RIGHT) {
+              this.doorControls.closeLowerRight(speed);
+            }
           }
+
+          // Wait for the current animation to complete before next command
+          await new Promise(resolve => setTimeout(resolve, speed * 1000));
         }
-
-        // Wait for the current animation to complete before next command
-        await new Promise(resolve => setTimeout(resolve, speed * 1000));
       }
 
       // Generate combined message for all commands
@@ -816,9 +858,13 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         return `${command.action} ${this.getDoorDisplayName(command.door)} door${command.action === AnimationAction.OPEN ? ` to ${degrees} degrees` : ''} at ${speed} second speed`;
       });
 
+      const message = isDamperCommands
+        ? `Executing simultaneous animations: ${commandDescriptions.join(' and ')}`
+        : `Executing sequence: ${commandDescriptions.join(' → ')}`;
+
       return {
         type: 'action',
-        message: `Executing sequence: ${commandDescriptions.join(' → ')}`,
+        message: message,
         command: commands[0] // Return first command as representative
       };
     } catch (error) {

@@ -57,6 +57,20 @@ export const getDamperAnimationCommands = (input: string): AnimationCommand[] =>
     return LEFT_DAMPER_COMMANDS;
 };
 
+// Check if commands are damper commands (for special handling in execution)
+export const areDamperCommands = (commands: AnimationCommand[]): boolean => {
+    // Check if commands match the predefined damper command patterns
+    const isLeftDamper = commands.length === 2 &&
+        commands.some(cmd => cmd.door === DoorType.TOP_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
+        commands.some(cmd => cmd.door === DoorType.BOTTOM_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3);
+
+    const isRightDamper = commands.length === 2 &&
+        commands.some(cmd => cmd.door === DoorType.TOP_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
+        commands.some(cmd => cmd.door === DoorType.BOTTOM_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3);
+
+    return isLeftDamper || isRightDamper;
+};
+
 // Check if input contains damper keyword
 export const isDamperCommand = (input: string): boolean => {
     return input.includes('damper');
