@@ -24,16 +24,37 @@ export interface AnimationCommand {
     speed?: number;
 }
 
-// Damper animation commands configuration
-const DAMPER_COMMANDS: AnimationCommand[] = [
+// Damper animation commands configuration (separated by side)
+const LEFT_DAMPER_COMMANDS: AnimationCommand[] = [
     { door: DoorType.TOP_LEFT, action: AnimationAction.OPEN, degrees: 45, speed: 3 },
     { door: DoorType.BOTTOM_LEFT, action: AnimationAction.OPEN, degrees: 180, speed: 3 }
 ];
 
-// Get damper animation commands
-export const getDamperAnimationCommands = (): AnimationCommand[] => {
-    console.log('Detected damper service command');
-    return DAMPER_COMMANDS;
+const RIGHT_DAMPER_COMMANDS: AnimationCommand[] = [
+    { door: DoorType.TOP_RIGHT, action: AnimationAction.OPEN, degrees: 45, speed: 3 },
+    { door: DoorType.BOTTOM_RIGHT, action: AnimationAction.OPEN, degrees: 180, speed: 3 }
+];
+
+// Get damper animation commands based on input direction
+export const getDamperAnimationCommands = (input: string): AnimationCommand[] => {
+    console.log('Detected damper service command:', input);
+
+    // Detect left/right direction before damper keyword
+    const lowerInput = input.toLowerCase().trim();
+    const damperIndex = lowerInput.indexOf('damper');
+    const textBeforeDamper = lowerInput.slice(0, damperIndex);
+
+    if (textBeforeDamper.includes('left')) {
+        console.log('Left damper detected, returning left commands');
+        return LEFT_DAMPER_COMMANDS;
+    } else if (textBeforeDamper.includes('right')) {
+        console.log('Right damper detected, returning right commands');
+        return RIGHT_DAMPER_COMMANDS;
+    }
+
+    // Default to left if direction not specified
+    console.log('No direction specified, defaulting to left commands');
+    return LEFT_DAMPER_COMMANDS;
 };
 
 // Check if input contains damper keyword

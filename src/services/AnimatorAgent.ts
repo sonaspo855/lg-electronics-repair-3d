@@ -668,7 +668,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
     // Damper service command detection
     if (isDamperCommand(input)) {
-      return getDamperAnimationCommands();
+      return getDamperAnimationCommands(input);
     }
 
     const doorType = this.identifyDoor(input);
