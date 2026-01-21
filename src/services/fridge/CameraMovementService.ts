@@ -1,6 +1,7 @@
 import { LEFT_DOOR_DAMPER_NODE_NAME } from '../../shared/utils/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
+import { animate, calculateCameraTargetPosition, NodeCache, type AnimationOptions, type CameraTargetOptions } from '../../shared/utils/animationUtils';
 
 // Camera movement options
 export interface CameraMoveOptions {
@@ -14,7 +15,7 @@ export interface CameraMoveOptions {
 export class CameraMovementService {
     private cameraControls: any;
     private sceneRoot: THREE.Object3D | null = null;
-    private nodeCache: Map<string, THREE.Object3D> = new Map();
+    private nodeCache: NodeCache = new NodeCache();
 
     constructor(cameraControls: any, sceneRoot?: THREE.Object3D) {
         this.cameraControls = cameraControls;
@@ -60,112 +61,44 @@ export class CameraMovementService {
     ): Promise<void> {
         const duration = options.duration || 1000; // Default 1 second
         const startPosition = this.cameraControls.object.position.clone();
-        const startTime = performance.now();
+        const startTarget = this.cameraControls.target.clone();
 
-        return new Promise((resolve) => {
-            const animate = (currentTime: number) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
+        await animate((progress, eased) => {
+            // Interpolate between start and target position
+            const currentPosition = startPosition.clone().lerp(targetPosition, eased);
+            this.cameraControls.object.position.copy(currentPosition);
 
-                // Easing function for smooth movement (ease in-out cubic)
-                const easeProgress = this.easeInOutCubic(progress);
+            // Interpolate between start and target look at position
+            const currentLookAt = startTarget.clone().lerp(targetLookAt, eased);
+            this.cameraControls.target.copy(currentLookAt);
 
-                // Interpolate between start and target position
-                const currentPosition = startPosition.clone().lerp(targetPosition, easeProgress);
+            // Update controls
+            this.cameraControls.update();
 
-                // Update camera position
-                this.cameraControls.object.position.copy(currentPosition);
-
-                // Update camera target to look at the node's bounding box center
-                this.cameraControls.target.copy(targetLookAt);
-
-                // Update controls
-                this.cameraControls.update();
-
-                // Call progress callback
-                if (options.onProgress) {
-                    options.onProgress(easeProgress);
-                }
-
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    resolve();
-                }
-            };
-
-            requestAnimationFrame(animate);
-        });
+            // Call progress callback
+            if (options.onProgress) {
+                options.onProgress(eased);
+            }
+        }, { duration });
     }
 
     // Find a node by name in the scene (with caching)
     private getNodeByName(nodeName: string): THREE.Object3D | null {
-        if (this.nodeCache.has(nodeName)) {
-            return this.nodeCache.get(nodeName)!;
-        }
-
         if (!this.sceneRoot) {
             console.error('Scene root not available for node lookup');
             return null;
         }
 
-        console.log(`Finding node: ${nodeName}`);
-        let found: any = null;
-        this.sceneRoot.traverse((child: any) => {
-            if (child.name === nodeName) {
-                found = child;
-            }
-        });
-
-        if (found) {
-            this.nodeCache.set(nodeName, found);
-        }
-
-        return found;
+        return this.nodeCache.findNodeByName(this.sceneRoot, nodeName);
     }
 
     // Calculate the target position for the camera using bounding box
     private calculateTargetPosition(node: any, options: CameraMoveOptions): THREE.Vector3 {
-        // Get precise bounding box of the node
         const targetBox = getPreciseBoundingBox(node);
-        const center = new THREE.Vector3();
-        targetBox.getCenter(center);
-
-        // Calculate diagonal length for size estimation
-        const diagonal = targetBox.min.distanceTo(targetBox.max);
-
-        // Camera FOV in radians
-        const camera = this.cameraControls.object;
-        const fov = camera.fov * (Math.PI / 180);
-
-        // Calculate base distance to fit the object in view
-        let cameraDistance = Math.abs(diagonal / 2 / Math.tan(fov / 2));
-
-        // Dynamic zoom ratio based on object size
-        let zoomRatio = options.zoomRatio || 2.0;
-        if (diagonal < 5) {
-            zoomRatio = options.zoomRatio || 3.0; // Small objects - closer
-        } else if (diagonal > 20) {
-            zoomRatio = options.zoomRatio || 1.5; // Large objects - farther
-        }
-        cameraDistance *= zoomRatio;
-
-        console.log(`Camera Focus:`);
-        console.log(`   Target Size (Diagonal): ${diagonal.toFixed(2)}`);
-        console.log(`   Final Distance: ${cameraDistance.toFixed(2)}`);
-
-        // Camera direction: front-right-top for better view (customizable)
-        const direction = options.direction || new THREE.Vector3(0.5, 0.8, 1.0).normalize();
-
-        // Final target position
-        const newCameraPos = center.clone().add(direction.multiplyScalar(cameraDistance));
-
-        return newCameraPos;
-    }
-
-    // Easing function: ease in-out cubic
-    private easeInOutCubic(t: number): number {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        return calculateCameraTargetPosition(this.cameraControls.object, targetBox, {
+            zoomRatio: options.zoomRatio,
+            direction: options.direction
+        });
     }
 
     // Default camera movement parameters
