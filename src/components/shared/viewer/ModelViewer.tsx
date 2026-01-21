@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils";
 import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
+import { animatorAgent } from "../../../services/AnimatorAgent";
 import "./ModelViewer.css";
 
 const DEFAULT_MODEL = "/models/M-Next3.glb";
@@ -383,6 +384,11 @@ export default function ModelViewer({
   useEffect(() => {
     if (!sceneRoot) {
       return;
+    }
+
+    // CameraControls 초기화
+    if (controlsRef.current) {
+      animatorAgent.setCameraControls(controlsRef.current, sceneRoot);
     }
 
     removeNodesByName(sceneRoot, REMOVE_NODE_NAME);

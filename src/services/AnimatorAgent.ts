@@ -38,6 +38,7 @@ class OllamaClient {
 }
 
 import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
+import { CameraMovementService } from './fridge/CameraMovementService';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -136,6 +137,7 @@ export class AnimatorAgent {
   private ollama: OllamaClient;
   private conversationState: ConversationState = {};
   private doorControls: any;
+  private cameraMovementService: CameraMovementService | null = null;
   private serviceStatus: {
     isRunning: boolean;
     status: 'online' | 'offline' | 'checking';
@@ -155,6 +157,12 @@ export class AnimatorAgent {
   // Set door controls reference from ModelViewer
   setDoorControls(controls: any) {
     this.doorControls = controls;
+  }
+
+  // Set camera controls reference
+  setCameraControls(cameraControls: any, sceneRoot?: any) {
+    console.log('setCameraControls!!!');
+    this.cameraMovementService = new CameraMovementService(cameraControls, sceneRoot);
   }
 
   // Check if Ollama is available
@@ -816,6 +824,14 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
         // Wait for the longest animation to complete
         await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
+        console.log('bbbbbb');
+        // Move camera to the left door damper node after damper animation
+        if (this.cameraMovementService) {
+          console.log('this.cameraMovementService!!!');
+          this.cameraMovementService.moveCameraToLeftDoorDamper();
+        } else {
+          console.log('CameraMovementService is not initialized');
+        }
       } else {
         // Execute commands sequentially for non-damper commands
         for (const command of commands) {
