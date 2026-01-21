@@ -33,6 +33,36 @@ export class CameraMovementService {
         return this.moveCameraCinematic(nodeName);
     }
 
+    private drawCameraPath(points: THREE.Vector3[]): void {
+        if (!this.sceneRoot) return;
+
+        // 1. 점을 연결하는 곡선 생성
+        const curve = new THREE.CatmullRomCurve3(points);
+        const curvePoints = curve.getPoints(100); // 100개의 세밀한 점 추출
+
+        // 2. 지오메트리 생성 및 점선 패턴 계산
+        const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+
+        // 3. 점선 재질 설정 (노란색 점선)
+        const material = new THREE.LineDashedMaterial({
+            color: 0xff0000,
+            dashSize: 0.4,
+            gapSize: 0.1,
+        });
+
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances(); // 점선 계산 필수
+
+        // 4. 씬에 추가 (디버깅용 객체임을 식별하기 위해 이름 부여)
+        line.name = "DEBUG_CAMERA_PATH";
+        this.sceneRoot.add(line);
+
+        // 5. 10초 후 자동 제거 (화면 유지 시간 조절 가능)
+        setTimeout(() => {
+            if (this.sceneRoot) this.sceneRoot.remove(line);
+        }, 10000);
+    }
+
     /**
      * [LG CNS 개선안] 
      * 2단계 시네마틱 이동: 
@@ -83,33 +113,41 @@ export class CameraMovementService {
 
         // [2단계] 최종 위치 설정 (로우 앵글)
         const finalPos = targetCenter.clone().add(quarterViewDir.clone().multiplyScalar(zoomDistance));
-        finalPos.y -= (diagonal * 0.3); // 타겟보다 낮게 설정하여 웅장한 앵글 유도
+        finalPos.y -= (diagonal * 0.4); // 도착 지점 높이를 조금 더 낮춰 웅장함 강조
 
         const startPos2 = this.cameraControls.object.position.clone();
         const startTarget2 = this.cameraControls.target.clone();
 
-        // [2단계] 지미집 궤적을 위한 제어점 설정 (U자형 곡선)
+        // [핵심 수정] 제어점(Control Point)의 하강폭을 diagonal * 0.5에서 1.5로 대폭 강화하여 깊은 포물선 유도
         const controlPos = new THREE.Vector3(
             (startPos2.x + finalPos.x) / 2,
-            Math.min(startPos2.y, finalPos.y) - (diagonal * 0.5), // 경로 중간을 아래로 낮춤
+            Math.min(startPos2.y, finalPos.y) - (diagonal * 1.5), // <--- 깊이(Depth) 강화
             (startPos2.z + finalPos.z) / 2
         );
         const curve = new THREE.QuadraticBezierCurve3(startPos2, controlPos, finalPos);
 
+        // [디버깅] 1~4단계 핵심 포인트 추출
+        const pathPoints = [
+            this.cameraControls.object.position.clone(), // 현재 시작점
+            alignPos.clone(),                            // 1단계: 전체 조망 포인트
+            controlPos.clone(),                          // 2단계: 지미집 최저점 (포물선 정점)
+            finalPos.clone()                             // 4단계: 최종 타겟 근접 포인트
+        ];
+
+        // 경로 그리기 실행
+        this.drawCameraPath(pathPoints);
+
         // 애니메이션 실행
         await animate((progress: number, eased: number) => {
-            // [핵심 수정] eased(이징이 적용된 0~1 값)를 사용하여 곡선 위의 정확한 좌표를 추출
+            // eased를 사용하여 곡선 위의 좌표를 추출하여 카메라 위치 강제 고정
             const point = curve.getPoint(eased);
-
-            // lerp가 아닌 copy를 사용하여 카메라 위치를 곡선 좌표로 강제 고정
             this.cameraControls.object.position.copy(point);
 
-            // [3단계] 주시점(Target) 고정 (Orbit 효과 재정의)
-            // 카메라가 곡선으로 움직이는 동안 시선은 타겟 중심을 향해 강력하게 달라붙음
+            // [3단계] 주시점(Target) 고정: 카메라가 아래로 크게 휘어지는 동안 시선은 타겟에 강력하게 고정
             this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
 
             this.cameraControls.update();
-        }, { duration: 1800 }); // 지미집 연출을 위해 충분한 시간(1.8초) 부여
+        }, { duration: 2000 }); // 깊어진 궤적을 충분히 감상할 수 있도록 시간(2초) 소폭 증가
 
         console.log("[CameraMovementService] 모든 시네마틱 단계 완료");
     }
