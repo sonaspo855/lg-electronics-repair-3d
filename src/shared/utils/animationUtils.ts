@@ -131,7 +131,30 @@ export const calculateCameraTargetPosition = (
     }
     cameraDistance *= zoomRatio;
 
-    const direction = options.direction || new THREE.Vector3(0.5, 0.8, 1.0).normalize();
+    // Determine the main face of the target box for front view
+    const size = new THREE.Vector3();
+    targetBox.getSize(size);
+
+    let direction = options.direction;
+
+    if (!direction) {
+        // Find the largest face to determine front direction
+        const maxDimension = Math.max(size.x, size.y, size.z);
+
+        if (maxDimension === size.x) {
+            // Largest face is along X-axis (front face is along Z-axis)
+            direction = new THREE.Vector3(0, 0, 1).normalize();
+        } else if (maxDimension === size.z) {
+            // Largest face is along Z-axis (front face is along X-axis)
+            direction = new THREE.Vector3(1, 0, 0).normalize();
+        } else {
+            // Largest face is along Y-axis (front face is along X-Z plane)
+            direction = new THREE.Vector3(1, 0, 1).normalize();
+        }
+    } else {
+        // Ensure direction is horizontal if requested (optional but recommended for this use case)
+        direction = new THREE.Vector3(direction.x, 0, direction.z).normalize();
+    }
 
     return center.clone().add(direction.multiplyScalar(cameraDistance));
 };

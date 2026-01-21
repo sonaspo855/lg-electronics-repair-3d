@@ -64,8 +64,12 @@ export class CameraMovementService {
         const startTarget = this.cameraControls.target.clone();
 
         await animate((progress, eased) => {
-            // Interpolate between start and target position
-            const currentPosition = startPosition.clone().lerp(targetPosition, eased);
+            // Interpolate between start and target position with horizontal movement constraint
+            const currentPosition = new THREE.Vector3(
+                startPosition.x + (targetPosition.x - startPosition.x) * eased,
+                startPosition.y, // Keep Y position constant for horizontal movement
+                startPosition.z + (targetPosition.z - startPosition.z) * eased
+            );
             this.cameraControls.object.position.copy(currentPosition);
 
             // Interpolate between start and target look at position
@@ -109,6 +113,8 @@ export class CameraMovementService {
         console.log('moveCameraToLeftDoorDamper!!');
         await this.moveCameraToNode(LEFT_DOOR_DAMPER_NODE_NAME, {
             duration: options.duration || CameraMovementService.DEFAULT_DAMPER_DURATION,
+            // Ensure horizontal direction for front view
+            direction: new THREE.Vector3(1, 0, 0).normalize(),
             ...options
         });
     }
