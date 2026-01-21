@@ -41,116 +41,74 @@ export class CameraMovementService {
      */
     public async moveCameraCinematic(nodeName: string): Promise<void> {
         const targetNode = this.getNodeByName(nodeName);
-        if (!targetNode || !this.sceneRoot) {
-            console.warn(`[CameraService] Node or SceneRoot not found`);
-            return;
-        }
+        if (!targetNode || !this.sceneRoot) return;
 
-        // 1. 모델 전체(Scene)와 타겟 노드(Node)의 바운딩 박스 각각 계산
-        const sceneBox = getPreciseBoundingBox(this.sceneRoot); // 모델 전체 크기
-        const targetBox = getPreciseBoundingBox(targetNode);    // 타겟 노드 크기
-
+        const sceneBox = getPreciseBoundingBox(this.sceneRoot);
+        const targetBox = getPreciseBoundingBox(targetNode);
         const sceneCenter = new THREE.Vector3();
         sceneBox.getCenter(sceneCenter);
+        const targetCenter = new THREE.Vector3();
+        targetBox.getCenter(targetCenter);
         const sceneSize = new THREE.Vector3();
         sceneBox.getSize(sceneSize);
 
-        const targetCenter = new THREE.Vector3();
-        targetBox.getCenter(targetCenter);
-
-        // 2. 전체 확인을 위한 안전 거리 계산 (모델 전체 크기 기준)
-        // 모델의 가장 긴 축을 기준으로 약 2.5~3배 거리를 확보하여 전체가 담기도록 함
-        const maxSceneDim = Math.max(sceneSize.x, sceneSize.y, sceneSize.z);
-        const safetyDistance = maxSceneDim * 2.5;
-
-        // 3. 목표 위치 계산: 전체 중심 기준 우측 정면(45도) 대각선
+        // 1단계 목표 위치 계산
+        const safetyDistance = Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 2.5;
         const quarterViewDir = new THREE.Vector3(1, 0, 1).normalize();
-        const alignPos = sceneCenter.clone().add(
-            quarterViewDir.multiplyScalar(safetyDistance)
-        );
+        const alignPos = sceneCenter.clone().add(quarterViewDir.clone().multiplyScalar(safetyDistance));
+        alignPos.y = targetCenter.y; // 타겟 높이 고정
 
-        // [지침 반영] Y축은 모델 전체 중심이 아닌 '지정한 노드의 높이'로 강제 고정
-        alignPos.y = targetCenter.y;
+        const startPos1 = this.cameraControls.object.position.clone();
+        const startTarget1 = this.cameraControls.target.clone();
 
-        console.log('1단계 애니메이션 실행: 전체 조망 위치로 이동!!');
-        // 1단계 애니메이션 실행: 전체 조망 위치로 이동
-        await animate(this.cameraControls.object.position, {
-            x: alignPos.x,
-            y: alignPos.y,
-            z: alignPos.z,
-            duration: 1.5,
-            easing: (t: any) => 1 - Math.pow(1 - t, 4),
-            onUpdate: () => {
-                this.cameraControls.target.lerp(targetCenter, 0.05);
-                this.cameraControls.update();
-            },
-            // [중요] animate 함수가 끝나는 시점에 resolve를 명시적으로 호출해야 합니다.
-            onComplete: () => {
-                console.log("1단계 완료: 이제 2단계로 넘어갑니다.");
-            }
-        });
+        console.log("1단계 시작: 전체 조망 이동");
+
+        // [개선] new Promise 대신 animate의 자체 반환 Promise를 await 합니다.
+        await animate((progress: number, eased: number) => {
+            this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
+            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased * 0.1); // 서서히 주시
+            this.cameraControls.update();
+        }, { duration: 1500 }); // ms 단위
 
         // ---------------------------------------------------------
-        // Phase 2, 3, 4: 곡선 궤적 진입 및 타겟 포커싱
+        // 2, 3, 4단계 진입 (여기서부터 96번 라인 이후 로직)
         // ---------------------------------------------------------
         console.log('Phase 2, 3, 4: 곡선 궤적 진입 및 타겟 포커싱!!');
-        console.log('93번 라인 디버깅 주석 출력 확인!!');
-        // [4단계] 화면 꽉 참 보장: 타겟 노드의 대각선 길이를 기반으로 동적 거리 계산
+
+        // [4단계] 화면 꽉 참 보장: 동적 거리 계산
         const diagonal = targetBox.min.distanceTo(targetBox.max);
-        const fov = this.cameraControls.object.fov * (Math.PI / 180); // Radian 변환
+        const fovRad = (this.cameraControls.object.fov * Math.PI) / 180;
+        let zoomDistance = (diagonal / 2) / Math.tan(fovRad / 2);
+        zoomDistance *= 1.3; // 여유 계수
 
-        console.log(`[CameraMovementService] Target diagonal: ${diagonal.toFixed(2)}`);
-        console.log(`[CameraMovementService] FOV (radians): ${fov.toFixed(4)}`);
+        // [2단계-5] 최종 위치: 로우 앵글 설정
+        const finalPos = targetCenter.clone().add(quarterViewDir.clone().multiplyScalar(zoomDistance));
+        finalPos.y -= (diagonal * 0.3);
 
-        // FOV를 고려하여 객체가 화면에 꽉 차는 기본 거리 산출 (여유 계수 1.2 ~ 1.5 적용)
-        let zoomDistance = (diagonal / 2) / Math.tan(fov / 2);
-        zoomDistance *= 1.3;
+        const startPos2 = this.cameraControls.object.position.clone();
+        const startTarget2 = this.cameraControls.target.clone();
 
-        console.log(`[CameraMovementService] Calculated zoomDistance: ${zoomDistance.toFixed(2)}`);
-
-        // [2단계-5] 최종 위치: 타겟 기준 우측 정면 방향에서 로우 앵글(웅장함) 연출을 위해 높이 낮춤
-        const finalPos = targetCenter.clone().add(
-            quarterViewDir.clone().multiplyScalar(zoomDistance)
-        );
-        finalPos.y -= (diagonal * 0.3); // 타겟 중심보다 아래로 배치하여 올려다보는 각도 형성
-
-        console.log(`[CameraMovementService] Final position: (${finalPos.x.toFixed(2)}, ${finalPos.y.toFixed(2)}, ${finalPos.z.toFixed(2)})`);
-
-        // [2단계-3] 제어점(Control Point) 설정: 아래로 깔리는 궤적 ("U"자 곡선)
-        const startPos = this.cameraControls.object.position.clone();
-        console.log(`[CameraMovementService] Start position: (${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)})`);
-
+        // [2단계-3] 제어점 설정 (U자 곡선)
         const controlPos = new THREE.Vector3(
-            (startPos.x + finalPos.x) / 2,
-            Math.min(startPos.y, finalPos.y) - (diagonal * 0.5), // 중간 지점에서 아래로 훅 떨어지는 Dip 효과
-            (startPos.z + finalPos.z) / 2
+            (startPos2.x + finalPos.x) / 2,
+            Math.min(startPos2.y, finalPos.y) - (diagonal * 0.5),
+            (startPos2.z + finalPos.z) / 2
         );
-        console.log(`[CameraMovementService] Control position: (${controlPos.x.toFixed(2)}, ${controlPos.y.toFixed(2)}, ${controlPos.z.toFixed(2)})`);
+        const curve = new THREE.QuadraticBezierCurve3(startPos2, controlPos, finalPos);
 
-        // 베지어 곡선 생성
-        const curve = new THREE.QuadraticBezierCurve3(startPos, controlPos, finalPos);
+        console.log("2단계 시작: 지미집 곡선 이동");
 
-        // Phase 2 & 3 애니메이션 실행
-        await new Promise<void>((resolve) => {
-            animate((progress: number) => {
-                // [2단계-4] 곡선 경로를 따라 카메라 이동 (지미집 효과)
-                const point = curve.getPoint(progress);
-                this.cameraControls.object.position.copy(point);
+        await animate((progress: number, eased: number) => {
+            // [2단계-4] 곡선 경로 이동
+            const point = curve.getPoint(eased);
+            this.cameraControls.object.position.copy(point);
 
-                // [3단계] 주시점(Target) 고정 연출: 이동 중에도 타겟 중심을 강력하게 추적
-                // 카메라가 곡선으로 움직여도 시선이 타겟에 고정되어 Orbit 느낌을 줌
-                this.cameraControls.target.lerp(targetCenter, 0.1);
-                this.cameraControls.update();
+            // [3단계] 주시점(Target) 고정 (강력한 Orbit 효과)
+            this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
+            this.cameraControls.update();
+        }, { duration: 1800 });
 
-                if (progress === 1) {
-                    console.log(`[CameraMovementService] Animation completed`);
-                }
-            }, {
-                duration: 1.8, // 웅장한 연출을 위해 약간 천천히 이동
-                easing: (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t, // EaseInOutQuad
-                onComplete: resolve
-            });
-        });
+        console.log("[CameraMovementService] 모든 시네마틱 단계 완료");
     }
 
     /**
