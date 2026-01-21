@@ -2,10 +2,19 @@ import { LEFT_DOOR_DAMPER_NODE_NAME } from '../../shared/utils/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
+// Camera movement options
+export interface CameraMoveOptions {
+    duration?: number; // milliseconds
+    zoomRatio?: number; // Custom zoom ratio
+    direction?: THREE.Vector3; // Custom camera direction
+    onProgress?: (progress: number) => void; // Progress callback
+}
+
 // Camera movement service for fridge animations
 export class CameraMovementService {
     private cameraControls: any;
     private sceneRoot: THREE.Object3D | null = null;
+    private nodeCache: Map<string, THREE.Object3D> = new Map();
 
     constructor(cameraControls: any, sceneRoot?: THREE.Object3D) {
         this.cameraControls = cameraControls;
@@ -15,78 +24,86 @@ export class CameraMovementService {
     // Set scene root reference for node lookup
     public setSceneRoot(sceneRoot: THREE.Object3D): void {
         this.sceneRoot = sceneRoot;
+        this.nodeCache.clear(); // Clear cache when scene root changes
     }
 
-    // Move camera to the specified node position
-    public moveCameraToNode(nodeName: string, distance: number, time: number): void {
-        console.log('moveCameraToNode>> ', nodeName, distance, time);
+    // Move camera to the specified node position (Promise-based)
+    public async moveCameraToNode(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
+        console.log('moveCameraToNode>> ', nodeName, options);
         if (!this.cameraControls) {
-            console.error('Camera controls are not available.');
-            return;
+            throw new Error('Camera controls are not available.');
         }
 
-        // Find the node in the scene
-        const node = this.findNodeByName(nodeName);
+        // Find the node in the scene (with caching)
+        const node = this.getNodeByName(nodeName);
         if (!node) {
-            console.error(`Node ${nodeName} not found in the scene.`);
-            return;
+            throw new Error(`Node ${nodeName} not found in the scene.`);
         }
 
         // Calculate the target position for the camera using bounding box
-        const targetPosition = this.calculateTargetPosition(node);
+        const targetPosition = this.calculateTargetPosition(node, options);
         const targetBox = getPreciseBoundingBox(node);
         const center = new THREE.Vector3();
         targetBox.getCenter(center);
 
         // Smooth camera movement using OrbitControls
-        this.smoothCameraMovement(targetPosition, center, time);
+        await this.smoothCameraMovement(targetPosition, center, options);
 
         console.log('Camera moved to node:', nodeName);
     }
 
-    // Smooth camera movement with duration
-    private smoothCameraMovement(
-        targetPosition: { x: number; y: number; z: number },
-        targetLookAt: { x: number; y: number; z: number },
-        duration: number
-    ): void {
-        console.log('smoothCameraMovement>> ', targetPosition, targetLookAt, duration);
+    // Smooth camera movement with duration (Promise-based)
+    private async smoothCameraMovement(
+        targetPosition: THREE.Vector3,
+        targetLookAt: THREE.Vector3,
+        options: CameraMoveOptions
+    ): Promise<void> {
+        const duration = options.duration || 1000; // Default 1 second
         const startPosition = this.cameraControls.object.position.clone();
-        const startTime = Date.now();
+        const startTime = performance.now();
 
-        const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / (duration * 1000), 1);
+        return new Promise((resolve) => {
+            const animate = (currentTime: number) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
 
-            // Easing function for smooth movement (ease out)
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
+                // Easing function for smooth movement (ease in-out cubic)
+                const easeProgress = this.easeInOutCubic(progress);
 
-            // Interpolate between start and target position
-            const currentPosition = startPosition.clone().lerp(targetPosition, easeProgress);
+                // Interpolate between start and target position
+                const currentPosition = startPosition.clone().lerp(targetPosition, easeProgress);
 
-            // Update camera position
-            this.cameraControls.object.position.copy(currentPosition);
+                // Update camera position
+                this.cameraControls.object.position.copy(currentPosition);
 
-            // Update camera target to look at the node's bounding box center
-            this.cameraControls.target.copy({
-                x: targetLookAt.x,
-                y: targetLookAt.y,
-                z: targetLookAt.z
-            });
+                // Update camera target to look at the node's bounding box center
+                this.cameraControls.target.copy(targetLookAt);
 
-            // Update controls
-            this.cameraControls.update();
+                // Update controls
+                this.cameraControls.update();
 
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        };
+                // Call progress callback
+                if (options.onProgress) {
+                    options.onProgress(easeProgress);
+                }
 
-        animate();
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    resolve();
+                }
+            };
+
+            requestAnimationFrame(animate);
+        });
     }
 
-    // Find a node by name in the scene
-    private findNodeByName(nodeName: string): any {
+    // Find a node by name in the scene (with caching)
+    private getNodeByName(nodeName: string): THREE.Object3D | null {
+        if (this.nodeCache.has(nodeName)) {
+            return this.nodeCache.get(nodeName)!;
+        }
+
         if (!this.sceneRoot) {
             console.error('Scene root not available for node lookup');
             return null;
@@ -99,11 +116,16 @@ export class CameraMovementService {
                 found = child;
             }
         });
+
+        if (found) {
+            this.nodeCache.set(nodeName, found);
+        }
+
         return found;
     }
 
     // Calculate the target position for the camera using bounding box
-    private calculateTargetPosition(node: any): { x: number, y: number, z: number } {
+    private calculateTargetPosition(node: any, options: CameraMoveOptions): THREE.Vector3 {
         // Get precise bounding box of the node
         const targetBox = getPreciseBoundingBox(node);
         const center = new THREE.Vector3();
@@ -120,11 +142,11 @@ export class CameraMovementService {
         let cameraDistance = Math.abs(diagonal / 2 / Math.tan(fov / 2));
 
         // Dynamic zoom ratio based on object size
-        let zoomRatio = 2.0;
+        let zoomRatio = options.zoomRatio || 2.0;
         if (diagonal < 5) {
-            zoomRatio = 3.0; // Small objects - closer
+            zoomRatio = options.zoomRatio || 3.0; // Small objects - closer
         } else if (diagonal > 20) {
-            zoomRatio = 1.5; // Large objects - farther
+            zoomRatio = options.zoomRatio || 1.5; // Large objects - farther
         }
         cameraDistance *= zoomRatio;
 
@@ -132,26 +154,29 @@ export class CameraMovementService {
         console.log(`   Target Size (Diagonal): ${diagonal.toFixed(2)}`);
         console.log(`   Final Distance: ${cameraDistance.toFixed(2)}`);
 
-        // Camera direction: front-right-top for better view
-        const direction = new THREE.Vector3(0.5, 0.8, 1.0).normalize();
+        // Camera direction: front-right-top for better view (customizable)
+        const direction = options.direction || new THREE.Vector3(0.5, 0.8, 1.0).normalize();
 
         // Final target position
         const newCameraPos = center.clone().add(direction.multiplyScalar(cameraDistance));
 
-        return {
-            x: newCameraPos.x,
-            y: newCameraPos.y,
-            z: newCameraPos.z
-        };
+        return newCameraPos;
     }
 
-    // Default camera movement parameters - reduced distance for closer view
-    private static readonly DEFAULT_DAMPER_DISTANCE = 150;
-    private static readonly DEFAULT_DAMPER_TIME = 1;
+    // Easing function: ease in-out cubic
+    private easeInOutCubic(t: number): number {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
 
-    // Move camera to the left door damper node
-    public moveCameraToLeftDoorDamper(distance: number = CameraMovementService.DEFAULT_DAMPER_DISTANCE, time: number = CameraMovementService.DEFAULT_DAMPER_TIME): void {
+    // Default camera movement parameters
+    private static readonly DEFAULT_DAMPER_DURATION = 1000;
+
+    // Move camera to the left door damper node (Promise-based)
+    public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
         console.log('moveCameraToLeftDoorDamper!!');
-        this.moveCameraToNode(LEFT_DOOR_DAMPER_NODE_NAME, distance, time);
+        await this.moveCameraToNode(LEFT_DOOR_DAMPER_NODE_NAME, {
+            duration: options.duration || CameraMovementService.DEFAULT_DAMPER_DURATION,
+            ...options
+        });
     }
 }

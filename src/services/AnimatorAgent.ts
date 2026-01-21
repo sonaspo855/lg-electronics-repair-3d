@@ -828,7 +828,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         // Move camera to the left door damper node after damper animation
         if (this.cameraMovementService) {
           console.log('this.cameraMovementService!!!');
-          this.cameraMovementService.moveCameraToLeftDoorDamper();
+          await this.cameraMovementService.moveCameraToLeftDoorDamper();
         } else {
           console.log('CameraMovementService is not initialized');
         }
