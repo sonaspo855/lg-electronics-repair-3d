@@ -37,7 +37,7 @@ class OllamaClient {
   }
 }
 
-import { getFridgeDamperAnimationCommands, isFridgeDamperCommand } from './fridge/DamperAnimationService';
+import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -781,13 +781,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
     try {
       // Check if commands are damper commands (need simultaneous execution)
-      const isDamperCommands = commands.length === 2 &&
-        ((commands.some(cmd => cmd.door === DoorType.TOP_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
-          commands.some(cmd => cmd.door === DoorType.BOTTOM_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3)) ||
-          (commands.some(cmd => cmd.door === DoorType.TOP_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
-            commands.some(cmd => cmd.door === DoorType.BOTTOM_RIGHT && cmd.action === AnimationAction.OPEN && cmd.degrees === 180 && cmd.speed === 3)));
+      const isFridgeDamperCommands = areFridgeDamperCommands(commands);
 
-      if (isDamperCommands) {
+      if (isFridgeDamperCommands) {
         // Execute all damper commands simultaneously
         let maxSpeed = 0;
         commands.forEach(command => {
@@ -860,7 +856,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         return `${command.action} ${this.getDoorDisplayName(command.door)} door${command.action === AnimationAction.OPEN ? ` to ${degrees} degrees` : ''} at ${speed} second speed`;
       });
 
-      const message = isDamperCommands
+      const message = isFridgeDamperCommands
         ? `Executing simultaneous animations: ${commandDescriptions.join(' and ')}`
         : `Executing sequence: ${commandDescriptions.join(' → ')}`;
 

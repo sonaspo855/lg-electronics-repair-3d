@@ -58,7 +58,7 @@ export const getFridgeDamperAnimationCommands = (input: string): AnimationComman
 };
 
 // Check if commands are damper commands (for special handling in execution)
-export const areDamperCommands = (commands: AnimationCommand[]): boolean => {
+export const areFridgeDamperCommands = (commands: AnimationCommand[]): boolean => {
     // Check if commands match the predefined damper command patterns
     const isLeftDamper = commands.length === 2 &&
         commands.some(cmd => cmd.door === DoorType.TOP_LEFT && cmd.action === AnimationAction.OPEN && cmd.degrees === 45 && cmd.speed === 3) &&
