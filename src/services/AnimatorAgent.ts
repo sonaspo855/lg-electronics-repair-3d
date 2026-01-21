@@ -739,6 +739,15 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Parse complete commands (all parameters in one input)
   private parseCompleteCommand(input: string): AnimationCommand | null {
+
+    // Damper service command detection
+    // Open the refrigerator door to service the left damper.
+    // Open the refrigerator door to service the right damper.
+    if (isFridgeDamperCommand(input)) {
+      return getFridgeDamperAnimationCommands(input);
+    }
+
+
     const doorType = this.identifyDoor(input);
     if (!doorType) return null;
 
@@ -762,7 +771,10 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
   // Identify door type from natural language
   private identifyDoor(input: string): DoorType | null {
     console.log('Identifying door from input:', input);
-    for (const [key, value] of Object.entries(DOOR_MAPPING)) {
+    // Sort keys by length in descending order to prioritize more specific matches
+    const sortedEntries = Object.entries(DOOR_MAPPING).sort((a, b) => b[0].length - a[0].length);
+
+    for (const [key, value] of sortedEntries) {
       if (input.includes(key)) {
         console.log('Found door match:', key, '->', value);
         return value;
@@ -857,6 +869,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           this.onActionCompleted?.(completionMessage);
         });
       };
+
+      // Check if commands are damper commands (need simultaneous execution)
+      const isFridgeDamperCommands = areFridgeDamperCommands(command);
 
       if (command.action === AnimationAction.OPEN) {
         if (command.door === DoorType.TOP_LEFT) {
