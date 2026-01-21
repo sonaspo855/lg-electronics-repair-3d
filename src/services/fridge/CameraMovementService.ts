@@ -74,22 +74,20 @@ export class CameraMovementService {
 
         console.log('1단계 애니메이션 실행: 전체 조망 위치로 이동!!');
         // 1단계 애니메이션 실행: 전체 조망 위치로 이동
-        await new Promise<void>((resolve) => {
-            animate(this.cameraControls.object.position, {
-                x: alignPos.x,
-                y: alignPos.y,
-                z: alignPos.z,
-                duration: 1.5,
-                easing: (t: any) => 1 - Math.pow(1 - t, 4),
-                onUpdate: () => {
-                    this.cameraControls.target.lerp(targetCenter, 0.05);
-                    this.cameraControls.update();
-                },
-                onComplete: () => {
-                    console.log("[Debug] 1단계 완료 - 2단계 진입"); // 디버깅 확인용
-                    resolve(); // 반드시 호출되어야 다음 await로 넘어갑니다.
-                }
-            });
+        await animate(this.cameraControls.object.position, {
+            x: alignPos.x,
+            y: alignPos.y,
+            z: alignPos.z,
+            duration: 1.5,
+            easing: (t: any) => 1 - Math.pow(1 - t, 4),
+            onUpdate: () => {
+                this.cameraControls.target.lerp(targetCenter, 0.05);
+                this.cameraControls.update();
+            },
+            // [중요] animate 함수가 끝나는 시점에 resolve를 명시적으로 호출해야 합니다.
+            onComplete: () => {
+                console.log("1단계 완료: 이제 2단계로 넘어갑니다.");
+            }
         });
 
         // ---------------------------------------------------------
