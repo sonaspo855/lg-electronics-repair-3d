@@ -41,35 +41,47 @@ export class CameraMovementService {
      */
     public async moveCameraCinematic(nodeName: string): Promise<void> {
         const targetNode = this.getNodeByName(nodeName);
-        if (!targetNode) {
-            console.warn(`[CameraService] Node not found: ${nodeName}`);
+        if (!targetNode || !this.sceneRoot) {
+            console.warn(`[CameraService] Node or SceneRoot not found`);
             return;
         }
 
-        const targetBox = getPreciseBoundingBox(targetNode);
+        // 1. 모델 전체(Scene)와 타겟 노드(Node)의 바운딩 박스 각각 계산
+        const sceneBox = getPreciseBoundingBox(this.sceneRoot); // 모델 전체 크기
+        const targetBox = getPreciseBoundingBox(targetNode);    // 타겟 노드 크기
+
+        const sceneCenter = new THREE.Vector3();
+        sceneBox.getCenter(sceneCenter);
+        const sceneSize = new THREE.Vector3();
+        sceneBox.getSize(sceneSize);
+
         const targetCenter = new THREE.Vector3();
         targetBox.getCenter(targetCenter);
 
-        // ---------------------------------------------------------
-        // Phase 1: 수평 이동 (Alignment) - 정면 수평 라인 강제 정렬
-        // ---------------------------------------------------------
-        // 타겟의 크기에 비례하여 정면 거리를 계산합니다.
-        const frontOffset = (targetBox.max.z - targetBox.min.z) * 3.0;
+        // 2. 전체 확인을 위한 안전 거리 계산 (모델 전체 크기 기준)
+        // 모델의 가장 긴 축을 기준으로 약 2.5~3배 거리를 확보하여 전체가 담기도록 함
+        const maxSceneDim = Math.max(sceneSize.x, sceneSize.y, sceneSize.z);
+        const safetyDistance = maxSceneDim * 2.5;
 
-        const alignPos = new THREE.Vector3(
-            targetCenter.x,          // X축: 타겟의 중심과 일치시켜 정면 라인 확보
-            targetCenter.y,          // Y축: 타겟의 높이 중심으로 고정 (수평 라인 정렬)
-            targetCenter.z + frontOffset // Z축: 타겟 앞쪽의 기준점
+        // 3. 목표 위치 계산: 전체 중심 기준 우측 정면(45도) 대각선
+        const quarterViewDir = new THREE.Vector3(1, 0, 1).normalize();
+        const alignPos = sceneCenter.clone().add(
+            quarterViewDir.multiplyScalar(safetyDistance)
         );
 
+        // [지침 반영] Y축은 모델 전체 중심이 아닌 '지정한 노드의 높이'로 강제 고정
+        alignPos.y = targetCenter.y;
+
+        // 1단계 애니메이션 실행: 전체 조망 위치로 이동
         await new Promise<void>((resolve) => {
             animate(this.cameraControls.object.position, {
                 x: alignPos.x,
                 y: alignPos.y,
                 z: alignPos.z,
-                duration: 1.0,
+                duration: 1.5, // 전체 조망을 위해 부드럽게 이동
+                easing: (t: any) => 1 - Math.pow(1 - t, 4), // EaseOutQuart
                 onUpdate: () => {
-                    // 이동 중 타겟 중심을 부드럽게 응시
+                    // 시선은 타겟 노드를 향해 서서히 일치시킴
                     this.cameraControls.target.lerp(targetCenter, 0.05);
                     this.cameraControls.update();
                 },
@@ -78,36 +90,43 @@ export class CameraMovementService {
         });
 
         // ---------------------------------------------------------
-        // Phase 2: 접근 (Zoom & Orbit) - 시선 고정 및 줌인
+        // Phase 2: 포물선 로우 앵글 진입 (Parabolic Swoop) - 주석 처리
         // ---------------------------------------------------------
-        const finalPos = calculateCameraTargetPosition(
-            this.cameraControls.object,
-            targetBox,
-            {
-                zoomRatio: 1.3, // 타겟에 근접
-                direction: new THREE.Vector3(0, 0, 1) // 정면 수평 방향에서 봄 (Y축 0으로 고정)
-            }
+        /*
+        // 목표: 1단계 위치(우측 정면)에서 타겟 쪽으로 파고들며 앵글 변화
+
+        // 최종 위치: 1단계와 동일한 각도(우측 정면)를 유지하되 거리만 좁힘
+        const zoomDistance = maxDim * 1.5;
+        const finalPos = targetCenter.clone().add(
+            quarterViewDir.multiplyScalar(zoomDistance)
+        );
+        // 최종 높이는 살짝 낮춰서 로우 앵글 연출 (웅장함)
+        finalPos.y -= (maxDim * 0.3);
+
+        // 제어점(Control Point) 설정: 이동 경로를 아래로 휘게 만듦 ("U"자 곡선)
+        const controlPos = new THREE.Vector3(
+            (alignPos.x + finalPos.x) / 2,
+            Math.min(alignPos.y, finalPos.y) - (maxDim * 0.3), // 딥(Dip) 효과 추가
+            (alignPos.z + finalPos.z) / 2
         );
 
+        const curve = new THREE.QuadraticBezierCurve3(alignPos, controlPos, finalPos);
+
         await new Promise<void>((resolve) => {
-            animate(this.cameraControls.object.position, {
-                x: finalPos.x,
-                y: finalPos.y,
-                z: finalPos.z,
+            animate((progress) => {
+                const point = curve.getPoint(progress);
+                this.cameraControls.object.position.copy(point);
+
+                // 카메라가 가까워질수록 타겟 중심을 강하게 주시
+                this.cameraControls.target.lerp(targetCenter, 0.2);
+                this.cameraControls.update();
+            }, {
                 duration: 1.5,
-                easing: (t: number) => 1 - Math.pow(1 - t, 3), // EaseOutCubic으로 부드러운 정지
-                onUpdate: () => {
-                    /**
-                     * 연출 포인트: 카메라가 이동하는 동안 컨트롤의 target을 지속적으로 lerp 업데이트합니다.
-                     * 이를 통해 카메라가 단순히 직선 이동하는 것이 아니라, 
-                     * 타겟 부품을 '응시'하며 궤도를 도는듯한(Orbit) 자연스러운 회전 효과가 발생합니다.
-                     */
-                    this.cameraControls.target.lerp(targetCenter, 0.1);
-                    this.cameraControls.update();
-                },
+                easing: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t, // EaseInOutQuad
                 onComplete: resolve
             });
         });
+        */
     }
 
     /**
