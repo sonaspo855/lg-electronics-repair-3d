@@ -62,14 +62,16 @@ export class CameraMovementService {
     }
 
     /**
-     * [LG CNS 개선안] 
-     * Longest Axis Awareness + Low-angle Cinema Path
+     * [LG CNS 최종 개선안] 
+     * 1. Longest Axis Awareness: 객체의 장축에 맞춰 정면/측면 자동 선택
+     * 2. Orthogonal Alignment: 비스듬한 뷰를 제거하고 완전한 수평 정렬 후 접근
+     * 3. Path Visualization: drawCameraPath를 호출하여 이동 궤적을 빨간 선으로 표시
     */
     public async moveCameraCinematic(nodeName: string): Promise<void> {
         const targetNode = this.getNodeByName(nodeName);
         if (!targetNode || !this.sceneRoot) return;
 
-        // 0. 타겟 정보 및 바운딩 박스 계산
+        // 0. 타겟 바운딩 박스 및 크기 분석
         const targetBox = getPreciseBoundingBox(targetNode);
         const targetCenter = new THREE.Vector3();
         targetBox.getCenter(targetCenter);
@@ -77,69 +79,70 @@ export class CameraMovementService {
         targetBox.getSize(size);
 
         // [Longest Axis Awareness] 가로(X)와 깊이(Z)를 비교하여 정면/측면 결정
-        // 비스듬한 뷰를 제거하기 위해 축 성분을 (1,0,0) 또는 (0,0,1)로 엄격히 제한합니다.
+        // 축 성분을 (0,0,1) 또는 (1,0,0)으로 엄격히 제한하여 비스듬함을 원천 차단합니다.
         const isWide = size.x >= size.z;
         const horizontalDir = isWide
-            ? new THREE.Vector3(0, 0, 1)  // 정면(Z축)
-            : new THREE.Vector3(1, 0, 0); // 측면(X축)
+            ? new THREE.Vector3(0, 0, 1)  // 가로가 길면 정면(Z축) 주시
+            : new THREE.Vector3(1, 0, 0); // 깊이가 길면 측면(X축) 주시
 
-        // 1단계: 전체 조망 정렬 (Alignment)
-        // 이전의 quarterViewDir(1, 0, 1)을 제거하고 계산된 horizontalDir를 사용합니다.
+        // 1단계 목표: 전체 조망 정렬 위치 (Alignment Position)
         const sceneBox = getPreciseBoundingBox(this.sceneRoot);
         const sceneSize = new THREE.Vector3();
         sceneBox.getSize(sceneSize);
-        const safetyDistance = Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 2.0;
-
-        // 타겟과 동일한 Y축 높이에서 수평 정렬 지점 계산
+        const safetyDistance = Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 1.5;
         const alignPos = targetCenter.clone().add(horizontalDir.clone().multiplyScalar(safetyDistance));
 
-        const startPos1 = this.cameraControls.object.position.clone();
-        const startTarget1 = this.cameraControls.target.clone();
-
-        await animate((progress, eased) => {
-            this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
-            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased);
-            this.cameraControls.update();
-        }, { duration: 1200 });
-
-        // ---------------------------------------------------------
-        // 2단계: 선형 줌인 및 하강 (Low-Angle Curve)
-        // ---------------------------------------------------------
-        const startPos2 = this.cameraControls.object.position.clone(); // 1단계 종료 시점 스냅샷
-        const startTarget2 = this.cameraControls.target.clone();
-
-        // 화면 꽉 참 거리 계산
+        // 2단계 목표: 최종 줌인 및 로우 앵글 위치 (Final Position)
         const diagonal = targetBox.min.distanceTo(targetBox.max);
         const fovRad = (this.cameraControls.object.fov * Math.PI) / 180;
         const zoomDistance = (diagonal / 2) / Math.tan(fovRad / 2);
-
-        // 최종 목적지 (Low-Angle): 타겟보다 아래에서 위를 보도록 Y값 하강
         const finalPos = targetCenter.clone().add(horizontalDir.clone().multiplyScalar(zoomDistance));
-        finalPos.y -= (size.y * 1.5); // 노드 크기에 맞춰 하강 깊이 조절
+        finalPos.y -= (size.y * 1.2); // 아래에서 위를 보도록 하강
 
-        // 제어점(controlPos): 이동 경로 중간까지는 수평(직선) 줌인을 유지하도록 설정
+        // Bezier 제어점: 이동 경로 중간까지는 수평(직선)을 유지하도록 설정
         const controlPos = new THREE.Vector3(
-            (startPos2.x + finalPos.x) / 2,
-            targetCenter.y, // 타겟 높이와 동일하게 설정하여 초반 직선 줌인 유도
-            (startPos2.z + finalPos.z) / 2
+            (alignPos.x + finalPos.x) / 2,
+            targetCenter.y, // 타겟 높이를 유지하여 직선 줌인 느낌 강조
+            (alignPos.z + finalPos.z) / 2
         );
 
-        const curve = new THREE.QuadraticBezierCurve3(startPos2, controlPos, finalPos);
+        // ---------------------------------------------------------
+        // [추가 요구사항] 카메라 궤적 선 그리기 (Phase 1 + Phase 2)
+        // ---------------------------------------------------------
+        const startPos1 = this.cameraControls.object.position.clone();
+        const pathPoints: THREE.Vector3[] = [startPos1]; // 시작점
+        pathPoints.push(alignPos); // 1단계 정렬점 (직선)
 
-        // Damping 일시 해제하여 곡선 궤적 정확도 확보
+        const zoomCurve = new THREE.QuadraticBezierCurve3(alignPos, controlPos, finalPos);
+        pathPoints.push(...zoomCurve.getPoints(50)); // 2단계 줌인 곡선 샘플링
+
+        this.drawCameraPath(pathPoints); // 궤적 시각화 실행
+
+        // ---------------------------------------------------------
+        // 애니메이션 실행
+        // ---------------------------------------------------------
+        const startTarget1 = this.cameraControls.target.clone();
+
+        // Phase 1: 축 정렬 (이동 중 비스듬한 상태를 수평/정면으로 교정)
+        await animate((progress: number, eased: number) => { // 타입을 명시적으로 지정
+            this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
+            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased);
+            this.cameraControls.update();
+        }, { duration: 1000 });
+
+        // Phase 2: 시네마틱 줌인 (Bezier 곡선을 따라 직선 줌 후 하강)
+        const startTarget2 = this.cameraControls.target.clone();
         const originalDamping = this.cameraControls.enableDamping;
         this.cameraControls.enableDamping = false;
 
-        await animate((progress, eased) => {
-            const point = curve.getPoint(eased);
+        await animate((progress: number, eased: number) => { // 타입을 명시적으로 지정
+            const point = zoomCurve.getPoint(eased);
             this.cameraControls.object.position.copy(point);
-
-            // 시선(Target)은 항상 노드 중심에 고정하여 '올려다보는' 연출 완성
             this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
             this.cameraControls.update();
         }, {
             duration: 2500,
-            easing: (t) => t * (2 - t)
+            easing: (t: number) => t * (2 - t) // easing 함수의 매개변수 t에도 타입을 지정하는 것이 좋습니다.
         });
 
         this.cameraControls.enableDamping = originalDamping;
