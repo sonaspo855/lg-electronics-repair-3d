@@ -193,14 +193,15 @@ export const calculateCameraTargetPosition = (
         const maxDimension = Math.max(size.x, size.y, size.z);
 
         if (maxDimension === size.x) {
-            // Largest face is along X-axis (front face is along Z-axis)
+            // X축이 가장 길 때 -> Z축 정면에서 바라봄
             direction = new THREE.Vector3(0, 0, 1).normalize();
         } else if (maxDimension === size.z) {
-            // Largest face is along Z-axis (front face is along X-axis)
+            // Z축이 가장 길 때 -> X축 정면에서 바라봄
             direction = new THREE.Vector3(1, 0, 0).normalize();
         } else {
-            // Largest face is along Y-axis (front face is along X-Z plane)
-            direction = new THREE.Vector3(1, 0, 1).normalize();
+            // [수정 포인트] Y축(높이)이 가장 길 때, 기존의 대각선(1, 0, 1) 대신 
+            // 가로 방향인 Z축 정면(0, 0, 1) 혹은 X축 정면(1, 0, 0)으로 고정합니다.
+            direction = new THREE.Vector3(0, 0, 1).normalize();
         }
     } else {
         // Always ensure horizontal direction for front view (Y-axis = 0)

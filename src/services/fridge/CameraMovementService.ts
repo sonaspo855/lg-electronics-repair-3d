@@ -116,8 +116,9 @@ export class CameraMovementService {
 
     public async moveCameraToUpwardView(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
         // X를 0으로 설정하여 노드가 가로로 바르게 정렬되도록 하고, 
-        // Z를 아주 미세하게(0.01) 주어 완전 수직 시의 짐벌락(Gimbal Lock) 현상을 방지합니다.
-        const upwardDirection = new THREE.Vector3(0, -1, 0.01).normalize();
+        // Z를 0으로 설정하여 정면(Front)에서 바라보도록 합니다.
+        // Y를 -1로 설정하여 아래에서 위를 바라보는 시점을 유지합니다.
+        const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
 
         return this.moveCameraToNode(nodeName, {
             ...options,
@@ -135,6 +136,19 @@ export class CameraMovementService {
 
         const targetNode = this.getNodeByName(nodeName);
         console.log('targetNode>> ', targetNode);
+
+        if (targetNode) {
+            const worldQuaternion = new THREE.Quaternion();
+            targetNode.getWorldQuaternion(worldQuaternion);
+            const worldEuler = new THREE.Euler().setFromQuaternion(worldQuaternion);
+            console.log(`[DEBUG] Node: ${nodeName}`);
+            console.log(`[DEBUG] World Rotation (Euler): x=${worldEuler.x}, y=${worldEuler.y}, z=${worldEuler.z}`);
+
+            // 노드의 로컬 축 확인 (디버깅용)
+            const localX = new THREE.Vector3(1, 0, 0).applyQuaternion(worldQuaternion);
+            console.log(`[DEBUG] World X-Axis of Node:`, localX);
+        }
+
         // 에러 방지: camera-controls는 .camera를 사용하며, 존재 여부를 체크합니다.
         // if (!targetNode || !this.cameraControls?.camera) return;
 
@@ -161,9 +175,9 @@ export class CameraMovementService {
         const maxDim = Math.max(size.x, size.y, size.z);
         const zoomDistance = (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
-        // 목적지 계산: options.direction(0, -1, 0.01) 반영
+        // 목적지 계산: options.direction(0, -1, 0) 반영
         const endPos = targetCenter.clone().add(
-            (options.direction || new THREE.Vector3(0, -1, 0.5)).clone().multiplyScalar(zoomDistance)
+            (options.direction || new THREE.Vector3(0, -1, 0)).clone().multiplyScalar(zoomDistance)
         );
 
         // [중요] 직선 접근을 위한 제어점: 시작점의 높이를 유지하되, 수평 위치는 목적지 위에 고정
@@ -186,11 +200,23 @@ export class CameraMovementService {
                 /**
                  * [핵심] 노드 가로 정렬 해결 (Up Vector 강제)
                  * 아래에서 위를 볼 때(Y축 이동), 카메라의 머리 방향을 
-                 * 모델의 뒤쪽(Z축)으로 고정하여 부품이 화면에서 수평으로 보이게 합니다.
+                 * 모델의 월드 좌표계나 노드의 회전 상태에 맞춰 조정합니다.
                  */
                 if (options.direction && Math.abs(options.direction.y) > 0.8) {
-                    // 시선 방향에 따라 up 벡터를 (0, 0, -1)로 고정하여 화면 기울어짐 방지
-                    camera.up.set(0, 0, -1);
+                    // [개선] 노드의 월드 X축을 기준으로 카메라의 UP 벡터를 설정하여 
+                    // 노드가 항상 화면에서 가로로 보이도록 합니다.
+                    const nodeQuat = new THREE.Quaternion();
+                    targetNode.getWorldQuaternion(nodeQuat);
+
+                    // 노드의 로컬 X축(가로축)을 월드 좌표로 변환
+                    const nodeX = new THREE.Vector3(1, 0, 0).applyQuaternion(nodeQuat);
+
+                    // 카메라의 시선 방향(아래->위)과 노드의 가로축에 수직인 벡터를 UP으로 설정
+                    // 시선 방향이 (0, 1, 0) 근처이므로, UP = Look x NodeX
+                    const lookDir = new THREE.Vector3(0, 1, 0); // 대략적인 시선 방향
+                    const calculatedUp = new THREE.Vector3().crossVectors(lookDir, nodeX).normalize();
+
+                    camera.up.copy(calculatedUp);
                 } else {
                     camera.up.set(0, 1, 0);
                 }
