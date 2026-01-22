@@ -79,7 +79,6 @@ export class CameraMovementService {
         targetBox.getSize(size);
 
         // [Longest Axis Awareness] 가로(X)와 깊이(Z)를 비교하여 정면/측면 결정
-        // 축 성분을 (0,0,1) 또는 (1,0,0)으로 엄격히 제한하여 비스듬함을 원천 차단합니다.
         const isWide = size.x >= size.z;
         const horizontalDir = isWide
             ? new THREE.Vector3(0, 0, 1)  // 가로가 길면 정면(Z축) 주시
@@ -107,43 +106,51 @@ export class CameraMovementService {
         );
 
         // ---------------------------------------------------------
-        // [추가 요구사항] 카메라 궤적 선 그리기 (Phase 1 + Phase 2)
+        // [시각화] 카메라 궤적 선 그리기
         // ---------------------------------------------------------
         const startPos1 = this.cameraControls.object.position.clone();
-        const pathPoints: THREE.Vector3[] = [startPos1]; // 시작점
-        pathPoints.push(alignPos); // 1단계 정렬점 (직선)
+        const pathPoints: THREE.Vector3[] = [startPos1];
+        pathPoints.push(alignPos);
 
         const zoomCurve = new THREE.QuadraticBezierCurve3(alignPos, controlPos, finalPos);
-        pathPoints.push(...zoomCurve.getPoints(50)); // 2단계 줌인 곡선 샘플링
+        pathPoints.push(...zoomCurve.getPoints(50));
 
-        this.drawCameraPath(pathPoints); // 궤적 시각화 실행
+        this.drawCameraPath(pathPoints);
 
         // ---------------------------------------------------------
-        // 애니메이션 실행
+        // 애니메이션 실행 (시그니처 수정: target, params, options)
         // ---------------------------------------------------------
         const startTarget1 = this.cameraControls.target.clone();
 
-        // Phase 1: 축 정렬 (이동 중 비스듬한 상태를 수평/정면으로 교정)
-        await animate((progress: number, eased: number) => { // 타입을 명시적으로 지정
-            this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
-            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased);
-            this.cameraControls.update();
-        }, { duration: 1000 });
+        // Phase 1: 축 정렬
+        await animate(
+            (progress: number, eased: number) => {
+                this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
+                this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased);
+                this.cameraControls.update();
+            },
+            {}, // [수정됨] params (Function target 사용 시 무시되지만, 인자 순서를 맞추기 위해 필수)
+            { duration: 1000 } // options
+        );
 
-        // Phase 2: 시네마틱 줌인 (Bezier 곡선을 따라 직선 줌 후 하강)
+        // Phase 2: 시네마틱 줌인
         const startTarget2 = this.cameraControls.target.clone();
         const originalDamping = this.cameraControls.enableDamping;
         this.cameraControls.enableDamping = false;
 
-        await animate((progress: number, eased: number) => { // 타입을 명시적으로 지정
-            const point = zoomCurve.getPoint(eased);
-            this.cameraControls.object.position.copy(point);
-            this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
-            this.cameraControls.update();
-        }, {
-            duration: 2500,
-            easing: (t: number) => t * (2 - t) // easing 함수의 매개변수 t에도 타입을 지정하는 것이 좋습니다.
-        });
+        await animate(
+            (progress: number, eased: number) => {
+                const point = zoomCurve.getPoint(eased);
+                this.cameraControls.object.position.copy(point);
+                this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
+                this.cameraControls.update();
+            },
+            {}, // [수정됨] params 위치에 빈 객체 전달
+            {
+                duration: 2500,
+                easing: (t: number) => t * (2 - t) // EaseOutQuad
+            }
+        );
 
         this.cameraControls.enableDamping = originalDamping;
     }
