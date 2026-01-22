@@ -231,21 +231,20 @@ export class CameraMovementService {
                         calculatedUp.negate();
                     }
 
-                    // [핵심] 진행률에 따른 UP 벡터 보간 (30% 지점부터 부드럽게 전환)
-                    // 0.3(30%) 이전에는 기본 UP, 이후에는 easeInOutCubic으로 매우 부드럽게 전환
-                    const transitionStart = 0.3;
+                    // [핵심] 진행률에 따른 UP 벡터 보간 (90% 지점에서 시작, 15%만 전환 - 회전 최소화)
+                    // 0.9(90%) 이전에는 기본 UP, 이후에 약 15%만 전환하여 거의 회전하지 않음
+                    const transitionStart = 0.9;
                     let finalUp;
                     if (progress < transitionStart) {
-                        // 초기 구간: 기본 UP 사용
+                        // 초기 구간: 기본 UP 사용 (거의 회전 없음)
                         finalUp = new THREE.Vector3(0, 1, 0);
                     } else {
-                        // 후반 구간: easeInOutCubic으로 매우 부드러운 전환
+                        // 후반 구간: 약 15%만 전환 - 거의 회전하지 않음
                         const transitionProgress = (progress - transitionStart) / (1 - transitionStart);
-                        // easeInOutCubic: 시작과 끝이 부드럽게 처리
-                        const easeTransition = transitionProgress < 0.5
-                            ? 4 * transitionProgress * transitionProgress * transitionProgress
-                            : 1 - Math.pow(-2 * transitionProgress + 2, 3) / 2;
-                        finalUp = new THREE.Vector3(0, 1, 0).lerp(calculatedUp, easeTransition);
+                        // easeOutQuad로 부드럽지만 약하게 전환
+                        const easeTransition = 1 - Math.pow(1 - transitionProgress, 2);
+                        // 0.15 = 15%만 전환 (거의 원래 상태 유지)
+                        finalUp = new THREE.Vector3(0, 1, 0).lerp(calculatedUp, easeTransition * 0.15);
                     }
 
                     camera.up.copy(finalUp);
