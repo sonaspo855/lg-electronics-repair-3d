@@ -63,113 +63,86 @@ export class CameraMovementService {
 
     /**
      * [LG CNS 개선안] 
-     * 2단계 시네마틱 이동: 
-     * 1단계 - 타겟 정면 수평 정렬 (Alignment)
-     * 2단계 - 타겟 중심 lerp를 통한 접근 및 회전 (Zoom & Orbit)
-     */
+     * Longest Axis Awareness + Low-angle Cinema Path
+    */
     public async moveCameraCinematic(nodeName: string): Promise<void> {
         const targetNode = this.getNodeByName(nodeName);
         if (!targetNode || !this.sceneRoot) return;
 
-        const sceneBox = getPreciseBoundingBox(this.sceneRoot);
+        // 0. 타겟 정보 및 바운딩 박스 계산
         const targetBox = getPreciseBoundingBox(targetNode);
-        const sceneCenter = new THREE.Vector3();
-        sceneBox.getCenter(sceneCenter);
         const targetCenter = new THREE.Vector3();
         targetBox.getCenter(targetCenter);
+        const size = new THREE.Vector3();
+        targetBox.getSize(size);
+
+        // [Longest Axis Awareness] 가로(X)와 깊이(Z)를 비교하여 정면/측면 결정
+        // 비스듬한 뷰를 제거하기 위해 축 성분을 (1,0,0) 또는 (0,0,1)로 엄격히 제한합니다.
+        const isWide = size.x >= size.z;
+        const horizontalDir = isWide
+            ? new THREE.Vector3(0, 0, 1)  // 정면(Z축)
+            : new THREE.Vector3(1, 0, 0); // 측면(X축)
+
+        // 1단계: 전체 조망 정렬 (Alignment)
+        // 이전의 quarterViewDir(1, 0, 1)을 제거하고 계산된 horizontalDir를 사용합니다.
+        const sceneBox = getPreciseBoundingBox(this.sceneRoot);
         const sceneSize = new THREE.Vector3();
         sceneBox.getSize(sceneSize);
+        const safetyDistance = Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 2.0;
 
-        // 1단계 목표 위치 계산
-        const safetyDistance = Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 2.5;
-        const quarterViewDir = new THREE.Vector3(1, 0, 1).normalize();
-        const alignPos = sceneCenter.clone().add(quarterViewDir.clone().multiplyScalar(safetyDistance));
-        alignPos.y = targetCenter.y; // 타겟 높이 고정
+        // 타겟과 동일한 Y축 높이에서 수평 정렬 지점 계산
+        const alignPos = targetCenter.clone().add(horizontalDir.clone().multiplyScalar(safetyDistance));
 
         const startPos1 = this.cameraControls.object.position.clone();
         const startTarget1 = this.cameraControls.target.clone();
 
-        console.log("1단계 시작: 전체 조망 이동");
-
-        // [개선] new Promise 대신 animate의 자체 반환 Promise를 await 합니다.
-        await animate((progress: number, eased: number) => {
+        await animate((progress, eased) => {
             this.cameraControls.object.position.lerpVectors(startPos1, alignPos, eased);
-            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased * 0.1); // 서서히 주시
+            this.cameraControls.target.lerpVectors(startTarget1, targetCenter, eased);
             this.cameraControls.update();
-        }, { duration: 1500 }); // ms 단위
+        }, { duration: 1200 });
 
         // ---------------------------------------------------------
-        // 2, 3, 4단계 진입 (여기서부터 96번 라인 이후 로직)
+        // 2단계: 선형 줌인 및 하강 (Low-Angle Curve)
         // ---------------------------------------------------------
-        console.log('Phase 2, 3, 4: 곡선 궤적 진입 및 타겟 포커싱!!');
-
-        // [4단계] 화면 꽉 참 보장: 바운딩 박스 기반 동적 거리 계산
-        const diagonal = targetBox.min.distanceTo(targetBox.max);
-        const fovRad = (this.cameraControls.object.fov * Math.PI) / 180;
-        let zoomDistance = (diagonal / 2) / Math.tan(fovRad / 2);
-
-        // [개선] 여유 계수를 1.0으로 조정하여 노드가 화면에 꽉 차게 배치 (웅장함 강조)
-        zoomDistance *= 1.0;
-
-        // [2단계] 최종 위치 설정 (정하단 로우 앵글)
-        // 비스듬한 시선을 제거하기 위해 X, Z축 수치를 최소화(0.05)하고 Y축(-1)에 집중하여 노드 바로 아래에 위치시킵니다.
-        // const lowAngleDir = new THREE.Vector3(-0.21, -0.4, 0.2).normalize();
-        const lowAngleDir = new THREE.Vector3(-0.21, -0.5, 0.21).normalize();
-
-
-        // 최종 위치 계산: 노드 중심에서 정하단 방향으로 zoomDistance만큼 떨어진 지점
-        const finalPos = targetCenter.clone().add(lowAngleDir.clone().multiplyScalar(zoomDistance));
-
-        // 하강폭 오프셋: 노드가 화면 중앙에 유지되도록 최소한의 보정값만 적용합니다.
-        // (이 값이 너무 크면 노드가 화면 상단으로 치우치게 됩니다.)
-        finalPos.y -= (diagonal * 1.5);
-
-        // 2단계 시작 시점의 카메라 상태 캡처
-        const startPos2 = this.cameraControls.object.position.clone();
+        const startPos2 = this.cameraControls.object.position.clone(); // 1단계 종료 시점 스냅샷
         const startTarget2 = this.cameraControls.target.clone();
 
-        // [3단계] 제어점(Control Point) 설정: '하강폭을 높여' 웅장하게 아래로 훑고 지나가는 궤적 생성
+        // 화면 꽉 참 거리 계산
+        const diagonal = targetBox.min.distanceTo(targetBox.max);
+        const fovRad = (this.cameraControls.object.fov * Math.PI) / 180;
+        const zoomDistance = (diagonal / 2) / Math.tan(fovRad / 2);
+
+        // 최종 목적지 (Low-Angle): 타겟보다 아래에서 위를 보도록 Y값 하강
+        const finalPos = targetCenter.clone().add(horizontalDir.clone().multiplyScalar(zoomDistance));
+        finalPos.y -= (size.y * 1.5); // 노드 크기에 맞춰 하강 깊이 조절
+
+        // 제어점(controlPos): 이동 경로 중간까지는 수평(직선) 줌인을 유지하도록 설정
         const controlPos = new THREE.Vector3(
             (startPos2.x + finalPos.x) / 2,
-            Math.min(startPos2.y, finalPos.y) - (diagonal * 3.5), // <--- 곡률을 깊게 주어 웅장한 접근 연출
+            targetCenter.y, // 타겟 높이와 동일하게 설정하여 초반 직선 줌인 유도
             (startPos2.z + finalPos.z) / 2
         );
 
-        // 궤적 곡선 생성 (Bezier)
         const curve = new THREE.QuadraticBezierCurve3(startPos2, controlPos, finalPos);
 
-        // 시각화 경로 업데이트
-        const visualPoints = curve.getPoints(50);
-        this.drawCameraPath(visualPoints);
-
-        // Damping(관성) 비활성화: 곡선 궤적을 오차 없이 따라가도록 설정
+        // Damping 일시 해제하여 곡선 궤적 정확도 확보
         const originalDamping = this.cameraControls.enableDamping;
-        if (this.cameraControls.hasOwnProperty('enableDamping')) {
-            this.cameraControls.enableDamping = false;
-        }
+        this.cameraControls.enableDamping = false;
 
-        // 애니메이션 실행
-        await animate((progress: number, eased: number) => {
-            // Bezier 곡선 위의 좌표를 카메라 위치로 강제 주입
+        await animate((progress, eased) => {
             const point = curve.getPoint(eased);
             this.cameraControls.object.position.copy(point);
 
-            // [핵심] 타겟(주시점)을 노드 중심(targetCenter)으로 부드럽게 고정하여 중앙 정렬 보장
+            // 시선(Target)은 항상 노드 중심에 고정하여 '올려다보는' 연출 완성
             this.cameraControls.target.lerpVectors(startTarget2, targetCenter, eased);
-
             this.cameraControls.update();
         }, {
-            duration: 5000, // 웅장함을 느끼기에 충분한 시간
-            easing: (t) => t * (2 - t) // 도착 시 부드럽게 감속
+            duration: 2500,
+            easing: (t) => t * (2 - t)
         });
 
-        // 애니메이션 종료 후 Damping 복구
-        if (this.cameraControls.hasOwnProperty('enableDamping')) {
-            this.cameraControls.enableDamping = originalDamping;
-            this.cameraControls.update();
-        }
-
-        console.log("[CameraMovementService] 모든 시네마틱 단계 완료");
+        this.cameraControls.enableDamping = originalDamping;
     }
 
     /**
