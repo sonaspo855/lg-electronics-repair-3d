@@ -134,7 +134,18 @@ export class CameraMovementService {
         const zoomDistance = (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
         // 목적지 계산
-        const direction = options.direction || new THREE.Vector3(0, -1, 0);
+        let direction = options.direction || new THREE.Vector3(0, -1, 0);
+
+        // [수정] 특정 노드(왼쪽 도어 댐퍼 등)에 대해 항상 일관된 뷰(왼쪽 출력)를 제공하도록 방향 강제
+        if (nodeName === LEFT_DOOR_DAMPER_NODE_NAME && !options.direction) {
+            // 모델의 로컬 좌표계나 월드 좌표계 기준에 따라 다르지만, 
+            // 이미지를 통해 확인된 '왼쪽 출력'을 위해 X축 방향을 조정합니다.
+            // 기존 (0, -1, 0)에서 약간의 X축 오프셋을 주어 카메라가 오른쪽에서 왼쪽을 바라보게 하거나 그 반대를 설정합니다.
+            // 사용자가 원하는 '왼쪽 출력'은 객체가 화면의 왼쪽에 위치하는 것이 아니라, 
+            // 특정 방향에서 바라본 일관된 뷰를 의미하는 것으로 보입니다.
+            direction = new THREE.Vector3(0.5, -1, 0.5).normalize();
+        }
+
         const endPos = targetCenter.clone().add(direction.clone().multiplyScalar(zoomDistance));
 
         // 거리 체크 (너무 가까우면 직선 이동)
