@@ -93,6 +93,7 @@ export class CameraMovementService {
 
         // 대상의 정면(Z+)에서 아래쪽(-Y)에 카메라 위치
         const endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.8, zoomDistance));
+        // const endPos = targetCenter.clone().add(new THREE.Vector3(0, size.y * 0.8, zoomDistance));
 
         // 2. 제어점(Control Point) 설정: '직선 접근 후 낙하'를 위해 목적지 바로 위(고도 유지)에 배치
         const startPos = camera.position.clone();
