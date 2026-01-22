@@ -30,7 +30,7 @@ export class CameraMovementService {
 
     public async moveCameraToNode(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
         // 단순히 시네마틱 로직을 실행하도록 연결
-        return this.moveCameraCinematic(nodeName);
+        return this.moveCameraCinematic(nodeName, options);
     }
 
     private drawCameraPath(points: THREE.Vector3[]): void {
@@ -61,11 +61,22 @@ export class CameraMovementService {
         }, 10000); */
     }
 
+    public async moveCameraToUpwardView(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
+        // Z값을 0.1로 낮춰 사선이 아닌 수직에 가깝게 설정
+        const upwardDirection = new THREE.Vector3(0, -1, 0.1).normalize();
+
+        return this.moveCameraToNode(nodeName, {
+            ...options,
+            direction: options.direction || upwardDirection,
+            zoomRatio: options.zoomRatio || 2.5
+        });
+    }
+
     /**
      * [LG CNS 개선안] 시네마틱 카메라 워킹
      * 1) 직선 접근 -> 2) 막바지 급격한 하강(Drop) -> 3) 로우 앵글(Low Angle)
      */
-    public async moveCameraCinematic(nodeName: string): Promise<void> {
+    public async moveCameraCinematic(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
         console.log('moveCameraCinematic!!!');
 
         const targetNode = this.getNodeByName(nodeName);
@@ -87,13 +98,20 @@ export class CameraMovementService {
         const size = new THREE.Vector3();
         targetBox.getSize(size);
 
-        // 1. 목표 지점(End Pos) 설정: 로우 앵글을 위해 부품 중심보다 낮게 설정
+        // 1. 목표 지점(End Pos) 설정 수정
         const fovRad = (camera.fov * Math.PI) / 180;
-        const zoomDistance = (size.y) / Math.tan(fovRad / 2) * 1.5; // 거리는 부품 크기에 맞춰 자동 계산
+        const zoomDistance = (size.y) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.5);
 
-        // 대상의 정면(Z+)에서 아래쪽(-Y)에 카메라 위치
-        const endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.8, zoomDistance));
-        // const endPos = targetCenter.clone().add(new THREE.Vector3(0, size.y * 0.8, zoomDistance));
+        let endPos: THREE.Vector3;
+
+        if (options.direction) {
+            // 전달받은 direction 벡터를 사용하여 카메라 위치 계산
+            // 방향 벡터에 거리를 곱하여 타겟 중심에서부터의 오프셋 생성
+            endPos = targetCenter.clone().add(options.direction.clone().multiplyScalar(zoomDistance));
+        } else {
+            // 기본값: 정면 아래쪽
+            endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.8, zoomDistance));
+        }
 
         // 2. 제어점(Control Point) 설정: '직선 접근 후 낙하'를 위해 목적지 바로 위(고도 유지)에 배치
         const startPos = camera.position.clone();
@@ -143,14 +161,15 @@ export class CameraMovementService {
      * [추가] webp 시나리오: 커버 -> 레버 -> 힌지 순으로 카메라가 추적하는 시퀀스
      */
     public async playDisassemblyCameraSequence(): Promise<void> {
-        // 1단계: 도어 커버 집중 (정면 사선)
+        // 1단계: 도어 커버 집중
         await this.moveCameraToNode("Door_Cover", { duration: 1200, zoomRatio: 2 });
 
-        // 2단계: 레버 분리 시점에 맞춰 상단으로 이동
-        await new Promise(resolve => setTimeout(resolve, 500)); // 애니메이션 타이밍 동기화
-        await this.moveCameraToNode("Lever_Part", { duration: 1000, direction: new THREE.Vector3(0, 1, 0.5) });
+        // [수정 포인트] 2단계: 레버 분리 시, 위에서 보는 대신 '완전히 올려다보는' 시점 적용
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // 기존: await this.moveCameraToNode("Lever_Part", { ... });
+        await this.moveCameraToUpwardView("Lever_Part", { duration: 1500, zoomRatio: 1.5 });
 
-        // 3단계: 힌지 분리 시점에 맞춰 측면 집중
+        // 3단계: 힌지 분리 시점
         await this.moveCameraToNode("Hinge_Assembly", { duration: 1000, zoomRatio: 1.2 });
     }
 
@@ -171,10 +190,9 @@ export class CameraMovementService {
     // Move camera to the left door damper node (Promise-based)
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
         console.log('moveCameraToLeftDoorDamper!!');
-        await this.moveCameraToNode(LEFT_DOOR_DAMPER_NODE_NAME, {
-            duration: options.duration || CameraMovementService.DEFAULT_DAMPER_DURATION,
-            // Ensure horizontal direction for front view
-            direction: new THREE.Vector3(1, 0, 0).normalize(),
+        // 기존 moveCameraToNode 대신 새로 만든 UpwardView 호출
+        await this.moveCameraToUpwardView(LEFT_DOOR_DAMPER_NODE_NAME, {
+            duration: options.duration || 1000,
             ...options
         });
     }
