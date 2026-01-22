@@ -99,21 +99,23 @@ export class CameraMovementService {
         const size = new THREE.Vector3();
         targetBox.getSize(size);
 
-        // 1. 목표 지점(End Pos) 설정 수정
+        // moveCameraCinematic 함수 내부 1번 항목(End Pos 설정) 수정
         const fovRad = (camera.fov * Math.PI) / 180;
 
-        // [개선] y축 크기만이 아니라 객체의 전체 크기(Max Dimension)를 기준으로 거리 계산
-        // 이를 통해 부품이 화면 정중앙에 가로/세로 잘림 없이 꽉 차게 들어옵니다.
+        // [개선] 객체의 전체 크기(Max Dimension)를 기준으로 거리를 계산하여 정중앙 배치 보장
         const maxDim = Math.max(size.x, size.y, size.z);
         const zoomDistance = (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
         let endPos: THREE.Vector3;
 
+        console.log('options>> ', options);
         if (options.direction) {
-            // 방향 벡터를 타겟 중심에 더해 카메라의 최종 목적지 계산
+            console.log('options.direction>> ', options.direction);
+            // 방향 벡터를 타겟 중심에 더해 카메라의 최종 목적지 계산 (options 전달이 되어야 작동함)
             endPos = targetCenter.clone().add(options.direction.clone().multiplyScalar(zoomDistance));
         } else {
-            // 기본값 시점에서도 가로 정렬을 위해 X축은 타겟과 일치시킵니다.
+            console.log('bbb');
+            // 기본값: 타겟과 X축을 일치시켜 가로 정렬 유지
             endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.5, zoomDistance));
         }
 
