@@ -211,9 +211,9 @@ export class CameraMovementService {
                 camera.position.copy(point);
 
                 /**
-                 * [수정] 단계적 UP 벡터 전환
-                 * - 초기 80%: 기본 UP (0, 1, 0) 사용 - 자연스러운 이동
-                 * - 후반부 20%: 노드 방향으로 서서히 전환 - 최종 직각 올려다보기
+                 * [수정] 단계적 UP 벡터 전환 (자연스러운 로우 앵글 구현)
+                 * - 초기 30%: 기본 UP (0, 1, 0) 사용 - 자연스러운 이동 유지
+                 * - 후반부 70%: 노드 방향으로 서서히 전환 - 카메라가 아래에서 위로 자연스럽게 올려다봄
                  */
                 if (options.direction && Math.abs(options.direction.y) > 0.8 && targetNode) {
                     // 실제 시선 방향 계산 (타겟 중심 - 현재 카메라 위치)
@@ -231,18 +231,20 @@ export class CameraMovementService {
                         calculatedUp.negate();
                     }
 
-                    // [핵심] 진행률에 따른 UP 벡터 보간 (0% ~ 20% 구간에서 전환)
-                    // 0.8(80%) 이전에는 기본 UP, 이후에는 서서히 전환
-                    const transitionStart = 0.8;
+                    // [핵심] 진행률에 따른 UP 벡터 보간 (30% 지점부터 부드럽게 전환)
+                    // 0.3(30%) 이전에는 기본 UP, 이후에는 easeInOutCubic으로 매우 부드럽게 전환
+                    const transitionStart = 0.3;
                     let finalUp;
                     if (progress < transitionStart) {
                         // 초기 구간: 기본 UP 사용
                         finalUp = new THREE.Vector3(0, 1, 0);
                     } else {
-                        // 후반 구간: 노드 정렬 UP으로 서서히 전환
+                        // 후반 구간: easeInOutCubic으로 매우 부드러운 전환
                         const transitionProgress = (progress - transitionStart) / (1 - transitionStart);
-                        // easeOutQuad로 부드러운 전환
-                        const easeTransition = 1 - Math.pow(1 - transitionProgress, 2);
+                        // easeInOutCubic: 시작과 끝이 부드럽게 처리
+                        const easeTransition = transitionProgress < 0.5
+                            ? 4 * transitionProgress * transitionProgress * transitionProgress
+                            : 1 - Math.pow(-2 * transitionProgress + 2, 3) / 2;
                         finalUp = new THREE.Vector3(0, 1, 0).lerp(calculatedUp, easeTransition);
                     }
 
