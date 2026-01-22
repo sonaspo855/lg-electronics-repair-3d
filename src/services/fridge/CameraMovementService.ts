@@ -373,8 +373,8 @@ export class CameraMovementService {
     }
 
     /**
-     * 줌 효과
-     */
+ * 줌 효과 및 일관된 화면 배치 (왼쪽 출력)
+ */
     public async zoomTo(
         zoomRatio: number,
         options: CameraMoveOptions = {}
@@ -386,12 +386,23 @@ export class CameraMovementService {
         const targetCenter = new THREE.Vector3();
         targetBox.getCenter(targetCenter);
 
-        const currentPos = camera.position.clone();
-        const direction = currentPos.clone().sub(targetCenter).normalize();
-        const currentDistance = currentPos.distanceTo(targetCenter);
-        const targetDistance = currentDistance / zoomRatio;
-        const targetPos = targetCenter.clone().add(direction.multiplyScalar(targetDistance));
+        // [수정 1] 고정된 시점(Direction) 정의
+        // 매번 다른 각도가 아닌, 특정 방향(예: 정면 우측 상단 45도)에서 바라보도록 고정합니다.
+        const fixedDirection = options.direction || new THREE.Vector3(1, 0.5, 1).normalize();
 
-        return this.moveTo(targetPos, targetCenter, options);
+        const currentDistance = camera.position.distanceTo(targetCenter);
+        const targetDistance = currentDistance / zoomRatio;
+
+        // [수정 2] 타겟 위치(Camera Position) 계산
+        const targetPos = targetCenter.clone().add(fixedDirection.multiplyScalar(targetDistance));
+
+        // [수정 3] 화면 왼쪽 배치를 위한 타겟 오프셋(Target Offset) 적용
+        // 카메라가 객체의 정중앙이 아닌, 오른쪽의 빈 공간을 바라보게 하여 객체를 왼쪽으로 밉니다.
+        // 0.5 값은 현장 모델 크기에 맞춰 조정하십시오.
+        const screenOffset = new THREE.Vector3(0.5, 0, 0);
+        const adjustedTarget = targetCenter.clone().add(screenOffset);
+
+        // moveTo 호출 시 수정된 targetPos와 adjustedTarget을 전달합니다.
+        return this.moveTo(targetPos, adjustedTarget, options);
     }
 }
