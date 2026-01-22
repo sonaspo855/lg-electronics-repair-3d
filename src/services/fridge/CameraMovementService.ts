@@ -110,8 +110,15 @@ export class CameraMovementService {
         zoomDistance *= 1.3; // 여유 계수
 
         // [2단계] 최종 위치 설정 (로우 앵글)
-        const finalPos = targetCenter.clone().add(quarterViewDir.clone().multiplyScalar(zoomDistance));
-        finalPos.y -= (diagonal * 0.4); // 도착 지점 높이를 조금 더 낮춰 웅장함 강조
+        // 1. 방향 벡터 수정: 정면(Z)과 측면(X)뿐만 아니라 아래에서 위를 보는 방향(Y)을 정의합니다.
+        // const lowAngleDir = new THREE.Vector3(1, -0.6, 1).normalize(); // Y값을 마이너스로 설정하여 아래쪽 배치
+        const lowAngleDir = new THREE.Vector3(3, -3, 3).normalize(); // Y값을 마이너스로 설정하여 아래쪽 배치
+
+        // 2. 최종 위치 계산: 계산된 lowAngleDir 방향으로 zoomDistance만큼 이동
+        const finalPos = targetCenter.clone().add(lowAngleDir.clone().multiplyScalar(zoomDistance));
+
+        // 3. 웅장함 극대화: 타겟의 크기에 비례하여 Y축 높이를 추가적으로 낮춤
+        finalPos.y -= (diagonal * 3.0); // 기존 0.4에서 0.8로 하강폭 증대
 
         const startPos2 = this.cameraControls.object.position.clone();
         const startTarget2 = this.cameraControls.target.clone();
