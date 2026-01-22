@@ -62,13 +62,14 @@ export class CameraMovementService {
     }
 
     public async moveCameraToUpwardView(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
-        // Z값을 0.1로 낮춰 사선이 아닌 수직에 가깝게 설정
-        const upwardDirection = new THREE.Vector3(0, -1, 0.1).normalize();
+        // X를 0으로 설정하여 노드가 가로로 바르게 정렬되도록 하고, 
+        // Z를 아주 미세하게(0.01) 주어 완전 수직 시의 짐벌락(Gimbal Lock) 현상을 방지합니다.
+        const upwardDirection = new THREE.Vector3(0, -1, 0.01).normalize();
 
         return this.moveCameraToNode(nodeName, {
             ...options,
             direction: options.direction || upwardDirection,
-            zoomRatio: options.zoomRatio || 2.5
+            zoomRatio: options.zoomRatio || 3 // 정중앙에 꽉 차게 보이도록 배율 최적화
         });
     }
 
@@ -100,17 +101,20 @@ export class CameraMovementService {
 
         // 1. 목표 지점(End Pos) 설정 수정
         const fovRad = (camera.fov * Math.PI) / 180;
-        const zoomDistance = (size.y) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.5);
+
+        // [개선] y축 크기만이 아니라 객체의 전체 크기(Max Dimension)를 기준으로 거리 계산
+        // 이를 통해 부품이 화면 정중앙에 가로/세로 잘림 없이 꽉 차게 들어옵니다.
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const zoomDistance = (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
         let endPos: THREE.Vector3;
 
         if (options.direction) {
-            // 전달받은 direction 벡터를 사용하여 카메라 위치 계산
-            // 방향 벡터에 거리를 곱하여 타겟 중심에서부터의 오프셋 생성
+            // 방향 벡터를 타겟 중심에 더해 카메라의 최종 목적지 계산
             endPos = targetCenter.clone().add(options.direction.clone().multiplyScalar(zoomDistance));
         } else {
-            // 기본값: 정면 아래쪽
-            endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.8, zoomDistance));
+            // 기본값 시점에서도 가로 정렬을 위해 X축은 타겟과 일치시킵니다.
+            endPos = targetCenter.clone().add(new THREE.Vector3(0, -size.y * 0.5, zoomDistance));
         }
 
         // 2. 제어점(Control Point) 설정: '직선 접근 후 낙하'를 위해 목적지 바로 위(고도 유지)에 배치
