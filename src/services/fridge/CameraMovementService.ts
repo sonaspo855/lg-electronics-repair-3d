@@ -260,10 +260,9 @@ export class CameraMovementService {
                         .subVectors(targetCenter, camera.position)
                         .normalize();
 
-                    // [수정] UP 벡터 = 시선방향 × 노드Y (순서 변경으로 올바른 방향 설정)
-                    // 노드가 가로로 바르게 보이도록 방향 조정
+                    // UP 벡터 = 노드Y × 시선방향 (Cross Product)
                     let calculatedUp = new THREE.Vector3()
-                        .crossVectors(lookDir, nodeY)
+                        .crossVectors(nodeY, lookDir)
                         .normalize();
 
                     // 방향 검증: UP 벡터가 아래를 향하면 반전
@@ -301,9 +300,8 @@ export class CameraMovementService {
                 .subVectors(targetCenter, camera.position)
                 .normalize();
 
-            // [수정] UP 벡터 = 시선방향 × 노드Y (순서 변경으로 올바른 방향 설정)
             let calculatedUp = new THREE.Vector3()
-                .crossVectors(lookDir, nodeY)
+                .crossVectors(nodeY, lookDir)
                 .normalize();
 
             if (calculatedUp.y < 0) {
