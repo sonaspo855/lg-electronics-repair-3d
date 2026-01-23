@@ -1039,7 +1039,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
       }
 
       const responseVerb = await responseVerbPromise;
-      console.log('Single command response verb:', responseVerb);
       const message = this.buildActionMessage(
         doorLabel,
         degrees,

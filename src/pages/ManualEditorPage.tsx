@@ -228,6 +228,49 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   const [isProcessing, setIsProcessing] = useState(false);
   const animationHistoryService = useMemo(() => new AnimationHistoryService(), []);
 
+  // 로컬 스토리지에서 히스토리 로드
+  useEffect(() => {
+    const loadHistoryFromService = () => {
+      try {
+        const savedHistory = animationHistoryService.getAllHistory();
+        if (savedHistory.length > 0) {
+          console.log('[HISTORY-LOAD] Loaded history from AnimationHistoryService:', savedHistory.length, 'items');
+          // AnimationHistoryService의 인터페이스를 AnimationHistoryPanel 타입으로 변환
+          const convertedItems: AnimationHistoryItem[] = savedHistory.map((item, index) => ({
+            id: item.id,
+            title: item.title,
+            detail: item.detail,
+            info: item.info,
+            checked: item.checked,
+            order: item.order ?? index + 1,
+            command: item.command ? {
+              door: item.command.door as string,
+              action: item.command.action as string,
+              degrees: item.command.degrees,
+              speed: item.command.speed,
+            } : undefined,
+          }));
+          setHistoryItems((prev) => {
+            // 기존 히스토리와 중복되지 않는 경우에만 추가
+            const existingIds = new Set(prev.map((p) => p.id));
+            const newItems = convertedItems.filter((item) => !existingIds.has(item.id));
+            if (newItems.length === 0) {
+              return prev;
+            }
+            console.log('[HISTORY-LOAD] Added', newItems.length, 'new items from service');
+            return [...newItems, ...prev];
+          });
+        } else {
+          console.log('[HISTORY-LOAD] No saved history found in AnimationHistoryService');
+        }
+      } catch (error) {
+        console.error('[HISTORY-LOAD] Failed to load history from service:', error);
+      }
+    };
+
+    loadHistoryFromService();
+  }, [animationHistoryService]);
+
   useEffect(() => {
     const handleCompletion = (message: string) => {
       if (!message) {
