@@ -39,6 +39,7 @@ class OllamaClient {
 
 import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
 import { CameraMovementService } from './fridge/CameraMovementService';
+import { AnimationHistoryService } from './AnimationHistoryService';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -178,6 +179,7 @@ export interface LLMResponse {
 }
 
 export class AnimatorAgent {
+  private static executionCounter = 0; // [DEBUG] Track total executions
   private ollama: OllamaClient;
   private conversationState: ConversationState = {};
   private doorControls: any;
@@ -201,6 +203,7 @@ export class AnimatorAgent {
       message: 'Service status not checked yet.'
     };
   private availableModels: string[] = [];
+  private animationHistoryService: AnimationHistoryService | null = null;
 
   constructor() {
     this.ollama = new OllamaClient('http://localhost:11434');
@@ -219,6 +222,10 @@ export class AnimatorAgent {
 
   setOnActionCompleted(callback?: (message: string) => void) {
     this.onActionCompleted = callback;
+  }
+
+  setAnimationHistoryService(service: AnimationHistoryService) {
+    this.animationHistoryService = service;
   }
 
   setActionVerbResolver(
@@ -852,23 +859,53 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
     }
 
     try {
+      // [DEBUG] Increment execution counter
+      AnimatorAgent.executionCounter++;
+      const totalExecutions = AnimatorAgent.executionCounter;
+      console.log(`=== [DEBUG] executeAnimationCommand called (total: ${totalExecutions}) ===`);
+
       // Check if commands are damper commands (need simultaneous execution)
       const commandsArray = Array.isArray(commands) ? commands : [commands];
+      console.log('commandsArray>> ', JSON.stringify(commandsArray.map(c => ({ door: c.door, action: c.action, degrees: c.degrees }))));
       const isDamperCommands = areFridgeDamperCommands(commandsArray);
+
+      // [DEBUG] Add unique execution ID
+      const executionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
 
       if (isDamperCommands) {
         const locale = this.lastInputLocale;
         const responseVerbPromise = this.resolveActionVerb(this.lastUserInput, AnimationAction.OPEN, locale);
         let remaining = commandsArray.length;
+        let isCompleted = false;
 
         const handleCompletion = () => {
+          console.log('handleCompletion000');
+          if (isCompleted) {
+            console.log('[DEBUG] handleCompletion already completed, skipping');
+            return;
+          }
+
+          if (remaining <= 0) return;
           remaining -= 1;
+
           if (remaining <= 0) {
+            isCompleted = true;
+
             void responseVerbPromise.then((responseVerb) => {
               const completionMessage = locale === 'ko'
-                ? '댐퍼 서비스를 위한 문 열기 완료'
-                : 'Completed: Doors opened for damper service';
+                ? `${responseVerb} 댐퍼 서비스를 위한 문 열기 완료`
+                : `Completed: ${responseVerb} doors opened for damper service`;
+              console.log('responseVerb>> ', responseVerb);
               this.onActionCompleted?.(completionMessage);
+              // Add to animation history
+              if (this.animationHistoryService) {
+                commandsArray.forEach(command => {
+                  this.animationHistoryService?.addAnimationHistory(command, completionMessage);
+                });
+              } else {
+                console.warn('Animation history service not available');
+              }
             });
           }
         };
@@ -902,15 +939,18 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         });
 
         const responseVerb = await responseVerbPromise;
+        console.log('Damper service response verb:', responseVerb);
         const message = locale === 'ko'
           ? '댐퍼 서비스를 위해 문을 열고 있습니다'
           : 'Opening doors for damper service';
 
         // Calculate max speed to determine animation duration
         const maxSpeed = Math.max(...commandsArray.map(cmd => cmd.speed || 1));
+        console.log('Waiting for damper animation completion, max speed:', maxSpeed, 'seconds');
 
         // Wait for the longest animation to complete
         await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
+        console.log('Damper animation wait completed');
 
         // Move camera to the left door damper node after damper animation
         if (this.cameraMovementService) {
@@ -934,7 +974,11 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
       const locale = this.lastInputLocale;
       const doorLabel = this.getDoorDisplayNameForLocale(command.door, locale);
       const responseVerbPromise = this.resolveActionVerb(this.lastUserInput, command.action, locale);
+      let isCompleted = false;
       const handleCompletion = () => {
+        console.log('handleCompletion111');
+        if (isCompleted) return;
+        isCompleted = true;
         void responseVerbPromise.then((responseVerb) => {
           const completionMessage = this.buildCompletionMessage(
             doorLabel,
@@ -943,7 +987,15 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             responseVerb,
             locale
           );
+          console.log('Single command completed:', command.action, doorLabel);
           this.onActionCompleted?.(completionMessage);
+          // Add to animation history
+          if (this.animationHistoryService) {
+            console.log('Adding to animation history:', command);
+            this.animationHistoryService.addAnimationHistory(command, completionMessage);
+          } else {
+            console.warn('Animation history service not available for single command');
+          }
         });
       };
 
@@ -970,6 +1022,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
       }
 
       const responseVerb = await responseVerbPromise;
+      console.log('Single command response verb:', responseVerb);
       const message = this.buildActionMessage(
         doorLabel,
         degrees,
@@ -977,6 +1030,12 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         responseVerb,
         locale
       );
+
+      console.log('Returning action response:', {
+        type: 'action',
+        message,
+        command
+      });
 
       return {
         type: 'action',
@@ -1286,9 +1345,23 @@ What would you like to do next?`,
         : 'Completed: all doors are closed.';
       let remaining = 4;
       const handleCompletion = () => {
+        console.log('handleCompletion222');
         remaining -= 1;
         if (remaining <= 0) {
+          console.log('All doors closed, adding to history');
           this.onActionCompleted?.(completionMessage);
+          // Add to animation history for each door
+          if (this.animationHistoryService) {
+            console.log('Adding close all doors to history');
+            [DoorType.TOP_LEFT, DoorType.TOP_RIGHT, DoorType.BOTTOM_LEFT, DoorType.BOTTOM_RIGHT].forEach(door => {
+              this.animationHistoryService?.addAnimationHistory(
+                { door, action: AnimationAction.CLOSE, degrees: 0, speed: 1 },
+                completionMessage
+              );
+            });
+          } else {
+            console.warn('Animation history service not available for close all');
+          }
         }
       };
 
@@ -1369,3 +1442,4 @@ What would you like to do next?`,
 
 // Export singleton instance
 export const animatorAgent = new AnimatorAgent();
+

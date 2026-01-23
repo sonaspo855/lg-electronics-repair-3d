@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { ModelViewer } from "@/components/shared/viewer";
 import { animatorAgent, type LLMResponse } from "@/services/AnimatorAgent";
+import { AnimationHistoryService } from "@/services/AnimationHistoryService";
 import { ManualEditorSidebar } from "@/components/pages/manual-editor";
 import { AnimationHistoryPanel, type AnimationHistoryItem } from "@/components/pages/manual-editor";
 import "./ManualEditorPage.css";
@@ -223,6 +224,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const animationHistoryService = useMemo(() => new AnimationHistoryService(), []);
 
   useEffect(() => {
     const handleCompletion = (message: string) => {
@@ -238,10 +240,13 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     };
 
     animatorAgent.setOnActionCompleted(handleCompletion);
+    animatorAgent.setAnimationHistoryService(animationHistoryService);
+    console.log('AnimationHistoryService initialized and set to AnimatorAgent');
+
     return () => {
       animatorAgent.setOnActionCompleted();
     };
-  }, []);
+  }, [animationHistoryService]);
 
   const orderedHistory = useMemo(
     () =>
@@ -326,10 +331,14 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
 
   const handleRemoveHistory = (id: string) => {
     setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+    animationHistoryService.removeHistoryItem(id);
+    console.log('Removed history item:', id);
   };
 
   const handleClearHistory = () => {
     setHistoryItems([]);
+    animationHistoryService.clearHistory();
+    console.log('Animation history cleared');
   };
 
   const stopTimelineLoop = () => {
@@ -513,6 +522,8 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
         return item;
       })
     );
+    animationHistoryService.reorderHistory(orderedIds);
+    console.log('Reordered history:', orderedIds);
   };
 
   const handleResetViewer = () => {
@@ -522,6 +533,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleExportHistory = () => {
     if (!sceneRoot) {
       return;
@@ -559,6 +571,13 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
       },
       { binary: true, animations: [clip], onlyVisible: false }
     );
+  };
+
+  const handleExportHistoryJson = () => {
+    const json = animationHistoryService.exportToJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    downloadBlob(blob, 'animation_history.json');
+    console.log('Exported animation history JSON:', json.length, 'bytes');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -608,7 +627,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
               items={historyItems}
               onClear={handleClearHistory}
               onRemove={handleRemoveHistory}
-              onExport={handleExportHistory}
+              onExport={handleExportHistoryJson}
               onReorder={handleReorderHistory}
               isPlaying={isTimelinePlaying}
               currentTime={timelineTime}

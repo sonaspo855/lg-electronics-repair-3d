@@ -188,9 +188,8 @@ export default function AnimationHistoryPanel({
                     return (
                       <div
                         key={item.id}
-                        className={`history-item ${
-                          orderMap.has(item.id) ? "is-draggable" : ""
-                        } ${draggingId === item.id ? "is-dragging" : ""}`}
+                        className={`history-item ${orderMap.has(item.id) ? "is-draggable" : ""
+                          } ${draggingId === item.id ? "is-dragging" : ""}`}
                         style={{ width: `${itemWidth}px` }}
                         draggable={Boolean(onReorder && orderMap.has(item.id))}
                         onDragStart={handleDragStart(item.id)}
@@ -198,25 +197,25 @@ export default function AnimationHistoryPanel({
                         onDrop={handleDrop(item.id)}
                         onDragEnd={handleDragEnd}
                       >
-                  <div className="history-content">
-                    <div className="history-title">{item.title}</div>
-                    <div className="history-detail">{item.detail}</div>
-                  </div>
-                  <div className="history-item-actions">
-                    <button
-                      className="history-remove"
-                      type="button"
-                      onClick={() => onRemove(item.id)}
-                      aria-label="Remove from history"
-                    >
-                      -
-                    </button>
-                    <div className="history-info" aria-label="View action details">
-                      i
-                      {item.info && <span className="history-tooltip">{item.info}</span>}
-                    </div>
-                  </div>
-                </div>
+                        <div className="history-content">
+                          <div className="history-title">{item.title}</div>
+                          <div className="history-detail">{item.detail}</div>
+                        </div>
+                        <div className="history-item-actions">
+                          <button
+                            className="history-remove"
+                            type="button"
+                            onClick={() => onRemove(item.id)}
+                            aria-label="Remove from history"
+                          >
+                            -
+                          </button>
+                          <div className="history-info" aria-label="View action details">
+                            i
+                            {item.info && <span className="history-tooltip">{item.info}</span>}
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
