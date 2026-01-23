@@ -230,6 +230,10 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
 
   // 로컬 스토리지에서 히스토리 로드
   useEffect(() => {
+    // 새로고침 시 항상 히스토리를 clear (로컬 스토리지 자동 정리)
+    animationHistoryService.clearHistory();
+    console.log('[HISTORY-LOAD] Cleared previous history on page load');
+
     const loadHistoryFromService = () => {
       try {
         const savedHistory = animationHistoryService.getAllHistory();
