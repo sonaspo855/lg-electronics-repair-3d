@@ -15,15 +15,13 @@ LG 전자 제품의 3D 조립/분해 매뉴얼을 생성하고 관리하는 웹 
 ```
 lg-electronics-repair-3d/
 ├─ public/                          # 정적 리소스 폴더
-│  ├─ data/                        # 데이터 파일
 │  └─ models/                      # 3D 모델 파일 (GLB 포맷)
 │     └─ M-Next3.glb              # 기본 냉장고 모델
 ├─ src/                            # 소스 코드 폴더
 │  ├─ app/                         # 애플리케이션 엔트리
 │  │  ├─ App.tsx                  # 메인 애플리케이션 컴포넌트
-│  │  ├─ main.tsx                 # React 렌더링 엔트리
-│  │  ├─ providers/               # 상태 관리 제공자
-│  │  └─ routes/                  # 라우팅 설정
+│  │  ├─ App.css                  # 앱 전역 스타일
+│  │  └─ main.tsx                 # React 렌더링 엔트리
 │  ├─ pages/                       # 페이지 컴포넌트
 │  │  ├─ ManualEditorPage.tsx     # 3D 매뉴얼 에디터 페이지
 │  │  ├─ AnimationLibraryPage.tsx # 애니메이션 라이브러리 페이지
@@ -34,48 +32,67 @@ lg-electronics-repair-3d/
 │  │  │  │  ├─ ActionLibraryPanel.tsx    # 액션 라이브러리 패널
 │  │  │  │  ├─ AnimationHistoryPanel.tsx # 애니메이션 히스토리 패널
 │  │  │  │  ├─ HierarchyPanel.tsx        # 노드 계층 패널
-│  │  │  │  └─ ManualEditorSidebar.tsx   # 에디터 사이드바
+│  │  │  │  ├─ ManualEditorSidebar.tsx   # 에디터 사이드바
+│  │  │  │  ├─ ActionLibraryPanel.css
+│  │  │  │  ├─ AnimationHistoryPanel.css
+│  │  │  │  ├─ HierarchyPanel.css
+│  │  │  │  ├─ ManualEditorSidebar.css
+│  │  │  │  └─ index.ts           # 컴포넌트 인덱스
 │  │  │  └─ projects/             # 프로젝트 관리 관련 컴포넌트
+│  │  │     ├─ ProjectsFrame.tsx  # 프로젝트 프레임
+│  │  │     ├─ ProjectsHeader.tsx # 프로젝트 헤더
+│  │  │     ├─ ProjectsTable.tsx  # 프로젝트 테이블
+│  │  │     ├─ ProjectDetail.tsx  # 프로젝트 상세
+│  │  │     ├─ types.ts           # 타입 정의
+│  │  │     └─ index.ts
 │  │  └─ shared/                  # 공용 컴포넌트
-│  │     ├─ common/               # 범용 UI/유틸 컴포넌트
+│  │     ├─ common/               # 범용 UI 컴포넌트
+│  │     │  └─ index.ts
 │  │     └─ viewer/               # 3D 모델 뷰어
 │  │        ├─ ModelViewer.tsx    # 3D 모델 렌더링 컴포넌트
-│  │        └─ NodeHierarchy.tsx  # 노드 계층 구조 컴포넌트
-│  ├─ features/                   # 기능 모듈 (Feature Sliced Design)
-│  │  ├─ animation/               # 애니메이션 관리
-│  │  ├─ glb-upload/              # GLB 파일 업로드
-│  │  └─ player/                  # 애니메이션 플레이어
+│  │        ├─ NodeHierarchy.tsx  # 노드 계층 구조 컴포넌트
+│  │        ├─ ModelViewer.css
+│  │        └─ index.ts
 │  ├─ services/                   # 서비스 로직
-│  │  ├─ AnimatorAgent.ts        # AI 애니메이터 에이전트
-│  │  └─ fridge/                 # 냉장고 특화 서비스
-│  │     └─ DamperAnimationService.ts  # 댐퍼 애니메이션 서비스
+│  │  ├─ AnimatorAgent.ts         # AI 애니메이터 에이전트
+│  │  ├─ AnimationHistoryService.ts # 애니메이션 히스토리 서비스
+│  │  └─ fridge/                  # 냉장고 특화 서비스
+│  │     ├─ DamperAnimationService.ts # 댐퍼 애니메이션 서비스
+│  │     └─ CameraMovementService.ts  # 카메라 이동 서비스
 │  ├─ shared/                     # UI가 아닌 공용 코드
-│  │  ├─ hooks/                   # 사용자 정의 Hooks
 │  │  ├─ types/                   # 타입 정의
+│  │  │  └─ three-examples.d.ts   # Three.js 확장 타입
 │  │  └─ utils/                   # 유틸리티 함수
-│  ├─ entities/                   # 도메인 엔티티
-│  │  └─ glb/                     # GLB 파일 관련 엔티티
+│  │     ├─ commonUtils.ts        # 일반적인 유틸리티 함수
+│  │     ├─ animationUtils.ts     # 애니메이션 유틸리티
+│  │     ├─ fridgeConstants.ts    # 냉장고 상수 정의
+│  │     ├─ findNodeHeight.ts     # 3D 모델 노드의 높이 계산
+│  │     ├─ highlightTreeNode.ts  # 트리 노드 하이라이트
+│  │     ├─ removeClickedNode.ts  # 클릭한 노드 제거
+│  │     └─ selectedNodeHeight.ts # 선택된 노드 높이 계산
 │  └─ styles/                     # 전역 스타일
+│     └─ index.css                # 전역 CSS
 ├─ package.json                   # 프로젝트 의존성
 ├─ tsconfig.json                  # TypeScript 설정
+├─ tsconfig.app.json              # Vite 앱 TypeScript 설정
+├─ tsconfig.node.json             # Node TypeScript 설정
 ├─ vite.config.ts                 # Vite 설정
-└─ CONVENTION.md                  # 개발 컨벤션
+├─ CONVENTION.md                  # 개발 컨벤션
+└─ index.html                     # HTML 엔트리
 
 ```
 
 ## 폴더 역할 상세 설명
 
 ### 1. public/
-- **data/**: 애플리케이션에서 사용하는 정적 데이터 파일
 - **models/**: 3D 모델 파일 (GLB 포맷)
   - `M-Next3.glb`: 기본으로 로드되는 냉장고 3D 모델
 
 ### 2. src/app/
 애플리케이션의 전체 구조와 라우팅을 관리합니다.
 - **App.tsx**: 메인 애플리케이션 컴포넌트, 페이지 전환 및 상태 관리
+- **App.css**: 앱 전역 스타일
 - **main.tsx**: React 애플리케이션의 진입점
-- **providers/**: React Context API나 상태 관리 라이브러리의 Provider 컴포넌트
-- **routes/**: 라우팅 설정 파일
 
 ### 3. src/pages/
 각 페이지에 해당하는 컴포넌트를 포함합니다.
@@ -96,7 +113,14 @@ lg-electronics-repair-3d/
   - `AnimationHistoryPanel.tsx`: 애니메이션 히스토리 패널 (생성된 애니메이션 관리)
   - `HierarchyPanel.tsx`: 노드 계층 패널 (3D 모델의 구조 표시)
   - `ManualEditorSidebar.tsx`: 에디터 사이드바 (파일 메뉴, 속성 관리)
+  - 각 컴포넌트별 CSS 스타일 파일 포함
+  - `index.ts`: 컴포넌트 인덱스 파일
 - **projects/**: 프로젝트 관리 페이지 컴포넌트
+  - `ProjectsFrame.tsx`: 프로젝트 프레임 (전체 레이아웃)
+  - `ProjectsHeader.tsx`: 프로젝트 헤더 (타이틀, 액션 버튼)
+  - `ProjectsTable.tsx`: 프로젝트 테이블 (목록 표시)
+  - `ProjectDetail.tsx`: 프로젝트 상세 정보
+  - `types.ts`: 프로젝트 관련 타입 정의
 
 #### 4.2 shared/
 여러 페이지에서 공용으로 사용되는 컴포넌트
@@ -105,38 +129,35 @@ lg-electronics-repair-3d/
   - `ModelViewer.tsx`: 3D 모델 렌더링 컴포넌트
   - `NodeHierarchy.tsx`: 3D 모델의 노드 계층 구조 컴포넌트
 
-### 5. src/features/
-Feature Sliced Design 패턴을 기반으로 기능별로 분할된 모듈
-- **animation/**: 애니메이션 생성, 관리, 편집 기능
-- **glb-upload/**: GLB 파일 업로드 및 처리 기능
-- **player/**: 애니메이션 플레이어 기능
-
-### 6. src/services/
+### 5. src/services/
 API 호출, AI 통신, 비즈니스 로직을 처리합니다.
 - **AnimatorAgent.ts**: AI 애니메이터 에이전트
   - Ollama API로 AI와 통신
   - 자연어 명령을 파싱하여 애니메이션 생성
   - 대화 상태 관리
+- **AnimationHistoryService.ts**: 애니메이션 히스토리 서비스
+  - 애니메이션 히스토리 저장/불러기
+  - 실행 취소/다시 실행 기능
 - **fridge/**: 냉장고 특화 서비스
   - `DamperAnimationService.ts`: 댐퍼 애니메이션 서비스
+  - `CameraMovementService.ts`: 카메라 이동 서비스 (시네마틱 카메라 워킹)
 
-### 7. src/shared/
+### 6. src/shared/
 UI 컴포넌트가 아닌 공용 코드
-- **hooks/**: 사용자 정의 React Hooks
 - **types/**: TypeScript 타입 정의
+  - `three-examples.d.ts`: Three.js 확장 타입 정의
 - **utils/**: 유틸리티 함수
-  - `commonUtils.ts`: 일반적인 유틸리티 함수
+  - `commonUtils.ts`: 일반적인 유틸리티 함수 (바운딩 박스 계산 등)
+  - `animationUtils.ts`: 애니메이션 관련 유틸리티
+  - `fridgeConstants.ts`: 냉장고 모델 상수 정의 (노드 이름, 애니메이션 파라미터)
   - `findNodeHeight.ts`: 3D 모델 노드의 높이 계산
-  - `highlightTreeNode.ts`: 트리 노드 하이라이트
-  - `removeClickedNode.ts`: 클릭한 노드 제거
+  - `highlightTreeNode.ts`: 트리 노드 하이라이트 처리
+  - `removeClickedNode.ts`: 클릭한 노드 제거 유틸리티
   - `selectedNodeHeight.ts`: 선택된 노드 높이 계산
 
-### 8. src/entities/
-도메인 엔티티를 관리합니다.
-- **glb/**: GLB 파일 관련 엔티티 (파일 구조, 메타데이터)
-
-### 9. src/styles/
+### 7. src/styles/
 전역 스타일과 CSS 변수를 관리합니다.
+- **index.css**: 전역 CSS 스타일 및 CSS 변수
 
 ## 주요 기능
 
