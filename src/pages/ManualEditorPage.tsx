@@ -3,7 +3,7 @@ import type { Object3D } from "three";
 import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { ModelViewer } from "@/components/shared/viewer";
-import { animatorAgent, type LLMResponse } from "@/services/AnimatorAgent";
+import { animatorAgent, type LLMResponse, AnimationAction } from "@/services/AnimatorAgent";
 import { AnimationHistoryService } from "@/services/AnimationHistoryService";
 import { ManualEditorSidebar } from "@/components/pages/manual-editor";
 import { AnimationHistoryPanel, type AnimationHistoryItem } from "@/components/pages/manual-editor";
@@ -72,12 +72,14 @@ const buildHistoryItem = (
         return "Open";
       case "close":
         return "Close";
-      case "detach":
-        return "Detach";
-      case "attach":
-        return "Attach";
-      default:
-        return actionLabel.replace(/_/g, " ");
+      case "camera_move":
+        return "Camera Move";
+      default: {
+        const label = String(actionLabel);
+        if (label === "detach") return "Detach";
+        if (label === "attach") return "Attach";
+        return label.replace(/_/g, " ");
+      }
     }
   })();
   const detailParts = [doorLabel.title, doorLabel.detail];

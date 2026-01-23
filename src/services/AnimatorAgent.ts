@@ -147,7 +147,8 @@ export const AnimationAction = {
   OPEN: 'open',
   CLOSE: 'close',
   SET_DEGREES: 'set_degrees',
-  SET_SPEED: 'set_speed'
+  SET_SPEED: 'set_speed',
+  CAMERA_MOVE: 'camera_move'
 } as const;
 
 export type AnimationAction = typeof AnimationAction[keyof typeof AnimationAction];
@@ -954,8 +955,24 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
         // Move camera to the left door damper node after damper animation
         if (this.cameraMovementService) {
-          console.log('this.cameraMovementService!!!');
           await this.cameraMovementService.moveCameraToLeftDoorDamper();
+
+          // 카메라 이동 히스토리 기록
+          const cameraMoveCommand: AnimationCommand = {
+            door: DoorType.TOP_LEFT,
+            action: AnimationAction.CAMERA_MOVE,
+            degrees: 0,
+            speed: 1
+          };
+          const cameraMessage = locale === 'ko'
+            ? '댐퍼 위치로 카메라 이동 완료'
+            : 'Camera moved to damper position';
+          if (this.animationHistoryService) {
+            console.log('[CAMERA-HISTORY] Recording camera movement to history');
+            this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
+          } else {
+            console.warn('[CAMERA-HISTORY] Animation history service not available');
+          }
         } else {
           console.log('CameraMovementService is not initialized');
         }

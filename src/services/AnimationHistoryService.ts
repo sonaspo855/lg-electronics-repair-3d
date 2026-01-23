@@ -74,12 +74,9 @@ export class AnimationHistoryService {
             }
         };
 
-        console.log('[DEBUG-HISTORY] Created item:', { id: item.id, title: item.title });
-
         this.history.push(item);
         this.saveToLocalStorage();
 
-        console.log('[DEBUG-HISTORY] History count after push:', this.history.length);
         console.log('Last items:', this.history.slice(-3).map(i => ({ id: i.id, title: i.title })));
 
         return item;
@@ -97,7 +94,8 @@ export class AnimationHistoryService {
             [AnimationAction.OPEN]: 'Open',
             [AnimationAction.CLOSE]: 'Close',
             [AnimationAction.SET_DEGREES]: 'Set Degrees',
-            [AnimationAction.SET_SPEED]: 'Set Speed'
+            [AnimationAction.SET_SPEED]: 'Set Speed',
+            [AnimationAction.CAMERA_MOVE]: 'Camera Move'
         };
 
         return `${actionNames[command.action]} ${doorNames[command.door]}`;

@@ -12,7 +12,8 @@ export const AnimationAction = {
     OPEN: 'open',
     CLOSE: 'close',
     SET_DEGREES: 'set_degrees',
-    SET_SPEED: 'set_speed'
+    SET_SPEED: 'set_speed',
+    CAMERA_MOVE: 'camera_move'
 } as const;
 
 export type AnimationAction = typeof AnimationAction[keyof typeof AnimationAction];
