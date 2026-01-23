@@ -2,11 +2,6 @@ import gsap from 'gsap';
 import { LEFT_DOOR_DAMPER_NODE_NAME } from '../../shared/utils/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
-import {
-    NodeCache,
-    createHighlightMaterial,
-    CinematicSequence
-} from '../../shared/utils/animationUtils';
 
 // ============================================================================
 // Camera movement options
@@ -27,7 +22,6 @@ export interface CameraMoveOptions {
 export class CameraMovementService {
     private cameraControls: any;
     private sceneRoot: THREE.Object3D | null = null;
-    private nodeCache: NodeCache = new NodeCache();
 
     constructor(cameraControls: any, sceneRoot?: THREE.Object3D) {
         this.cameraControls = cameraControls;
@@ -37,60 +31,31 @@ export class CameraMovementService {
     // Set scene root reference for node lookup
     public setSceneRoot(sceneRoot: THREE.Object3D): void {
         this.sceneRoot = sceneRoot;
-        this.nodeCache.clear();
     }
 
+    // Move camera to the left door damper node (for backward compatibility)
+    public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
+        const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
+
+        return this.moveCameraCinematic(LEFT_DOOR_DAMPER_NODE_NAME, {
+            duration: options.duration || 1000,
+            direction: options.direction || upwardDirection,
+            zoomRatio: options.zoomRatio || 3,
+            easing: options.easing || 'power3.inOut',
+            ...options
+        });
+    }
+
+    // Move camera to node (for backward compatibility)
     public async moveCameraToNode(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
         return this.moveCameraCinematic(nodeName, options);
     }
 
-    /**
-     * 특정 노드와 그 자식 메쉬들을 하이라이트 처리합니다.
-     */
-    public applyHighlight(nodeName: string, color: number = 0xffff00): void {
-        const targetNode = this.getNodeByName(nodeName);
-        if (!targetNode) {
-            console.warn(`Highlight failed: Node "${nodeName}" not found.`);
-            return;
-        }
-
-        console.log('Applying highlight to node:', targetNode.name);
-
-        const highlightMat = createHighlightMaterial(color);
-
-        let meshCount = 0;
-        targetNode.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                meshCount++;
-                if (!child.userData.originalMaterial) {
-                    child.userData.originalMaterial = child.material;
-                }
-                child.material = highlightMat;
-            }
-        });
-
-        console.log(`Applied highlight to ${meshCount} meshes`);
-    }
-
-    /**
-     * 노드에 적용된 하이라이트를 제거하고 원래 재질로 복구합니다.
-     */
-    public resetHighlight(nodeName: string): void {
-        const targetNode = this.getNodeByName(nodeName);
-        if (!targetNode) return;
-
-        targetNode.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.userData.originalMaterial) {
-                child.material = child.userData.originalMaterial;
-                delete child.userData.originalMaterial;
-            }
-        });
-    }
-
+    // Move camera to upward view (for backward compatibility)
     public async moveCameraToUpwardView(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
         const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
 
-        return this.moveCameraToNode(nodeName, {
+        return this.moveCameraCinematic(nodeName, {
             ...options,
             direction: options.direction || upwardDirection,
             zoomRatio: options.zoomRatio || 3,
@@ -103,8 +68,6 @@ export class CameraMovementService {
      * 1) 직선 접근 -> 2) 막바지 급격한 하강(Drop) -> 3) 로우 앵글(Low Angle)
      */
     public async moveCameraCinematic(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
-        console.log('🎬 moveCameraCinematic:', nodeName);
-
         const targetNode = this.getNodeByName(nodeName);
         if (!targetNode) {
             console.error('Target node not found:', nodeName);
@@ -136,13 +99,8 @@ export class CameraMovementService {
         // 목적지 계산
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
 
-        // [수정] 특정 노드(왼쪽 도어 댐퍼 등)에 대해 항상 일관된 뷰(왼쪽 출력)를 제공하도록 방향 강제
+        // 특정 노드(왼쪽 도어 댐퍼)에 대해 일관된 뷰를 제공하도록 방향 강제
         if (nodeName === LEFT_DOOR_DAMPER_NODE_NAME && !options.direction) {
-            // 모델의 로컬 좌표계나 월드 좌표계 기준에 따라 다르지만, 
-            // 이미지를 통해 확인된 '왼쪽 출력'을 위해 X축 방향을 조정합니다.
-            // 기존 (0, -1, 0)에서 약간의 X축 오프셋을 주어 카메라가 오른쪽에서 왼쪽을 바라보게 하거나 그 반대를 설정합니다.
-            // 사용자가 원하는 '왼쪽 출력'은 객체가 화면의 왼쪽에 위치하는 것이 아니라, 
-            // 특정 방향에서 바라본 일관된 뷰를 의미하는 것으로 보입니다.
             direction = new THREE.Vector3(0.5, -1, 0.5).normalize();
         }
 
@@ -261,169 +219,15 @@ export class CameraMovementService {
                 }
             });
         });
-
-        console.log('✅ moveCameraCinematic 완료');
     }
 
-    /**
-     * [GSAP Timeline 기반] 분해 카메라 시퀀스
-     * 커버 -> 레버 -> 힌지 순으로 카메라 추적
-     */
-    public async playDisassemblyCameraSequence(): Promise<void> {
-        console.log('🎬 playDisassemblyCameraSequence 시작');
-
-        const sequence = new CinematicSequence();
-        const camera = this.cameraControls.camera || this.cameraControls.object;
-
-        // 1단계: 도어 커버 집중
-        await this.moveCameraToNode("Door_Cover", {
-            duration: 1200,
-            zoomRatio: 2,
-            easing: 'power2.inOut'
-        });
-
-        // 2단계: 레버 분리 - 올려다보는 시점
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await this.moveCameraToUpwardView("Lever_Part", {
-            duration: 1500,
-            zoomRatio: 1.5,
-            easing: 'power3.inOut'
-        });
-
-        // 3단계: 힌지 분리 시점
-        await this.moveCameraToNode("Hinge_Assembly", {
-            duration: 1000,
-            zoomRatio: 1.2,
-            easing: 'power2.inOut'
-        });
-
-        console.log('✅ playDisassemblyCameraSequence 완료');
-    }
-
-    /**
-     * [GSAP Timeline 활용] 커스텀 시네마틱 시퀀스
-     */
-    public createCinematicSequence(): CinematicSequence {
-        return new CinematicSequence();
-    }
-
-    // Find a node by name in the scene (with caching)
+    // Find a node by name in the scene
     private getNodeByName(nodeName: string): THREE.Object3D | null {
         if (!this.sceneRoot) {
             console.error('Scene root not available for node lookup');
             return null;
         }
 
-        return this.nodeCache.findNodeByName(this.sceneRoot, nodeName);
-    }
-
-    // Default camera movement parameters
-    private static readonly DEFAULT_DAMPER_DURATION = 1000;
-
-    // Move camera to the left door damper node
-    public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
-        console.log('🎬 moveCameraToLeftDoorDamper');
-
-        await this.moveCameraToUpwardView(LEFT_DOOR_DAMPER_NODE_NAME, {
-            duration: options.duration || 1000,
-            ...options
-        });
-
-        // 대상 노드를 하이라이트 처리
-        this.applyHighlight(LEFT_DOOR_DAMPER_NODE_NAME);
-    }
-
-    /**
-     * [단순화된 API] 지정된 위치로 카메라 이동
-     */
-    public async moveTo(
-        position: THREE.Vector3,
-        target: THREE.Vector3,
-        options: CameraMoveOptions = {}
-    ): Promise<void> {
-        const camera = this.cameraControls.camera || this.cameraControls.object;
-        if (!camera) return;
-
-        const duration = (options.duration || 1500) / 1000;
-        const easing = options.easing || 'power2.out';
-
-        // Damping 비활성화
-        const originalDamping = this.cameraControls.enableDamping;
-        this.cameraControls.enableDamping = false;
-
-        await new Promise<void>((resolve) => {
-            gsap.to(camera.position, {
-                x: position.x,
-                y: position.y,
-                z: position.z,
-                duration,
-                ease: easing,
-                onUpdate: () => {
-                    this.cameraControls.target.lerp(target, 0.1);
-                    this.cameraControls.update();
-                },
-                onComplete: () => {
-                    this.cameraControls.target.copy(target);
-                    this.cameraControls.update();
-                    this.cameraControls.enableDamping = originalDamping;
-                    resolve();
-                }
-            });
-        });
-    }
-
-    // CameraMovementService.ts
-
-    public async zoomTo(
-        zoomRatio: number,
-        options: CameraMoveOptions = {}
-    ): Promise<void> {
-        const camera = this.cameraControls.camera || this.cameraControls.object;
-        if (!camera) return;
-
-        // [필수] 애니메이션 시작 전 최신 월드 행렬 강제 업데이트
-        this.sceneRoot?.updateMatrixWorld(true);
-        const targetBox = getPreciseBoundingBox(this.sceneRoot!);
-        const targetCenter = new THREE.Vector3();
-        targetBox.getCenter(targetCenter);
-
-        const fixedDirection = options.direction || new THREE.Vector3(1, 0.5, 1).normalize();
-        const currentDistance = camera.position.distanceTo(targetCenter);
-        const targetDistance = currentDistance / zoomRatio;
-
-        // [개선] 현재 카메라의 방향이 아닌, '고정된 시점' 기준의 오른쪽 벡터 계산
-        // 월드 Up(0, 1, 0)과 fixedDirection을 외적하여 항상 일관된 가로 오프셋 방향 산출
-        const worldUp = new THREE.Vector3(0, 1, 0);
-        const sideVector = new THREE.Vector3().crossVectors(fixedDirection, worldUp).normalize();
-
-        // 객체를 화면 왼쪽에 두기 위해 타겟(시선)을 오른쪽으로 이동 (값은 바운딩 박스 크기에 비례 권장)
-        const boxSize = new THREE.Vector3();
-        targetBox.getSize(boxSize);
-        const horizontalOffset = sideVector.multiplyScalar(boxSize.x * 0.5);
-
-        const finalTarget = targetCenter.clone().add(horizontalOffset);
-        const targetPos = finalTarget.clone().add(fixedDirection.clone().multiplyScalar(targetDistance));
-
-        // GSAP 실행 전 Damping 일시 정지
-        const originalDamping = this.cameraControls.enableDamping;
-        this.cameraControls.enableDamping = false;
-
-        return new Promise((resolve) => {
-            gsap.to(camera.position, {
-                x: targetPos.x,
-                y: targetPos.y,
-                z: targetPos.z,
-                duration: (options.duration || 1000) / 1000,
-                ease: options.easing || 'power3.inOut',
-                onUpdate: () => {
-                    this.cameraControls.target.copy(finalTarget);
-                    this.cameraControls.update();
-                },
-                onComplete: () => {
-                    this.cameraControls.enableDamping = originalDamping;
-                    resolve();
-                }
-            });
-        });
+        return this.sceneRoot.getObjectByName(nodeName) || null;
     }
 }
