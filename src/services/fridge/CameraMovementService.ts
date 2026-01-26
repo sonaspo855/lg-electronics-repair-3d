@@ -232,6 +232,13 @@ export class CameraMovementService {
                     this.cameraControls.smoothTime = originalSmoothTime;
 
                     // 카메라 이동 완료 후 노드 하이라이트
+                    const nodeColors = [
+                        0xffff00, // 녹색 (Cover Body)
+                        0xff0000, // 빨간색 (Damper Assembly)
+                        0x0000ff, // 파란색 (Screw 1)
+                        0xffff00  // 노란색 (Screw 2)
+                    ];
+
                     LEFT_DOOR_NODES.forEach((nodeName, index) => {
                         const node = this.getNodeByName(nodeName);
                         if (node && camera) {
@@ -239,7 +246,7 @@ export class CameraMovementService {
                             findNodeHeight(this.sceneRoot || node, camera, this.cameraControls, {
                                 highlightNodeName: nodeName,
                                 matchMode: 'equals',
-                                boxColor: 0x00ff00,
+                                boxColor: nodeColors[index],
                                 append: index > 0
                             });
                         }

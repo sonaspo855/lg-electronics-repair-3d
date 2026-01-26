@@ -3,7 +3,7 @@ import { invalidate } from '@react-three/fiber';
 import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
 const HighlightNode = 'ACV74674704_Damper_Assembly_10813';
 
-const highlightMaterial = createHighlightMaterial(0xff0000, 0.3);
+// const highlightMaterial = createHighlightMaterial(0xff0000, 0.3);
 
 type FindNodeHeightState = {
     helper?: THREE.Box3Helper;
@@ -64,6 +64,8 @@ export const findNodeHeight = (
     const boxColor = options?.boxColor ?? 0xffff00;
     const append = options?.append ?? false;
 
+    const dynamicHighlightMaterial = createHighlightMaterial(boxColor, 0.3);  // 노드 전용 하이라이트 재질 생성
+
     if (!append) {
         clearPrevious(root);
     }
@@ -91,7 +93,7 @@ export const findNodeHeight = (
                 if (!child.userData.originalMaterial) {
                     child.userData.originalMaterial = child.material;
                 }
-                child.material = highlightMaterial;
+                child.material = dynamicHighlightMaterial;  // 공통 재질이 아닌, 방금 생성한 dynamicHighlightMaterial 적용
                 child.renderOrder = 99999;
                 meshes.push(child);
             }
