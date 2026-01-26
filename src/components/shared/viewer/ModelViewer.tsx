@@ -209,10 +209,10 @@ function CameraManager({
     }
 
     // 초기 렌더링 시 HighlightNode를 하이라이트
-    findNodeHeight(scene, camera as THREE.PerspectiveCamera, {
+    /* findNodeHeight(scene, camera as THREE.PerspectiveCamera, {
       target: controlsRef.current?.target || new THREE.Vector3(0, 0, 0),
       update: () => controlsRef.current?.update(),
-    });
+    }); */
 
     highlightedRef.current = true;
   }, [scene, camera, controlsRef]);
