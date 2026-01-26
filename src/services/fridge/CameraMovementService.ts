@@ -232,26 +232,40 @@ export class CameraMovementService {
                     this.cameraControls.smoothTime = originalSmoothTime;
 
 
-                    // 카메라 이동 완료 후 노드 하이라이트
+                    // 카메라 이동 완료 후 노드 하이라이트 (Emissive 방식)
                     const nodeColors = [
-                        0xffff00, // 녹색 (Cover Body)
-                        0xff0000, // 빨간색 (Damper Assembly)
-                        0x0000ff, // 파란색 (Screw 1)
-                        0xffff00  // 노란색 (Screw 2)
+                        0x325311, // 녹색 (Cover Body) - 발광 효과를 위해 채도를 높인 값 권장
+                        0xff3333, // 빨간색 (Damper Assembly)
+                        0x3333ff, // 파란색 (Screw 1)
+                        0xffff33  // 노란색 (Screw 2)
                     ];
 
                     LEFT_DOOR_NODES.forEach((nodeName, index) => {
                         if (index > 1) return; // 0번째, 1번째 인덱스만 색상 적용
 
                         const node = this.getNodeByName(nodeName);
-                        if (node && camera) {
-                            console.log(`[Highlight] Target: ${nodeName}`);
-                            findNodeHeight(this.sceneRoot || node, camera, this.cameraControls, {
-                                highlightNodeName: nodeName,
-                                matchMode: 'equals',
-                                boxColor: nodeColors[index],
-                                append: index > 0
+                        if (node) {
+                            console.log(`[Highlight - Emissive] Target: ${nodeName}`);
+
+                            // 노드 내부의 모든 Mesh를 탐색하여 재질 수정
+                            node.traverse((child) => {
+                                if (child instanceof THREE.Mesh) {
+                                    // 1. 재질이 배열인 경우와 단일 객체인 경우 모두 대응
+                                    if (Array.isArray(child.material)) {
+                                        child.material = child.material.map(mat => {
+                                            // 재질을 복제하여 다른 노드와 연결을 끊음
+                                            const newMat = mat.clone();
+                                            this.applyEmissive(newMat, nodeColors[index]);
+                                            return newMat;
+                                        });
+                                    } else {
+                                        // 단일 재질 복제 및 적용
+                                        child.material = child.material.clone();
+                                        this.applyEmissive(child.material, nodeColors[index]);
+                                    }
+                                }
                             });
+
                         }
                     });
 
@@ -263,6 +277,15 @@ export class CameraMovementService {
                 }
             });
         });
+    }
+
+    // Helper 함수 (가독성을 위해 분리)
+    private applyEmissive(material: THREE.Material, color: number) {
+        if ('emissive' in material) {
+            (material as any).emissive.setHex(color);
+            (material as any).emissiveIntensity = 0.8;
+            material.needsUpdate = true;
+        }
     }
 
     // Find a node by name in the scene
