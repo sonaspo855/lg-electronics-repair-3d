@@ -294,7 +294,7 @@ export default function ModelViewer({
   );
   const [sceneRoot, setSceneRoot] = useState<THREE.Object3D | null>(null);
 
-  // 추가된 코드 - sceneRoot가 null이 아닐 때만 생성
+
   const assemblyService = useMemo(() => {
     if (!sceneRoot) return null;
     return new PartAssemblyService(sceneRoot);
@@ -302,11 +302,9 @@ export default function ModelViewer({
 
   const handleStartManual = () => {
     if (!assemblyService) {
-      console.log('aaaaaaa');
       return;
     };
 
-    console.log('bbbbbb');
     assemblyService.prepareManualAssembly(LEFT_DOOR_DAMPER_COVER_BODY_NODE, LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
   };
 
