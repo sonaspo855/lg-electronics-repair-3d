@@ -33,45 +33,71 @@ export class PartAssemblyService {
     public async animateLinearAssembly(
         sourceNodeName: string,
         targetNodeName: string,
-        duration: number = 1.5
+        options: AssemblyOptions = {}
     ): Promise<void> {
-        console.log('animateLinearAssembly>> ', sourceNodeName, targetNodeName);
+        // 기본값 설정
+        const config = {
+            duration: options.duration || 1500,
+            easing: options.easing || 'power2.inOut',
+            ...options
+        };
+
+        console.log('[Assembly] animateLinearAssembly 시작:', { sourceNodeName, targetNodeName, config });
+
         const sourceNode = this.sceneRoot.getObjectByName(sourceNodeName);
         const targetNode = this.sceneRoot.getObjectByName(targetNodeName);
 
         if (!sourceNode || !targetNode) {
-            console.error('노드를 찾을 수 없습니다.');
+            console.error('[Assembly] 노드를 찾을 수 없습니다:', {
+                source: sourceNodeName,
+                target: targetNodeName,
+                sourceFound: !!sourceNode,
+                targetFound: !!targetNode
+            });
             return;
         }
 
+        // 원래 위치 저장 (되돌리기용)
+        if (!this.originalPositions.has(sourceNodeName)) {
+            this.originalPositions.set(sourceNodeName, sourceNode.position.clone());
+        }
+
         // 1. 대상 노드(홈)의 월드 좌표 중심점 계산
-        const targetBox = getPreciseBoundingBox(targetNode);
-        const targetWorldPos = new THREE.Vector3();
-        targetBox.getCenter(targetWorldPos);
+        const targetWorldCenter = CoordinateTransformUtils.getWorldCenter(targetNode);
 
         // 2. 월드 좌표를 소스 노드의 부모 기준 로컬 좌표로 변환
-        // (소스 노드가 어떤 계층에 있더라도 정확한 위치로 이동하기 위함)
         const targetLocalPos = sourceNode.parent
-            ? sourceNode.parent.worldToLocal(targetWorldPos.clone())
-            : targetWorldPos;
+            ? CoordinateTransformUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
+            : targetWorldCenter;
 
-        // 3. GSAP를 이용한 선형 이동 애니메이션 실행
+        // 3. GSAP Timeline 생성 및 실행
+        this.timeline = gsap.timeline({
+            onStart: () => {
+                this.isAnimating = true;
+                console.log(`[Assembly] ${sourceNodeName} 선형 조립 시작`);
+            },
+            onComplete: () => {
+                this.isAnimating = false;
+                console.log(`[Assembly] ${sourceNodeName} 선형 조립 완료`);
+                config.onComplete?.();
+            }
+        });
+
+        this.timeline.to(sourceNode.position, {
+            x: targetLocalPos.x,
+            y: targetLocalPos.y,
+            z: targetLocalPos.z,
+            duration: config.duration / 1000,
+            ease: config.easing,
+            onUpdate: () => {
+                const progress = this.timeline?.progress() || 0;
+                config.onProgress?.(progress);
+            }
+        });
+
         return new Promise((resolve) => {
-            gsap.to(sourceNode.position, {
-                x: targetLocalPos.x,
-                y: targetLocalPos.y,
-                z: targetLocalPos.z,
-                duration: duration,
-                ease: "power2.inOut", // 자연스러운 시작과 끝을 위한 이징
-                onStart: () => {
-                    this.isAnimating = true;
-                    console.log(`[Assembly] ${sourceNodeName} 조립 시작`);
-                },
-                onComplete: () => {
-                    this.isAnimating = false;
-                    console.log(`[Assembly] ${sourceNodeName} 조립 완료`);
-                    resolve();
-                }
+            this.timeline?.eventCallback('onComplete', () => {
+                resolve();
             });
         });
     }
