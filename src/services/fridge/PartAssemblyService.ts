@@ -30,6 +30,54 @@ export class PartAssemblyService {
     }
 
     /**
+ * PartAssemblyService.ts 추가/수정 부분
+ */
+
+    // 1. 수동 조립 준비 (타임라인만 생성하고 일시정지)
+    public prepareManualAssembly(
+        sourceNodeName: string,
+        targetNodeName: string,
+        options: AssemblyOptions = {}
+    ): void {
+        console.log('ccccccc');
+        const sourceNode = this.sceneRoot.getObjectByName(sourceNodeName);
+        const targetNode = this.sceneRoot.getObjectByName(targetNodeName);
+
+        console.log('sourceNode>> ', sourceNode);
+        console.log('targetNode>> ', targetNode);
+        if (!sourceNode || !targetNode) return;
+
+        // 타겟 위치 계산 (기존 로직 활용)
+        const targetWorldCenter = CoordinateTransformUtils.getWorldCenter(targetNode);
+        const targetLocalPos = sourceNode.parent
+            ? CoordinateTransformUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
+            : targetWorldCenter;
+
+        // 타임라인 생성 및 즉시 정지(paused: true)
+        this.timeline = gsap.timeline({ paused: true });
+        this.isAnimating = true;
+
+        this.timeline.to(sourceNode.position, {
+            x: targetLocalPos.x,
+            y: targetLocalPos.y,
+            duration: 1, // progress(0~1) 계산을 쉽게 하기 위해 1초로 설정
+            ease: 'none', // 수동 제어 시에는 linear가 가장 직관적임
+            onUpdate: () => {
+                options.onProgress?.(this.timeline?.progress() || 0);
+            }
+        });
+    }
+
+    // 2. 외부 입력(마우스/슬라이더)에 따른 진행률 업데이트
+    public updateManualProgress(progress: number): void {
+        if (this.timeline) {
+            // 0~1 사이 값으로 클램핑하여 타임라인 위치 이동
+            const clampedProgress = Math.min(Math.max(progress, 0), 1);
+            this.timeline.progress(clampedProgress);
+        }
+    }
+
+    /**
      * 부품을 타겟 위치로 조립
      * 
      * @param sourceNodeName 이동할 부품 노드 이름

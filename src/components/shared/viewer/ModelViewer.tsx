@@ -6,6 +6,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils";
 import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 import { animatorAgent } from "../../../services/AnimatorAgent";
+import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
 import "./ModelViewer.css";
 
 const DEFAULT_MODEL = "/models/M-Next3.glb";
@@ -18,6 +19,13 @@ const REMOVE_NODE_NAME = "5210JA3030J_Tube,Plastic";
 const BUCKET_NODE_NAME = "AKC73369920_Bucket_Assembly,Ice";
 const LEFT_DOOR_LOWER_ANCHOR_NAME = "MBJ42493801_Cam,Locker_14466001";
 const LEFT_DOOR_LOWER_SHAFT_NAME = "AEH36821925_Hinge_Assembly,Center_183656_SHAFT";
+
+import {
+  LEFT_DOOR_DAMPER_COVER_BODY_NODE,
+  LEFT_DOOR_DAMPER_ASSEMBLY_NODE
+} from '../../../shared/utils/fridgeConstants';
+
+
 type DoorState = {
   isOpen: boolean;
   degrees: number;
@@ -285,6 +293,28 @@ export default function ModelViewer({
     [allowDefaultModel, modelPath]
   );
   const [sceneRoot, setSceneRoot] = useState<THREE.Object3D | null>(null);
+
+  // 추가된 코드 - sceneRoot가 null이 아닐 때만 생성
+  const assemblyService = useMemo(() => {
+    if (!sceneRoot) return null;
+    return new PartAssemblyService(sceneRoot);
+  }, [sceneRoot]);
+
+  const handleStartManual = () => {
+    if (!assemblyService) {
+      console.log('aaaaaaa');
+      return;
+    };
+
+    console.log('bbbbbb');
+    assemblyService.prepareManualAssembly(LEFT_DOOR_DAMPER_COVER_BODY_NODE, LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
+  };
+
+  const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!assemblyService) return;
+    const value = parseFloat(e.target.value); // 0 ~ 1 사이의 값
+    assemblyService.updateManualProgress(value);
+  };
   const [isLoading, setIsLoading] = useState(true);
   const controlsRef = useRef<any>(null);
   const cameraProps = useMemo(
@@ -605,6 +635,55 @@ export default function ModelViewer({
             <span className="viewer-loading-dot" />
           </div>
           <div className="viewer-loading-text">Loading 3D model...</div>
+        </div>
+      )}
+      {/* 수동 조립 컨트롤 패널 */}
+      {sceneRoot && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          padding: '15px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+          zIndex: 1000
+        }}>
+          <div style={{ marginBottom: '10px', fontWeight: 'bold', color: 'black' }}>
+            수동 조립 제어
+          </div>
+          <button
+            onClick={handleStartManual}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginBottom: '10px'
+            }}
+          >
+            조립 준비
+          </button>
+          <div style={{ marginBottom: '5px', color: 'black' }}>
+            진행률: <span id="progress-value">0</span>%
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            onChange={(e) => {
+              onSliderChange(e);
+              const value = Math.round(parseFloat(e.target.value) * 100);
+              const progressElement = document.getElementById('progress-value');
+              if (progressElement) {
+                progressElement.textContent = value.toString();
+              }
+            }}
+            style={{ width: '100%' }}
+          />
         </div>
       )}
       <Canvas
