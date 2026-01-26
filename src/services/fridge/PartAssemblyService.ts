@@ -113,7 +113,7 @@ export class PartAssemblyService {
         this.timeline.to(sourceNode.position, {
             x: targetLocalPos.x,
             y: targetLocalPos.y,
-            z: targetLocalPos.z,
+            z: 0,
             duration: config.duration / 1000,
             ease: config.easing, // 'linear' 또는 'power3.inOut' 등 옵션에 따름
             onUpdate: () => {
