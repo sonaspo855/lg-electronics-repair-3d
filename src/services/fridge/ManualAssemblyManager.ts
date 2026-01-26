@@ -139,37 +139,58 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * [New] 댐퍼 커버 조립 실행 함수
-     * 계획서의 요구사항: 왼쪽 돌출부를 오른쪽 홈에 삽입
+     * 댐퍼 커버 조립 (충돌 방지 로직 적용)
      */
     public async assembleDamperCover(options?: {
         duration?: number;
         onComplete?: () => void;
     }): Promise<void> {
-        console.log('assembleDamperCover!!!');
-        if (!this.partAssemblyService || !this.sceneRoot) {
-            console.warn('[ManualAssemblyManager] 서비스가 초기화되지 않았습니다.');
-            return;
-        }
+        if (!this.partAssemblyService || !this.sceneRoot) return;
 
-        console.log('[ManualAssemblyManager] 댐퍼 커버 조립 애니메이션 시작');
+        console.log('[ManualAssemblyManager] 댐퍼 커버 조립 시작 (충돌 방지 모드)');
 
-        try {
-            await this.partAssemblyService.animateLinearAssembly(
-                LEFT_DOOR_DAMPER_COVER_BODY_NODE, // Source: 커버 바디
-                LEFT_DOOR_DAMPER_ASSEMBLY_NODE,   // Target: 댐퍼 어셈블리
-                {
-                    duration: options?.duration || 1500,
-                    slotOffset: DAMPER_COVER_SLOT_OFFSET, // 오프셋 적용
-                    easing: "power2.out", // 부드러운 감속 효과
-                    onComplete: () => {
-                        console.log('[ManualAssemblyManager] 조립 완료');
-                        options?.onComplete?.();
-                    }
-                }
-            );
-        } catch (error) {
-            console.error('[ManualAssemblyManager] 조립 중 오류 발생:', error);
+        // 1. [Lifting Step] ASSEMBLY 노드를 살짝 들어올려 공간 확보
+        // 예: Y축으로 5cm (0.05) 들어올림. 축 방향은 실제 모델 좌표계에 맞춰 조정 필요
+        const LIFT_OFFSET = new THREE.Vector3(0, 0.15, 0);
+        console.log('LIFT_OFFSET>>  ', LIFT_OFFSET);
+
+        await this.partAssemblyService.movePartRelative(
+            LEFT_DOOR_DAMPER_ASSEMBLY_NODE,
+            LIFT_OFFSET,
+            2000 // 2초 동안 리프팅
+        );
+
+        // 2. [Assembly Step] COVER 노드 선형 이동 (기존 조립 로직)
+        // 기존의 assemblePart 혹은 animateLinearAssembly 호출
+        // *참고: 만약 assemblePart가 내부적으로 좌표를 강제 설정한다면, 
+        //  PartAssemblyService 내에서 상대 좌표 계산이 필요할 수 있습니다.
+        //  여기서는 기존 로직이 '목표 위치로 이동'한다고 가정합니다.
+
+        // 커버 이동
+        await this.partAssemblyService.assemblePart(
+            LEFT_DOOR_DAMPER_COVER_BODY_NODE,
+            LEFT_DOOR_DAMPER_ASSEMBLY_NODE, // 타겟 노드
+            {
+                duration: options?.duration || 1000,
+                // 리프팅 된 상태의 ASSEMBLY 노드 위치로 갈 것인지, 
+                // 원래 정위치로 갈 것인지에 따라 파라미터 조정 필요
+            }
+        );
+
+        // (선택 사항) 3. [Settling Step] 들어올렸던 ASSEMBLY 노드를 다시 원위치로 내리기
+        // 두 부품이 결합된 후 같이 내려가야 한다면 이 단계가 필요합니다.
+        /*
+        await this.partAssemblyService.movePartRelative(
+            LEFT_DOOR_DAMPER_ASSEMBLY_NODE, 
+            LIFT_OFFSET.clone().negate(), // 반대 방향으로 이동
+            500
+        );
+        */
+
+        console.log('[ManualAssemblyManager] 댐퍼 커버 조립 완료');
+
+        if (options?.onComplete) {
+            options.onComplete();
         }
     }
 }

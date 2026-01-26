@@ -456,4 +456,40 @@ export class PartAssemblyService {
     public getOriginalPosition(nodeName: string): THREE.Vector3 | null {
         return this.originalPositions.get(nodeName) || null;
     }
+
+    /**
+ * 특정 노드를 현재 위치에서 상대적으로 이동시킵니다.
+ * @param nodeName 대상 노드 이름
+ * @param offset 이동할 벡터 (Vector3)
+ * @param duration 애니메이션 시간 (ms)
+ */
+    public async movePartRelative(
+        nodeName: string,
+        offset: THREE.Vector3,
+        duration: number = 500
+    ): Promise<void> {
+        const node = this.sceneRoot.getObjectByName(nodeName);
+        if (!node) {
+            console.warn(`[Assembly] 노드를 찾을 수 없음: ${nodeName}`);
+            return;
+        }
+
+        // 목표 위치 계산 (현재 위치 + 오프셋)
+        const targetPos = node.position.clone().add(offset);
+
+        // 중요: Promise를 반환해야 ManualAssemblyManager에서 'await'가 작동합니다.
+        return new Promise((resolve) => {
+            gsap.to(node.position, {
+                x: targetPos.x,
+                y: targetPos.y,
+                z: targetPos.z,
+                duration: duration / 1000,
+                ease: "power2.out",
+                onComplete: () => {
+                    console.log(`[Assembly] ${nodeName} 리프팅 완료`);
+                    resolve();
+                }
+            });
+        });
+    }
 }
