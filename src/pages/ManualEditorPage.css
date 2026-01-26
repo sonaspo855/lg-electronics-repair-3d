@@ -66,8 +66,62 @@
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
 }
 
-.viewer-hierarchy-toggle:hover {
+.viewer-reset-btn {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1b1013;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.viewer-reset-btn:hover {
   background: rgba(255, 255, 255, 0.9);
+}
+
+.viewer-assemble-btn {
+  border: 1px solid rgba(0, 128, 0, 0.5);
+  background: rgba(0, 200, 0, 0.2);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1b1013;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.viewer-assemble-btn:hover:not(:disabled) {
+  background: rgba(0, 200, 0, 0.4);
+}
+
+.viewer-assemble-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.viewer-disassemble-btn {
+  border: 1px solid rgba(128, 0, 0, 0.5);
+  background: rgba(200, 0, 0, 0.2);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1b1013;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.viewer-disassemble-btn:hover:not(:disabled) {
+  background: rgba(200, 0, 0, 0.4);
+}
+
+.viewer-disassemble-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .viewer-tag {

@@ -7,6 +7,7 @@ import { animatorAgent, type LLMResponse, AnimationAction } from "@/services/Ani
 import { AnimationHistoryService } from "@/services/AnimationHistoryService";
 import { ManualEditorSidebar } from "@/components/pages/manual-editor";
 import { AnimationHistoryPanel, type AnimationHistoryItem } from "@/components/pages/manual-editor";
+import { DamperAssemblyService, getDamperAssemblyService } from "@/services/fridge/DamperAssemblyService";
 import "./ManualEditorPage.css";
 
 type ManualEditorPageProps = {
@@ -227,6 +228,9 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const animationHistoryService = useMemo(() => new AnimationHistoryService(), []);
+  const [damperAssemblyService, setDamperAssemblyService] = useState<DamperAssemblyService | null>(null);
+  const [isAssemblyPlaying, setIsAssemblyPlaying] = useState(false);
+  const [assemblyProgress, setAssemblyProgress] = useState(0);
 
   // 로컬 스토리지에서 히스토리 로드
   useEffect(() => {
@@ -513,6 +517,22 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     mixerRef.current = null;
   }, [sceneRoot]);
 
+  // DamperAssemblyService 초기화
+  useEffect(() => {
+    if (sceneRoot) {
+      const service = getDamperAssemblyService();
+      service.initialize(sceneRoot);
+      setDamperAssemblyService(service);
+      console.log('[ManualEditor] DamperAssemblyService 초기화 완료');
+
+      return () => {
+        service.dispose();
+        setDamperAssemblyService(null);
+        console.log('[ManualEditor] DamperAssemblyService 정리 완료');
+      };
+    }
+  }, [sceneRoot]);
+
   useEffect(() => {
     handlePauseTimeline();
     if (mixerRef.current) {
@@ -579,6 +599,69 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     const didReset = animatorAgent.resetDoors(0.5);
     if (didReset) {
       setSelectedNode(null);
+    }
+  };
+
+  // 댐퍼 커버 조립
+  const handleAssembleDamperCover = async () => {
+    if (!damperAssemblyService) {
+      console.error('[ManualEditor] DamperAssemblyService가 초기화되지 않음');
+      return;
+    }
+
+    if (damperAssemblyService.isPlaying()) {
+      console.warn('[ManualEditor] 애니메이션이 이미 실행 중');
+      return;
+    }
+
+    console.log('[ManualEditor] 댐퍼 커버 조립 시작');
+    setIsAssemblyPlaying(true);
+
+    try {
+      await damperAssemblyService.assembleDamperCover({
+        duration: 2500,
+        liftHeight: 2.0,
+        snapThreshold: 0.2,
+        onComplete: () => {
+          console.log('[ManualEditor] 댐퍼 커버 조립 완료');
+          setIsAssemblyPlaying(false);
+          setAssemblyProgress(0);
+        }
+      });
+    } catch (error) {
+      console.error('[ManualEditor] 조립 실패:', error);
+      setIsAssemblyPlaying(false);
+    }
+  };
+
+  // 댐퍼 커버 분해
+  const handleDisassembleDamperCover = async () => {
+    if (!damperAssemblyService) {
+      console.error('[ManualEditor] DamperAssemblyService가 초기화되지 않음');
+      return;
+    }
+
+    if (damperAssemblyService.isPlaying()) {
+      console.warn('[ManualEditor] 애니메이션이 이미 실행 중');
+      return;
+    }
+
+    console.log('[ManualEditor] 댐퍼 커버 분해 시작');
+    setIsAssemblyPlaying(true);
+
+    try {
+      await damperAssemblyService.disassembleDamperCover({
+        duration: 1500,
+        liftHeight: 1.5,
+        onComplete: () => {
+          console.log('[ManualEditor] 댐퍼 커버 분해 완료');
+          setIsAssemblyPlaying(false);
+          setAssemblyProgress(0);
+        }
+      });
+    } catch (error) {
+      console.error('[ManualEditor] 분해 실패:', error);
+      setIsAssemblyPlaying(false);
     }
   };
 
@@ -658,16 +741,42 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
               onNodeSelect={setSelectedNode}
               allowDefaultModel={false}
               overlay={
-                <button
-                  className="viewer-reset-btn"
-                  type="button"
-                  onClick={handleResetViewer}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onTouchStart={(event) => event.stopPropagation()}
-                >
-                  Reset
-                </button>
+                <>
+                  <button
+                    className="viewer-reset-btn"
+                    type="button"
+                    onClick={handleResetViewer}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onTouchStart={(event) => event.stopPropagation()}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    className="viewer-assemble-btn"
+                    type="button"
+                    onClick={handleAssembleDamperCover}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onTouchStart={(event) => event.stopPropagation()}
+                    disabled={isAssemblyPlaying}
+                    style={{ marginLeft: '8px' }}
+                  >
+                    {isAssemblyPlaying ? '조립중...' : '조립'}
+                  </button>
+                  <button
+                    className="viewer-disassemble-btn"
+                    type="button"
+                    onClick={handleDisassembleDamperCover}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onTouchStart={(event) => event.stopPropagation()}
+                    disabled={isAssemblyPlaying}
+                    style={{ marginLeft: '8px' }}
+                  >
+                    {isAssemblyPlaying ? '분해중...' : '분해'}
+                  </button>
+                </>
               }
             />
           </div>
