@@ -150,8 +150,8 @@ export class ManualAssemblyManager {
         console.log('[ManualAssemblyManager] 댐퍼 커버 조립 시작 (충돌 방지 모드)');
 
         // 1. [Lifting Step] ASSEMBLY 노드를 살짝 들어올려 공간 확보
-        // 예: Y축으로 5cm (0.05) 들어올림. 축 방향은 실제 모델 좌표계에 맞춰 조정 필요
-        const LIFT_OFFSET = new THREE.Vector3(0, 0.15, 0);
+        // 모델 좌표계에 따라 Y축(0, 0.15, 0) 대신 Z축(-0.15) 등이 필요할 수 있음
+        const LIFT_OFFSET = new THREE.Vector3(0, 0, -10);
         console.log('LIFT_OFFSET>>  ', LIFT_OFFSET);
 
         await this.partAssemblyService.movePartRelative(

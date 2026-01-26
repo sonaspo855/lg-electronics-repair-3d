@@ -244,9 +244,11 @@ export class PartAssemblyService {
             config
         });
 
-        // 1. 타겟의 월드 중심점 계산
-        const targetWorldCenter = CoordinateTransformUtils.getWorldCenter(targetNode);
-        console.log('[Assembly] 타겟 월드 중심점:', targetWorldCenter);
+        // 1. 타겟의 월드 중심점 계산 (캐시 무시: 노드가刚刚 이동했을 수 있으므로 최신 bbox 사용)
+        const targetBbox = getPreciseBoundingBox(targetNode);
+        const targetWorldCenter = new THREE.Vector3();
+        targetBbox.getCenter(targetWorldCenter);
+        console.log('[Assembly] 타겟 월드 중심점 (Live):', targetWorldCenter);
 
         // 2. 슬롯 오프셋 적용 (홈 입구 위치 조정)
         if (options.slotOffset) {
@@ -466,7 +468,7 @@ export class PartAssemblyService {
     public async movePartRelative(
         nodeName: string,
         offset: THREE.Vector3,
-        duration: number = 500
+        duration: number = 2000
     ): Promise<void> {
         const node = this.sceneRoot.getObjectByName(nodeName);
         if (!node) {
@@ -476,6 +478,7 @@ export class PartAssemblyService {
 
         // 목표 위치 계산 (현재 위치 + 오프셋)
         const targetPos = node.position.clone().add(offset);
+        console.log('targetPos>> ', targetPos);
 
         // 중요: Promise를 반환해야 ManualAssemblyManager에서 'await'가 작동합니다.
         return new Promise((resolve) => {
