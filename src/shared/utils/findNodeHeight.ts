@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { invalidate } from '@react-three/fiber';
 import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
-
 const HighlightNode = 'ACV74674704_Damper_Assembly_10813';
 
-const highlightMaterial = createHighlightMaterial(0xff0000, 0.8);
+const highlightMaterial = createHighlightMaterial(0xff0000, 0.3);
 
 type FindNodeHeightState = {
     helper?: THREE.Box3Helper;
@@ -56,14 +55,18 @@ export const findNodeHeight = (
         matchMode?: 'includes' | 'equals';
         duration?: number;
         boxColor?: number;
+        append?: boolean;
     }
 ) => {
     const highlightNodeName = options?.highlightNodeName ?? HighlightNode;
     const matchMode = options?.matchMode ?? 'includes';
     const duration = options?.duration ?? 1.0;
     const boxColor = options?.boxColor ?? 0xffff00;
+    const append = options?.append ?? false;
 
-    clearPrevious(root);
+    if (!append) {
+        clearPrevious(root);
+    }
 
     const matched: THREE.Object3D[] = [];
     root.traverse((node) => {

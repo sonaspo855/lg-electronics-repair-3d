@@ -1,7 +1,9 @@
 import gsap from 'gsap';
-import { LEFT_DOOR_DAMPER_NODE_NAME } from '../../shared/utils/fridgeConstants';
+// import { LEFT_DOOR_DAMPER_COVER_BODY_NODE, LEFT_DOOR_DAMPER_ASSEMBLY_NODE, LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
+import { LEFT_DOOR_NODES } from '../../shared/utils/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
+import { findNodeHeight } from '../../shared/utils/findNodeHeight'
 
 // ============================================================================
 // Camera movement options
@@ -37,7 +39,20 @@ export class CameraMovementService {
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
         const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
 
-        return this.moveCameraCinematic(LEFT_DOOR_DAMPER_NODE_NAME, {
+        // LEFT_DOOR_DAMPER_COVER_BODY_NODE 노드를 하이라이트
+        /* const targetNode = this.getNodeByName(LEFT_DOOR_DAMPER_COVER_BODY_NODE);
+        if (targetNode) {
+            const camera = this.cameraControls.camera || this.cameraControls.object;
+            if (camera) {
+                findNodeHeight(this.sceneRoot || targetNode, camera, this.cameraControls, {
+                    highlightNodeName: LEFT_DOOR_DAMPER_COVER_BODY_NODE,
+                    matchMode: 'equals',
+                    boxColor: 0x00ff00 // 녹색으로 변경
+                });
+            }
+        } */
+
+        return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
             duration: options.duration || 1000,
             direction: options.direction || upwardDirection,
             zoomRatio: options.zoomRatio || 3,
@@ -100,7 +115,8 @@ export class CameraMovementService {
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
 
         // 특정 노드(왼쪽 도어 댐퍼)에 대해 일관된 뷰를 제공하도록 방향 강제
-        if (nodeName === LEFT_DOOR_DAMPER_NODE_NAME && !options.direction) {
+        // if (nodeName === LEFT_DOOR_DAMPER_COVER_BODY_NODE && !options.direction) {
+        if (nodeName === LEFT_DOOR_NODES[0] && !options.direction) {
             direction = new THREE.Vector3(0.5, -1, 0.5).normalize();
         }
 
@@ -192,7 +208,7 @@ export class CameraMovementService {
                     options.onProgress?.(smoothProgress);
                 },
                 onComplete: () => {
-                    // 최종 UP 벡터 설정
+                    // 1. 카메라 및 컨트롤 최종 상태 확정
                     if (options.direction && Math.abs(options.direction.y) > 0.8) {
                         const lookDir = new THREE.Vector3()
                             .subVectors(targetCenter, camera.position)
@@ -215,6 +231,22 @@ export class CameraMovementService {
                     this.cameraControls.enableDamping = originalDamping;
                     this.cameraControls.smoothTime = originalSmoothTime;
 
+                    // 카메라 이동 완료 후 노드 하이라이트
+                    LEFT_DOOR_NODES.forEach((nodeName, index) => {
+                        const node = this.getNodeByName(nodeName);
+                        if (node && camera) {
+                            console.log(`[Highlight] Target: ${nodeName}`);
+                            findNodeHeight(this.sceneRoot || node, camera, this.cameraControls, {
+                                highlightNodeName: nodeName,
+                                matchMode: 'equals',
+                                boxColor: 0x00ff00,
+                                append: index > 0
+                            });
+                        }
+                    });
+
+                    // 모든 노드 하이라이트가 완료된 후 추가 확인
+                    console.log('All nodes highlighted');
                     resolve();
                 }
             });
