@@ -8,6 +8,12 @@ import { AnimationHistoryService } from "@/services/AnimationHistoryService";
 import { ManualEditorSidebar } from "@/components/pages/manual-editor";
 import { AnimationHistoryPanel, type AnimationHistoryItem } from "@/components/pages/manual-editor";
 import { DamperAssemblyService, getDamperAssemblyService } from "@/services/fridge/DamperAssemblyService";
+import {
+  ManualAssemblyManager,
+  getManualAssemblyManager,
+  prepareManualAssembly,
+  updateManualProgress
+} from "@/services/fridge/ManualAssemblyManager";
 import { getNodeHierarchy, exportHierarchyToJson } from "@/shared/utils/commonUtils";
 import "./ManualEditorPage.css";
 
@@ -229,7 +235,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const animationHistoryService = useMemo(() => new AnimationHistoryService(), []);
-  const [damperAssemblyService, setDamperAssemblyService] = useState<DamperAssemblyService | null>(null);
+  const [manualAssemblyManager, setManualAssemblyManager] = useState<ManualAssemblyManager | null>(null);
   const [isAssemblyPlaying, setIsAssemblyPlaying] = useState(false);
   const [assemblyProgress, setAssemblyProgress] = useState(0);
 
@@ -518,18 +524,18 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     mixerRef.current = null;
   }, [sceneRoot]);
 
-  // DamperAssemblyService 초기화
+  // ManualAssemblyManager 초기화
   useEffect(() => {
     if (sceneRoot) {
-      const service = getDamperAssemblyService();
-      service.initialize(sceneRoot);
-      setDamperAssemblyService(service);
-      console.log('[ManualEditor] DamperAssemblyService 초기화 완료');
+      const manager = getManualAssemblyManager();
+      manager.initialize(sceneRoot);
+      setManualAssemblyManager(manager);
+      console.log('[ManualEditor] ManualAssemblyManager 초기화 완료');
 
       return () => {
-        service.dispose();
-        setDamperAssemblyService(null);
-        console.log('[ManualEditor] DamperAssemblyService 정리 완료');
+        manager.dispose();
+        setManualAssemblyManager(null);
+        console.log('[ManualEditor] ManualAssemblyManager 정리 완료');
       };
     }
   }, [sceneRoot]);
@@ -612,29 +618,32 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     }
   };
 
-  // 댐퍼 커버 조립
-  const handleAssembleDamperCover = async () => {
-    if (!damperAssemblyService) {
-      console.error('[ManualEditor] DamperAssemblyService가 초기화되지 않음');
+  // 조립 준비 (prepareManualAssembly)
+  const handlePrepareAssembly = async () => {
+    if (!manualAssemblyManager) {
+      console.error('[ManualEditor] ManualAssemblyManager가 초기화되지 않음');
       return;
     }
 
-    if (damperAssemblyService.isPlaying()) {
+    if (manualAssemblyManager.isPlaying()) {
       console.warn('[ManualEditor] 애니메이션이 이미 실행 중');
       return;
     }
 
-    console.log('[ManualEditor] 댐퍼 커버 조립 시작');
+    console.log('[ManualEditor] 조립 시작');
     setIsAssemblyPlaying(true);
+    setAssemblyProgress(0);
 
     try {
-      await damperAssemblyService.assembleDamperCover({
+      await manualAssemblyManager.prepareManualAssembly({
         duration: 2500,
         snapThreshold: 0.2,
+        onProgress: (progress: number) => {
+          setAssemblyProgress(progress);
+        },
         onComplete: () => {
-          console.log('[ManualEditor] 댐퍼 커버 조립 완료');
+          console.log('[ManualEditor] 조립 완료');
           setIsAssemblyPlaying(false);
-          setAssemblyProgress(0);
         }
       });
     } catch (error) {
@@ -643,28 +652,38 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     }
   };
 
-  // 댐퍼 커버 분해
-  const handleDisassembleDamperCover = async () => {
-    if (!damperAssemblyService) {
-      console.error('[ManualEditor] DamperAssemblyService가 초기화되지 않음');
+  // 진행률 업데이트 (updateManualProgress)
+  const handleUpdateProgress = (progress: number) => {
+    if (!manualAssemblyManager) {
+      console.warn('[ManualEditor] ManualAssemblyManager가 초기화되지 않음');
+      return;
+    }
+    manualAssemblyManager.updateManualProgress(progress);
+    setAssemblyProgress(progress);
+  };
+
+  // 분해 (disassemble)
+  const handleDisassemble = async () => {
+    if (!manualAssemblyManager) {
+      console.error('[ManualEditor] ManualAssemblyManager가 초기화되지 않음');
       return;
     }
 
-    if (damperAssemblyService.isPlaying()) {
+    if (manualAssemblyManager.isPlaying()) {
       console.warn('[ManualEditor] 애니메이션이 이미 실행 중');
       return;
     }
 
-    console.log('[ManualEditor] 댐퍼 커버 분해 시작');
+    console.log('[ManualEditor] 분해 시작');
     setIsAssemblyPlaying(true);
+    setAssemblyProgress(0);
 
     try {
-      await damperAssemblyService.disassembleDamperCover({
+      await manualAssemblyManager.disassembleDamperCover({
         duration: 1500,
         onComplete: () => {
-          console.log('[ManualEditor] 댐퍼 커버 분해 완료');
+          console.log('[ManualEditor] 분해 완료');
           setIsAssemblyPlaying(false);
-          setAssemblyProgress(0);
         }
       });
     } catch (error) {
@@ -763,7 +782,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
                   <button
                     className="viewer-assemble-btn"
                     type="button"
-                    onClick={handleAssembleDamperCover}
+                    onClick={handlePrepareAssembly}
                     onPointerDown={(event) => event.stopPropagation()}
                     onMouseDown={(event) => event.stopPropagation()}
                     onTouchStart={(event) => event.stopPropagation()}
@@ -775,7 +794,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
                   <button
                     className="viewer-disassemble-btn"
                     type="button"
-                    onClick={handleDisassembleDamperCover}
+                    onClick={handleDisassemble}
                     onPointerDown={(event) => event.stopPropagation()}
                     onMouseDown={(event) => event.stopPropagation()}
                     onTouchStart={(event) => event.stopPropagation()}
