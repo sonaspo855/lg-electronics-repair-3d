@@ -94,6 +94,92 @@ export class DamperAssemblyService {
     }
 
     /**
+     * [핵심 로직] 홈의 실제 형태를 따라가는 하이라이트를 생성합니다.
+     */
+    private createGrooveShapeHighlight(mesh: THREE.Mesh, points: THREE.Vector3[], color: number, maxZ: number): void {
+        if (points.length < 3) return;
+
+        // 1. XY 평면상의 점들 추출 및 중복 제거
+        const uniquePoints: THREE.Vector3[] = [];
+        const seen = new Set<string>();
+        for (const p of points) {
+            const key = `${p.x.toFixed(4)},${p.y.toFixed(4)}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniquePoints.push(new THREE.Vector3(p.x, p.y, 0));
+            }
+        }
+
+        if (uniquePoints.length < 3) return;
+
+        // 2. Shape 생성 (최근접 이웃 방식으로 외곽선 연결)
+        const sortedPoints: THREE.Vector3[] = [];
+        let current = uniquePoints[0];
+        const remaining = [...uniquePoints.slice(1)];
+        sortedPoints.push(current);
+
+        while (remaining.length > 0) {
+            let nearestIdx = 0;
+            let minDist = Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                const dist = current.distanceTo(remaining[i]);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestIdx = i;
+                }
+            }
+            current = remaining[nearestIdx];
+            sortedPoints.push(current);
+            remaining.splice(nearestIdx, 1);
+        }
+
+        const shape = new THREE.Shape();
+        shape.moveTo(sortedPoints[0].x, sortedPoints[0].y);
+        for (let i = 1; i < sortedPoints.length; i++) {
+            shape.lineTo(sortedPoints[i].x, sortedPoints[i].y);
+        }
+        shape.closePath();
+
+        // 3. Mesh 및 Edges 생성
+        const geometry = new THREE.ShapeGeometry(shape);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide,
+            depthTest: false
+        });
+
+        const highlightMesh = new THREE.Mesh(geometry, material);
+        highlightMesh.position.z = maxZ + 0.005;
+        highlightMesh.applyMatrix4(mesh.matrixWorld);
+
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.8,
+            depthTest: false
+        });
+        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        edges.position.copy(highlightMesh.position);
+        edges.quaternion.copy(highlightMesh.quaternion);
+        edges.scale.copy(highlightMesh.scale);
+
+        // 애니메이션 추가
+        gsap.to([material, edgesMaterial], {
+            opacity: 0.1,
+            duration: 0.8,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+        });
+
+        this.debugObjects.push(highlightMesh, edges);
+        this.sceneRoot?.add(highlightMesh, edges);
+    }
+
+    /**
      * 댐퍼 어셈블리의 정면(XY) 홈 영역을 분석하여 시각화합니다.
      */
     public highlightDamperGroove(): void {
@@ -103,50 +189,63 @@ export class DamperAssemblyService {
         const targetNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
         if (!(targetNode instanceof THREE.Mesh)) return;
 
-        // 1. 기존 디버그 객체 및 하이라이트 제거
         this.clearHighlights();
 
-        // 2. 홈 영역 정점 분석 (Groove Bounds 계산)
-        const grooveBounds = this.findGrooveBounds(targetNode);
-        if (!grooveBounds) {
-            console.warn('[LG CNS] 홈 영역을 분석할 수 없습니다.');
-            return;
+        const geometry = targetNode.geometry;
+        const positions = geometry.attributes.position;
+        if (!positions) return;
+
+        geometry.computeBoundingBox();
+        const localBox = geometry.boundingBox!;
+        const center = new THREE.Vector3();
+        localBox.getCenter(center);
+
+        let maxZ = -Infinity;
+        for (let i = 0; i < positions.count; i++) {
+            const z = positions.getZ(i);
+            if (z > maxZ) maxZ = z;
         }
 
-        // 3. 분석된 Box3 데이터를 기반으로 하이라이트 평면 및 애니메이션 생성
-        // 3.1 왼쪽 작은 홈 (노란색 + 하이라이트 애니메이션 추가)
-        const leftCenter = new THREE.Vector3();
-        grooveBounds.left.getCenter(leftCenter);
-        const leftSize = new THREE.Vector3();
-        grooveBounds.left.getSize(leftSize);
+        const depthRange = maxZ - (localBox.min.z);
+        const threshold = Math.max(depthRange * 0.1, 0.001);
 
-        this.addDebugPlane(
-            leftCenter,
-            leftSize.x,
-            leftSize.y,
-            0xffff00,
-            1.0,
-            true,
-            targetNode // [추가] targetNode를 전달하여 월드 좌표 변환 수행
-        );
+        const paddingX = (localBox.max.x - localBox.min.x) * 0.15;
+        const paddingY = (localBox.max.y - localBox.min.y) * 0.15;
 
-        // 3.2 오른쪽 큰 홈 (하늘색)
-        const rightCenter = new THREE.Vector3();
-        grooveBounds.right.getCenter(rightCenter);
-        const rightSize = new THREE.Vector3();
-        grooveBounds.right.getSize(rightSize);
+        const filterPointsByProximity = (points: THREE.Vector3[]): THREE.Vector3[] => {
+            if (points.length < 3) return [];
+            const localCenter = new THREE.Vector3();
+            points.forEach(p => localCenter.add(p));
+            localCenter.divideScalar(points.length);
+            const distances = points.map(p => p.distanceTo(localCenter));
+            const avgDist = distances.reduce((a, b) => a + b, 0) / distances.length;
+            return points.filter((_, i) => distances[i] < avgDist * 1.3);
+        };
 
-        this.addDebugPlane(
-            rightCenter,
-            rightSize.x,
-            rightSize.y,
-            0x00ffff,
-            0.8,
-            false,
-            targetNode // [추가] targetNode를 전달하여 월드 좌표 변환 수행
-        );
+        const leftPoints: THREE.Vector3[] = [];
+        const rightPoints: THREE.Vector3[] = [];
 
-        console.log('[LG CNS] 작은 홈 하이라이트 및 전체 시각화 완료');
+        const leftLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.4;
+        const rightLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.6;
+
+        for (let i = 0; i < positions.count; i++) {
+            const p = new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i));
+            if (p.z < maxZ - threshold) {
+                if (p.x > localBox.min.x + paddingX && p.x < localBox.max.x - paddingX &&
+                    p.y > localBox.min.y + paddingY && p.y < localBox.max.y - paddingY) {
+                    if (p.x < leftLimit) leftPoints.push(p);
+                    else if (p.x > rightLimit) rightPoints.push(p);
+                }
+            }
+        }
+
+        const filteredLeftPoints = filterPointsByProximity(leftPoints);
+        const filteredRightPoints = filterPointsByProximity(rightPoints);
+
+        this.createGrooveShapeHighlight(targetNode, filteredLeftPoints, 0xffff00, maxZ);
+        this.createGrooveShapeHighlight(targetNode, filteredRightPoints, 0x00ffff, maxZ);
+
+        console.log('[LG CNS] 홈 형태 기반 하이라이트 완료');
     }
 
     /**
