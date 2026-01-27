@@ -31,86 +31,65 @@ export class DamperAssemblyService {
      * 댐퍼 어셈블리 노드의 홈 부분을 식별하고 하이라이트 효과를 적용합니다.
      */
     public highlightDamperGroove(): void {
-        if (!this.sceneRoot) return;
+        if (!this.sceneRoot) {
+            console.error('[DamperDebug] sceneRoot가 초기화되지 않았습니다.');
+            return;
+        }
 
-        // 1. 대상 노드 및 하위 Mesh 확보
-        let damperMesh: THREE.Mesh | null = null;
-        const damperNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
-        damperNode?.traverse((child) => {
-            if (child instanceof THREE.Mesh) damperMesh = child;
+        // 1. 노드 탐색 및 디버깅 로그
+        const targetNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
+
+        if (!targetNode) {
+            console.warn(`[DamperDebug] 노드를 찾을 수 없음: ${LEFT_DOOR_DAMPER_ASSEMBLY_NODE}`);
+            // 현재 씬의 모든 노드 이름을 출력하여 실제 이름을 확인해봅니다.
+            this.sceneRoot.traverse(n => { if (n.name.includes('DAMPER')) console.log('검색된 유사 노드:', n.name); });
+            return;
+        }
+
+        console.log(`[DamperDebug] 노드 발견: ${targetNode.name}`, targetNode);
+
+        // 2. 로컬 바운딩 박스 계산 (sample.ts 방식 적용)
+        const mesh = targetNode as THREE.Mesh;
+        if (!mesh.geometry) return;
+
+        mesh.geometry.computeBoundingBox();
+        const localBox = mesh.geometry.boundingBox!;
+        const center = new THREE.Vector3();
+        const size = new THREE.Vector3();
+        localBox.getCenter(center);
+        localBox.getSize(size);
+
+        console.log(`[DamperDebug] 로컬 좌표 정보 - Center:`, center, `Size:`, size);
+
+        // 3. 디버그 시각화 생성 (녹색 박스: 선택된 노드 전체 영역)
+        const debugBoxGeom = new THREE.BoxGeometry(size.x, size.y, size.z);
+        const debugBox = new THREE.Mesh(debugBoxGeom, new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, transparent: true, opacity: 0.3 }));
+
+        // 4. 홈(Groove) 테두리 생성 (노란색)
+        const innerWidth = size.x * 0.3;
+        const innerDepth = size.z * 0.3;
+        const grooveGeom = new THREE.PlaneGeometry(innerWidth, innerDepth);
+        const grooveBorder = new THREE.LineSegments(
+            new THREE.EdgesGeometry(grooveGeom),
+            new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 })
+        );
+
+        // 5. 중심점 표시 (빨간색 구)
+        const centerMarker = new THREE.Mesh(new THREE.SphereGeometry(size.x * 0.05), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+
+        // 6. 모든 객체에 월드 좌표계 적용 (가장 중요)
+        [debugBox, grooveBorder, centerMarker].forEach(obj => {
+            obj.position.copy(center);
+            if (obj === grooveBorder) {
+                obj.rotation.x = -Math.PI / 2;
+                obj.position.y += size.y / 2 + 0.001; // 상단 표면 배치
+            }
+            obj.applyMatrix4(mesh.matrixWorld); // 부모의 변환 정보를 그대로 적용
+            this.sceneRoot?.add(obj);
+            this.debugObjects.push(obj);
         });
 
-        if (!damperMesh) return;
-        const mesh = damperMesh as THREE.Mesh;
-        const geometry = mesh.geometry;
-        if (!geometry) return;
-
-        this.clearHighlights();
-
-        // 2. 바운딩 박스를 통해 부품의 '중앙 영역' 계산
-        geometry.computeBoundingBox();
-        const localBox = geometry.boundingBox;
-        if (!localBox) return;
-
-        const size = new THREE.Vector3();
-        localBox.getSize(size);
-        const center = new THREE.Vector3();
-        localBox.getCenter(center);
-
-        // [수정] 안쪽 홈을 결정하는 로직: 
-        // X, Z축 기준 전체 너비의 중앙 30% 영역 안에 있고, Y축 기준 상단에 위치한 엣지만 추출
-        const innerBoundX = size.x * 0.15; // 중앙으로부터 좌우 15% (총 30%)
-        const innerBoundZ = size.z * 0.15; // 중앙으로부터 앞뒤 15% (총 30%)
-
-        // =====================================================
-        // [시각화] 중앙 영역 및 innerBound 범위 디버그 시각화
-        // =====================================================
-        this.createDebugVisualizations(mesh, localBox, center, size, innerBoundX, innerBoundZ);
-        // =====================================================
-
-        const edgesGeom = new THREE.EdgesGeometry(geometry, 25);
-        const posAttr = edgesGeom.attributes.position;
-        const filteredPositions: number[] = [];
-
-        for (let i = 0; i < posAttr.count; i += 2) {
-            const v1 = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-            const v2 = new THREE.Vector3(posAttr.getX(i + 1), posAttr.getY(i + 1), posAttr.getZ(i + 1));
-
-            // [핵심 필터] 정점이 중앙 구역(Inner)에 포함되는지 확인
-            const isInsideX = Math.abs(v1.x - center.x) < innerBoundX;
-            const isInsideZ = Math.abs(v1.z - center.z) < innerBoundZ;
-            const isUpperHalf = v1.y > center.y; // 부품의 상단 절반 영역
-
-            if (isInsideX && isInsideZ && isUpperHalf) {
-                filteredPositions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
-            }
-        }
-
-        // 3. 필터링된 결과가 있을 때만 메쉬 생성
-        if (filteredPositions.length > 0) {
-            const filteredGeom = new THREE.BufferGeometry();
-            filteredGeom.setAttribute('position', new THREE.Float32BufferAttribute(filteredPositions, 3));
-            const lineMat = new THREE.LineBasicMaterial({
-                color: 0xff0000,
-                transparent: true,
-                depthTest: false, // 안쪽 홈이 겉면에 가려지지 않게 함
-                opacity: 0.8
-            });
-            const line = new THREE.LineSegments(filteredGeom, lineMat);
-
-            // mesh의 월드 매트릭스를 line에 적용
-            line.position.copy(mesh.position);
-            line.rotation.copy(mesh.rotation);
-            line.scale.copy(mesh.scale);
-            line.updateMatrixWorld(true);
-
-            this.activeHighlights = [line];
-            this.sceneRoot!.add(line);
-
-            gsap.to(lineMat, { opacity: 0.1, duration: 0.8, repeat: -1, yoyo: true });
-        } else {
-            console.warn("안쪽 홈 영역에서 엣지를 찾지 못했습니다. 범위를 조정하십시오.");
-        }
+        console.log('[DamperDebug] 시각화 객체 3종(박스, 테두리, 점)이 씬에 추가되었습니다.');
     }
 
     /**
@@ -138,6 +117,7 @@ export class DamperAssemblyService {
 
     /**
      * [시각화] 바운딩 박스 중앙 영역 및 innerBound 범위를 디버그용으로 시각화
+     * PlaneGeometry와 EdgesGeometry를 조합하여 노드의 안쪽 홈 테두리 시각화
      */
     private createDebugVisualizations(
         mesh: THREE.Mesh,
@@ -145,116 +125,115 @@ export class DamperAssemblyService {
         center: THREE.Vector3,
         size: THREE.Vector3,
         innerBoundX: number,
-        innerBoundZ: number
+        innerBoundZ: number,
+        grooveCenter?: THREE.Vector3
     ): void {
-        // 1. 전체 바운딩 박스 (녹색 - 50% 투명)
+        // 디버그 객체 먼저 정리
+        this.debugObjects.forEach((obj) => this.sceneRoot?.remove(obj));
+        this.debugObjects = [];
+
+        // mesh의 월드 매트릭스 업데이트
+        mesh.updateMatrixWorld(true);
+
+        // 1. 전체 바운딩 박스 (BoxGeometry + EdgesGeometry)
         const boxGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
-        const boxMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.1,
-            wireframe: false
-        });
-        const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
-        boxMesh.position.copy(center);
-        boxMesh.position.applyMatrix4(mesh.matrixWorld);
-        boxMesh.quaternion.copy(mesh.quaternion);
-        boxMesh.scale.copy(mesh.scale);
-        boxMesh.updateMatrixWorld(true);
+        this.createPlaneWithEdges(boxGeometry, 0x00ff00, 0.1, 0.5, center, mesh);
 
-        // 바운딩 박스 외곽선 (녹색 실선)
-        const boxEdges = new THREE.EdgesGeometry(boxGeometry);
-        const boxLineMat = new THREE.LineBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
-        const boxLines = new THREE.LineSegments(boxEdges, boxLineMat);
-        boxLines.position.copy(boxMesh.position);
-        boxLines.quaternion.copy(boxMesh.quaternion);
-        boxLines.scale.copy(boxMesh.scale);
-        boxLines.updateMatrixWorld(true);
-
-        // 2. innerBound 영역 (파란색 - XZ 평면 중앙 30%)
-        const innerWidth = innerBoundX * 2; // 좌우 15%씩이므로 총 30%
-        const innerDepth = innerBoundZ * 2; // 앞뒤 15%씩이므로 총 30%
-        const innerHeight = size.y; // 전체 높이
+        // 2. innerBound 영역 (XZ 평면 중앙 30%) - PlaneGeometry 사용
+        const innerWidth = innerBoundX * 2;
+        const innerDepth = innerBoundZ * 2;
+        const innerHeight = size.y;
 
         const innerBoxGeometry = new THREE.BoxGeometry(innerWidth, innerHeight, innerDepth);
-        const innerBoxMaterial = new THREE.MeshBasicMaterial({
-            color: 0x0000ff,
-            transparent: true,
-            opacity: 0.15,
-            wireframe: false
-        });
-        const innerBoxMesh = new THREE.Mesh(innerBoxGeometry, innerBoxMaterial);
-        innerBoxMesh.position.copy(center);
-        innerBoxMesh.position.applyMatrix4(mesh.matrixWorld);
-        innerBoxMesh.quaternion.copy(mesh.quaternion);
-        innerBoxMesh.scale.copy(mesh.scale);
-        innerBoxMesh.updateMatrixWorld(true);
+        this.createPlaneWithEdges(innerBoxGeometry, 0x0088ff, 0.15, 0.8, center, mesh);
 
-        // innerBound 외곽선 (파란색 실선)
-        const innerBoxEdges = new THREE.EdgesGeometry(innerBoxGeometry);
-        const innerBoxLineMat = new THREE.LineBasicMaterial({ color: 0x0088ff, transparent: true, opacity: 0.8 });
-        const innerBoxLines = new THREE.LineSegments(innerBoxEdges, innerBoxLineMat);
-        innerBoxLines.position.copy(innerBoxMesh.position);
-        innerBoxLines.quaternion.copy(innerBoxMesh.quaternion);
-        innerBoxLines.scale.copy(innerBoxMesh.scale);
-        innerBoxLines.updateMatrixWorld(true);
-
-        // 3. 중심점 (빨간색 구 - 바운딩 박스 크기의 0.2%)
-        const centerRadius = Math.min(size.x, size.y, size.z) * 0.002;
+        // 3. 안쪽 홈 중심점 (구 형태) - 월드 좌표로 변환
+        const centerRadius = Math.min(size.x, size.y, size.z) * 0.02;
         const centerGeometry = new THREE.SphereGeometry(centerRadius, 16, 16);
         const centerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         const centerPoint = new THREE.Mesh(centerGeometry, centerMaterial);
-        centerPoint.position.copy(center);
-        centerPoint.position.applyMatrix4(mesh.matrixWorld);
+
+        // targetCenter를 월드 좌표로 변환
+        const targetCenterWorld = new THREE.Vector3();
+        mesh.localToWorld(targetCenterWorld.copy(grooveCenter || center));
+        centerPoint.position.copy(targetCenterWorld);
         centerPoint.updateMatrixWorld(true);
 
-        // 4. innerBound 경계면 표시 (XZ 평면)
-        // innerBoundX 경계선 (좌우)
-        const boundaryXGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-innerBoundX, size.y / 2, -innerBoundZ),
-            new THREE.Vector3(-innerBoundX, size.y / 2, innerBoundZ),
-            new THREE.Vector3(innerBoundX, size.y / 2, -innerBoundZ),
-            new THREE.Vector3(innerBoundX, size.y / 2, innerBoundZ),
-        ]);
-        const boundaryXMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
-        const boundaryXLines = new THREE.LineSegments(boundaryXGeometry, boundaryXMaterial);
-        boundaryXLines.position.copy(center);
-        boundaryXLines.position.applyMatrix4(mesh.matrixWorld);
-        boundaryXLines.quaternion.copy(mesh.quaternion);
-        boundaryXLines.scale.copy(mesh.scale);
-        boundaryXLines.updateMatrixWorld(true);
+        this.debugObjects.push(centerPoint);
+        this.sceneRoot?.add(centerPoint);
 
-        // innerBoundZ 경계선 (앞뒤)
-        const boundaryZGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-innerBoundX, size.y / 2, -innerBoundZ),
-            new THREE.Vector3(innerBoundX, size.y / 2, -innerBoundZ),
-            new THREE.Vector3(-innerBoundX, size.y / 2, innerBoundZ),
-            new THREE.Vector3(innerBoundX, size.y / 2, innerBoundZ),
-        ]);
-        const boundaryZLines = new THREE.LineSegments(boundaryZGeometry, boundaryXMaterial);
-        boundaryZLines.position.copy(center);
-        boundaryZLines.position.applyMatrix4(mesh.matrixWorld);
-        boundaryZLines.quaternion.copy(mesh.quaternion);
-        boundaryZLines.scale.copy(mesh.scale);
-        boundaryZLines.updateMatrixWorld(true);
-
-        // 모든 디버그 객체添加到 scene과 리스트
-        this.debugObjects.push(boxMesh, boxLines, innerBoxMesh, innerBoxLines, centerPoint, boundaryXLines, boundaryZLines);
-        this.debugObjects.forEach(obj => this.sceneRoot?.add(obj));
+        // 4. innerBound 경계면 (PlaneGeometry + EdgesGeometry) - XZ 평면
+        const boundaryPlaneGeometry = new THREE.PlaneGeometry(innerWidth, innerDepth);
+        this.createPlaneWithEdges(boundaryPlaneGeometry, 0xffff00, 0.0, 0.8,
+            new THREE.Vector3(center.x, center.y + size.y / 2, center.z), mesh);
 
         console.log('[DamperAssemblyService] 디버그 시각화 생성:', {
             전체박스: { size: `(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)})` },
-            중심점: `(${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`,
+            중심점: `(${targetCenterWorld.x.toFixed(2)}, ${targetCenterWorld.y.toFixed(2)}, ${targetCenterWorld.z.toFixed(2)})`,
             innerBoundX: innerBoundX.toFixed(2),
-            innerBoundZ: innerBoundZ.toFixed(2),
-            내부박스: { size: `(${innerWidth.toFixed(2)}, ${innerHeight.toFixed(2)}, ${innerDepth.toFixed(2)})` }
+            innerBoundZ: innerBoundZ.toFixed(2)
         });
+    }
+
+    /**
+     * 지오메트리의 면과 테두리를 시각화하는 헬퍼 메서드
+     * PlaneGeometry와 EdgesGeometry를 조합하여 테두리가 있는 평면 생성
+     */
+    private createPlaneWithEdges(
+        geometry: THREE.BufferGeometry,
+        faceColor: number,
+        faceOpacity: number,
+        edgeOpacity: number,
+        position: THREE.Vector3,
+        mesh: THREE.Mesh
+    ): void {
+        // 1. 면 (Mesh)
+        const material = new THREE.MeshBasicMaterial({
+            color: faceColor,
+            transparent: true,
+            opacity: faceOpacity,
+            side: THREE.DoubleSide
+        });
+        const planeMesh = new THREE.Mesh(geometry, material);
+        planeMesh.position.copy(position);
+        planeMesh.position.applyMatrix4(mesh.matrixWorld);
+        planeMesh.quaternion.copy(mesh.quaternion);
+        planeMesh.scale.copy(mesh.scale);
+        planeMesh.updateMatrixWorld(true);
+
+        // 2. 테두리 (EdgesGeometry)
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: faceColor,
+            transparent: true,
+            opacity: edgeOpacity
+        });
+        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        edges.position.copy(planeMesh.position);
+        edges.quaternion.copy(planeMesh.quaternion);
+        edges.scale.copy(planeMesh.scale);
+        edges.updateMatrixWorld(true);
+
+        // 씬에 추가
+        this.debugObjects.push(planeMesh, edges);
+        this.sceneRoot?.add(planeMesh);
+        this.sceneRoot?.add(edges);
     }
 
     public dispose(): void {
         this.clearHighlights();
         this.sceneRoot = null;
         console.log('[DamperAssemblyService] 서비스 정리 완료');
+    }
+
+    /**
+     * 배열의 중앙값을 계산합니다.
+     */
+    private getMedian(values: number[]): number {
+        if (values.length === 0) return 0;
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
     }
 }
 
