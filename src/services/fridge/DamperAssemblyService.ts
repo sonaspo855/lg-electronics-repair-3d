@@ -30,37 +30,80 @@ export class DamperAssemblyService {
      * 댐퍼 어셈블리 노드의 홈 부분을 식별하고 하이라이트 효과를 적용합니다.
      */
     public highlightDamperGroove(): void {
-        console.log('highlightDamperGroove!!!');
         if (!this.sceneRoot) return;
 
-        // 기존 하이라이트 제거
-        this.clearHighlights();
-
+        // 1. 대상 노드 및 하위 Mesh 확보
+        let damperMesh: THREE.Mesh | null = null;
         const damperNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
-        if (!damperNode) {
-            console.warn(`[DamperAssemblyService] 노드를 찾을 수 없음: ${LEFT_DOOR_DAMPER_ASSEMBLY_NODE}`);
-            return;
-        }
-
-        // 홈 부분 식별 및 하이라이트 생성 (전략 A: EdgesGeometry)
-        // thresholdAngle을 20도로 설정하여 급격한 각도 변화가 있는 홈 부분을 타겟팅
-        const highlights = createGrooveHighlight(damperNode, 0xff0000, 20);
-        this.activeHighlights = highlights;
-
-        highlights.forEach((line) => {
-            this.sceneRoot?.add(line);
-
-            // GSAP를 이용한 맥동(Pulsing) 효과로 시각적 명인성 강화
-            gsap.to(line.material, {
-                opacity: 0.2,
-                duration: 0.8,
-                repeat: -1,
-                yoyo: true,
-                ease: 'power1.inOut'
-            });
+        damperNode?.traverse((child) => {
+            if (child instanceof THREE.Mesh) damperMesh = child;
         });
 
-        console.log(`[DamperAssemblyService] ${highlights.length}개의 홈 하이라이트 적용 완료`);
+        if (!damperMesh) return;
+        const mesh = damperMesh as THREE.Mesh;
+        const geometry = mesh.geometry;
+        if (!geometry) return;
+
+        this.clearHighlights();
+
+        // 2. 바운딩 박스를 통해 부품의 '중앙 영역' 계산
+        geometry.computeBoundingBox();
+        const localBox = geometry.boundingBox;
+        if (!localBox) return;
+
+        const size = new THREE.Vector3();
+        localBox.getSize(size);
+        const center = new THREE.Vector3();
+        localBox.getCenter(center);
+
+        // [수정] 안쪽 홈을 결정하는 로직: 
+        // X, Z축 기준 전체 너비의 중앙 30% 영역 안에 있고, Y축 기준 상단에 위치한 엣지만 추출
+        const innerBoundX = size.x * 0.15; // 중앙으로부터 좌우 15% (총 30%)
+        const innerBoundZ = size.z * 0.15; // 중앙으로부터 앞뒤 15% (총 30%)
+
+        const edgesGeom = new THREE.EdgesGeometry(geometry, 25);
+        const posAttr = edgesGeom.attributes.position;
+        const filteredPositions: number[] = [];
+
+        for (let i = 0; i < posAttr.count; i += 2) {
+            const v1 = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            const v2 = new THREE.Vector3(posAttr.getX(i + 1), posAttr.getY(i + 1), posAttr.getZ(i + 1));
+
+            // [핵심 필터] 정점이 중앙 구역(Inner)에 포함되는지 확인
+            const isInsideX = Math.abs(v1.x - center.x) < innerBoundX;
+            const isInsideZ = Math.abs(v1.z - center.z) < innerBoundZ;
+            const isUpperHalf = v1.y > center.y; // 부품의 상단 절반 영역
+
+            if (isInsideX && isInsideZ && isUpperHalf) {
+                filteredPositions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+            }
+        }
+
+        // 3. 필터링된 결과가 있을 때만 메쉬 생성
+        if (filteredPositions.length > 0) {
+            const filteredGeom = new THREE.BufferGeometry();
+            filteredGeom.setAttribute('position', new THREE.Float32BufferAttribute(filteredPositions, 3));
+            const lineMat = new THREE.LineBasicMaterial({
+                color: 0xff0000,
+                transparent: true,
+                depthTest: false, // 안쪽 홈이 겉면에 가려지지 않게 함
+                opacity: 0.8
+            });
+            const line = new THREE.LineSegments(filteredGeom, lineMat);
+
+            // mesh의 월드 매트릭스를 line에 적용
+            line.position.copy(mesh.position);
+            line.rotation.copy(mesh.rotation);
+            line.scale.copy(mesh.scale);
+            line.updateMatrixWorld(true);
+
+            this.activeHighlights = [line];
+            this.sceneRoot!.add(line);
+
+            gsap.to(lineMat, { opacity: 0.1, duration: 0.8, repeat: -1, yoyo: true });
+        } else {
+            console.warn("안쪽 홈 영역에서 엣지를 찾지 못했습니다. 범위를 조정하십시오.");
+        }
     }
 
     /**
