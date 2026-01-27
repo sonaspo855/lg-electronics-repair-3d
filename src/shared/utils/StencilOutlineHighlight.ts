@@ -28,6 +28,7 @@ export class StencilOutlineHighlight {
         targetNormal: THREE.Vector3 = new THREE.Vector3(0, 0, 1),
         normalTolerance: number = 0.2
     ): void {
+        console.log('createGrooveMeshHighlightWithNormalFilter!!!');
         if (!this.sceneRoot) return;
 
         // 월드 매트릭스 최신화
@@ -58,6 +59,7 @@ export class StencilOutlineHighlight {
         targetNormal: THREE.Vector3,
         normalTolerance: number
     ): void {
+        console.log('processMeshForGrooveHighlight!!!');
         const geometry = originalMesh.geometry;
 
         // 법선 벡터가 없으면 계산
@@ -69,8 +71,9 @@ export class StencilOutlineHighlight {
         const normals = geometry.attributes.normal;
         const indices = geometry.index;
 
-        // 필터링된 인덱스를 저장할 배열
+        // 필터링된 인덱스와 제외된 인덱스를 저장할 배열
         const filteredIndices: number[] = [];
+        const excludedIndices: number[] = [];
 
         if (indices) {
             // 인덱스 버퍼가 있는 경우
@@ -86,6 +89,8 @@ export class StencilOutlineHighlight {
                 const dotProduct = Math.abs(avgNormal.dot(targetNormal));
                 if (dotProduct > (1 - normalTolerance)) {
                     filteredIndices.push(idx1, idx2, idx3);
+                } else {
+                    excludedIndices.push(idx1, idx2, idx3);
                 }
             }
         } else {
@@ -98,11 +103,13 @@ export class StencilOutlineHighlight {
                 const dotProduct = Math.abs(avgNormal.dot(targetNormal));
                 if (dotProduct > (1 - normalTolerance)) {
                     filteredIndices.push(i, i + 1, i + 2);
+                } else {
+                    excludedIndices.push(i, i + 1, i + 2);
                 }
             }
         }
 
-        // 필터링된 면이 있는 경우에만 클론 및 Stencil 하이라이트 생성
+        // 1. 필터링된 영역 하이라이트 (이미지상의 주황색/노란색 영역)
         if (filteredIndices.length > 0) {
             this.createFilteredMeshHighlight(
                 originalMesh,
@@ -111,6 +118,59 @@ export class StencilOutlineHighlight {
                 thresholdAngle
             );
         }
+
+        console.log('제외된 영역 하이라이트 (이미지상에서 색상화되지 않은 영역 -> 붉은색)!!!');
+        // 2. 제외된 영역 하이라이트 (이미지상에서 색상화되지 않은 영역 -> 붉은색)
+        if (excludedIndices.length > 0) {
+            console.log(`[StencilOutlineHighlight] 제외된 영역(붉은색) 인덱스 수: ${excludedIndices.length}`);
+            this.createFilteredMeshHighlight(
+                originalMesh,
+                excludedIndices,
+                0xff0000, // 붉은색
+                thresholdAngle,
+                0.8 // 디버깅을 위해 불투명도 상향
+            );
+
+            // [디버깅용] 제외된 영역의 중심점에 작은 포인트 또는 라인 시각화
+            this.visualizeExcludedArea(originalMesh, excludedIndices);
+        }
+    }
+
+    /**
+     * [디버깅용] 제외된 영역을 시각적으로 확인하기 위한 라인 렌더링
+     */
+    private visualizeExcludedArea(originalMesh: THREE.Mesh, indices: number[]): void {
+        console.log('visualizeExcludedArea!!!');
+        if (!this.sceneRoot) return;
+
+        const positions = originalMesh.geometry.attributes.position;
+        const linePoints: THREE.Vector3[] = [];
+
+        // 너무 많으면 성능에 영향을 주므로 처음 100개의 삼각형만 시각화
+        const limit = Math.min(indices.length, 300);
+        for (let i = 0; i < limit; i += 3) {
+            const p1 = new THREE.Vector3().fromBufferAttribute(positions, indices[i]);
+            const p2 = new THREE.Vector3().fromBufferAttribute(positions, indices[i + 1]);
+            const p3 = new THREE.Vector3().fromBufferAttribute(positions, indices[i + 2]);
+
+            linePoints.push(p1, p2, p2, p3, p3, p1);
+        }
+
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0xff0000,
+            depthTest: false,
+            transparent: true,
+            opacity: 1.0
+        });
+
+        const debugLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        debugLines.applyMatrix4(originalMesh.matrixWorld);
+
+        this.sceneRoot.add(debugLines);
+        this.activeHighlights.push(debugLines);
+
+        console.log('[StencilOutlineHighlight] 제외된 영역 시각화 라인 추가됨');
     }
 
     /**
@@ -156,23 +216,37 @@ export class StencilOutlineHighlight {
         originalMesh: THREE.Mesh,
         filteredIndices: number[],
         color: number,
-        thresholdAngle: number
+        thresholdAngle: number,
+        opacity: number = 0.4
     ): void {
         if (!this.sceneRoot) return;
 
         // 1. 필터링된 인덱스로 새로운 지오메트리 생성
         const filteredGeometry = new THREE.BufferGeometry();
         const positions = originalMesh.geometry.attributes.position;
+        const normals = originalMesh.geometry.attributes.normal;
         const filteredPositions = new Float32Array(filteredIndices.length * 3);
+        const filteredNormals = normals ? new Float32Array(filteredIndices.length * 3) : null;
 
         for (let i = 0; i < filteredIndices.length; i++) {
             const idx = filteredIndices[i];
             filteredPositions[i * 3] = positions.getX(idx);
             filteredPositions[i * 3 + 1] = positions.getY(idx);
             filteredPositions[i * 3 + 2] = positions.getZ(idx);
+
+            if (filteredNormals && normals) {
+                filteredNormals[i * 3] = normals.getX(idx);
+                filteredNormals[i * 3 + 1] = normals.getY(idx);
+                filteredNormals[i * 3 + 2] = normals.getZ(idx);
+            }
         }
 
         filteredGeometry.setAttribute('position', new THREE.BufferAttribute(filteredPositions, 3));
+        if (filteredNormals) {
+            filteredGeometry.setAttribute('normal', new THREE.BufferAttribute(filteredNormals, 3));
+        } else {
+            filteredGeometry.computeVertexNormals();
+        }
 
         // 2. 필터링된 지오메트리의 EdgesGeometry 생성 (홈 모서리 하이라이트)
         const edgesGeometry = new THREE.EdgesGeometry(filteredGeometry, thresholdAngle);
@@ -192,7 +266,7 @@ export class StencilOutlineHighlight {
         const fillMaterial = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.4,
+            opacity: opacity,
             side: THREE.DoubleSide,
             depthTest: false,
             depthWrite: false,
@@ -271,6 +345,7 @@ export class StencilOutlineHighlight {
                 }
 
                 const filteredIndices: number[] = [];
+                const grooveWallIndices: number[] = [];
                 const faceCount = indices ? indices.count / 3 : positions.count / 3;
 
                 // 메쉬의 월드 쿼터니언 가져오기 (법선 변환용)
@@ -300,9 +375,14 @@ export class StencilOutlineHighlight {
                     // 카메라 방향(시선)과 면 법선이 반대 방향일 때(내적이 음수일 때) 카메라를 향하는 면임
                     const dotProduct = avgNormal.dot(cameraDirection);
 
-                    // 내적이 -0.5 미만이면 카메라를 어느 정도 정면으로 바라보는 면으로 간주
+                    // 1. 정면을 바라보는 면 (내적이 -0.5 미만) -> 지정된 색상 (기본 빨강)
                     if (dotProduct < -0.5) {
                         filteredIndices.push(idx1, idx2, idx3);
+                    }
+                    // 2. 그 외 모든 면 (측면 및 배면 포함) -> 노란색으로 채움
+                    // 카메라를 등지는 면이라도 홈의 일부일 수 있으므로 모두 포함하여 노란색으로 색상화
+                    else {
+                        grooveWallIndices.push(idx1, idx2, idx3);
                     }
                 }
 
@@ -312,7 +392,19 @@ export class StencilOutlineHighlight {
                         child,
                         filteredIndices,
                         color,
-                        thresholdAngle
+                        thresholdAngle,
+                        0.5 // 정면 면의 불투명도 약간 상향
+                    );
+                }
+
+                // 홈의 벽면 및 나머지 영역 노란색 하이라이트 적용
+                if (grooveWallIndices.length > 0) {
+                    this.createFilteredMeshHighlight(
+                        child,
+                        grooveWallIndices,
+                        0xffff00, // 노란색
+                        thresholdAngle,
+                        0.6 // 노란색 영역은 더 명확하게 보이도록 불투명도 상향
                     );
                 }
             }

@@ -130,13 +130,15 @@ export class DamperAssemblyService {
 
         this.clearHighlights();
 
-        // 카메라 필터링 + 메쉬 클론 + Stencil Buffer 방식 사용
+        /* // 카메라 필터링 + 메쉬 클론 + Stencil Buffer 방식 사용
         this.stencilHighlight.createGrooveMeshHighlightWithCameraFilter(
             targetNode,
             camera,
             0xff6600,  // 주황색
             15         // thresholdAngle: 15도
-        );
+        ); */
+
+        this.highlightDamperGroove();
 
         console.log('[LG CNS] 가장 가까운 면 하이라이트 완료');
     }
