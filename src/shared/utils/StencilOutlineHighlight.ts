@@ -235,7 +235,7 @@ export class StencilOutlineHighlight {
 
     /**
      * [신규] 카메라를 기준으로 가장 먼저 보이는 면(가장 가까운 면)만
-     * 정밀하게 하이라이트합니다. Raycaster를 사용하여 교차점을 계산합니다.
+     * 정밀하게 하이라이트합니다. 카메라 방향과 노드 법선을 직접 비교합니다.
      * @param targetNode 하이라이트할 대상 노드
      * @param camera 카메라 객체
      * @param color 하이라이트 색상 (기본값: 빨강)
@@ -247,105 +247,78 @@ export class StencilOutlineHighlight {
         color: number = 0xff0000,
         thresholdAngle: number = 15
     ): void {
-        console.log('createGrooveMeshHighlightWithCameraFilter!!');
+        console.log('createGrooveMeshHighlightWithCameraFilter - Threshold Based!!');
         if (!this.sceneRoot) return;
 
         // 월드 매트릭스 최신화
         targetNode.updateMatrixWorld(true);
 
-        // 노드의 바운딩 박스 중심 계산
-        const box = new THREE.Box3().setFromObject(targetNode);
-        const center = new THREE.Vector3();
-        box.getCenter(center);
+        // 카메라 방향 벡터 (카메라가 바라보는 방향)
+        const cameraDirection = new THREE.Vector3();
+        camera.getWorldDirection(cameraDirection);
+        cameraDirection.normalize();
 
-        // Raycaster를 사용하여 교차점 찾기
-        const raycaster = new THREE.Raycaster();
-
-        // 노드 중심을 화면 좌표로 변환
-        const screenPosition = center.clone().project(camera);
-        const ndc = new THREE.Vector2(screenPosition.x, screenPosition.y);
-
-        // 카메라에서 나가는 광선 설정 (노드 중심 방향)
-        raycaster.setFromCamera(ndc, camera);
-
-        // 가장 가까운 교차점 정보를 저장
-        let closestIntersection: {
-            distance: number;
-            face: THREE.Face;
-            faceIndex: number;
-            object: THREE.Mesh;
-        } | null = null;
-
-        // 대상 노드의 모든 메쉬에 대해 교차점 계산
-        const meshes: THREE.Mesh[] = [];
+        // 모든 메쉬를 순회하며 카메라를 향하는 면들을 수집
         targetNode.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                meshes.push(child);
+            if (child instanceof THREE.Mesh && child.geometry) {
+                const geometry = child.geometry;
+                const positions = geometry.attributes.position;
+                const normals = geometry.attributes.normal;
+                const indices = geometry.index;
+
+                if (!normals) {
+                    geometry.computeVertexNormals();
+                }
+
+                const filteredIndices: number[] = [];
+                const faceCount = indices ? indices.count / 3 : positions.count / 3;
+
+                // 메쉬의 월드 쿼터니언 가져오기 (법선 변환용)
+                const worldQuat = new THREE.Quaternion();
+                child.getWorldQuaternion(worldQuat);
+
+                for (let i = 0; i < faceCount; i++) {
+                    let idx1, idx2, idx3;
+                    if (indices) {
+                        idx1 = indices.getX(i * 3);
+                        idx2 = indices.getX(i * 3 + 1);
+                        idx3 = indices.getX(i * 3 + 2);
+                    } else {
+                        idx1 = i * 3;
+                        idx2 = i * 3 + 1;
+                        idx3 = i * 3 + 2;
+                    }
+
+                    // 평균 법선 계산
+                    const avgNormal = this.calculateAverageNormal(
+                        geometry.attributes.normal as THREE.BufferAttribute,
+                        idx1, idx2, idx3,
+                        worldQuat
+                    );
+
+                    // 카메라 방향과 법선의 내적 계산
+                    // 카메라 방향(시선)과 면 법선이 반대 방향일 때(내적이 음수일 때) 카메라를 향하는 면임
+                    const dotProduct = avgNormal.dot(cameraDirection);
+
+                    // 내적이 -0.5 미만이면 카메라를 어느 정도 정면으로 바라보는 면으로 간주
+                    if (dotProduct < -0.5) {
+                        filteredIndices.push(idx1, idx2, idx3);
+                    }
+                }
+
+                // 수집된 면이 있으면 하이라이트 적용
+                if (filteredIndices.length > 0) {
+                    this.createFilteredMeshHighlight(
+                        child,
+                        filteredIndices,
+                        color,
+                        thresholdAngle
+                    );
+                }
             }
         });
 
-        // 모든 메쉬에 대해 Raycaster 적용
-        for (const mesh of meshes) {
-            const intersects = raycaster.intersectObject(mesh, false);
-
-            for (const intersection of intersects) {
-                if (!closestIntersection || intersection.distance < closestIntersection.distance) {
-                    closestIntersection = {
-                        distance: intersection.distance,
-                        face: intersection.face!,
-                        faceIndex: intersection.faceIndex!,
-                        object: mesh
-                    };
-                }
-            }
-        }
-
-        console.log('[StencilOutlineHighlight] 교차점 검사 결과:', closestIntersection);
-        // 가장 가까운 교차점이 있으면 해당 면만 하이라이트
-        if (closestIntersection) {
-            console.log('[StencilOutlineHighlight] 가장 가까운 면 발견:', {
-                distance: closestIntersection.distance.toFixed(2),
-                faceNormal: `(${closestIntersection.face.normal.x.toFixed(2)}, ${closestIntersection.face.normal.y.toFixed(2)}, ${closestIntersection.face.normal.z.toFixed(2)})`
-            });
-
-            // 해당 메쉬에서 가장 가까운 면의 삼각형 인덱스만 추출
-            const targetMesh = closestIntersection.object;
-
-            if (targetMesh.geometry.index) {
-                // 인덱스 버퍼가 있는 경우
-                const faceIndex = Math.floor(closestIntersection.faceIndex / 3) * 3;
-                const indices = targetMesh.geometry.index;
-                const idx1 = indices.getX(faceIndex);
-                const idx2 = indices.getX(faceIndex + 1);
-                const idx3 = indices.getX(faceIndex + 2);
-
-                this.createSingleFaceHighlight(
-                    targetMesh,
-                    [idx1, idx2, idx3],
-                    color,
-                    thresholdAngle
-                );
-            } else {
-                // 인덱스 버퍼가 없는 경우 (비인덱스 지오메트리)
-                const faceIndex = Math.floor(closestIntersection.faceIndex / 3) * 3;
-                this.createSingleFaceHighlight(
-                    targetMesh,
-                    [faceIndex, faceIndex + 1, faceIndex + 2],
-                    color,
-                    thresholdAngle
-                );
-            }
-        } else {
-            console.log('[StencilOutlineHighlight] 교차점을 찾지 못함 - 노드 중심 기준으로 폴백 하이라이트');
-            // 폴백: 노드의 중심을 기준으로 법선 필터링 방식 사용
-            this.createGrooveMeshHighlightWithNormalFilter(
-                targetNode,
-                color,
-                thresholdAngle,
-                new THREE.Vector3(0, 0, 1),  // Z축 방향 (일반적으로 전면)
-                0.3  // normalTolerance를 더 넓게 설정
-            );
-        }
+        console.log('[StencilOutlineHighlight] 카메라 방향 기반 다중 면 하이라이트 완료');
     }
 
     /**
