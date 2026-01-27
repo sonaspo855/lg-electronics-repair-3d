@@ -44,37 +44,47 @@ export class DamperAssemblyService {
         localBox.getSize(size);
         localBox.getCenter(center);
 
-        // 1. 좌/우 홈의 규격 정의 (사용자 이미지 기반 비대칭 설정)
-        // 왼쪽 (작은 홈): 전체 폭의 약 15%, 오른쪽 (큰 홈): 전체 폭의 약 25%
-        const leftWidth = size.x * 0.15;
-        const rightWidth = size.x * 0.25;
-        const grooveDepth = size.z * 0.3; // 앞뒤 깊이는 동일하게 30% 가정
+        // 1. 정면(XY 평면) 기준 홈 규격 정의
+        const leftWidth = size.x * 0.15;  // 왼쪽 작은 홈 폭
+        const rightWidth = size.x * 0.25; // 오른쪽 큰 홈 폭
+        const grooveHeight = size.y * 0.4; // 정면에서 보이는 홈의 높이
 
-        // 2. 개별 홈 생성을 위한 헬퍼 함수
-        const createBorder = (width: number, depth: number, offsetX: number, color: number) => {
-            const geom = new THREE.PlaneGeometry(width, depth);
+        const createFrontBorder = (width: number, height: number, offsetX: number, offsetY: number, color: number) => {
+            const geom = new THREE.PlaneGeometry(width, height);
             const edges = new THREE.EdgesGeometry(geom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+            const material = new THREE.LineBasicMaterial({
+                color,
+                linewidth: 2,
+                depthTest: false, // 모델에 가려지더라도 항상 보이게 설정
+                transparent: true,
+                opacity: 0.8
+            });
+            const line = new THREE.LineSegments(edges, material);
 
-            line.rotation.x = -Math.PI / 2; // 평면 눕히기
-            line.position.copy(center);
-            line.position.x += offsetX;      // 좌우 오프셋 적용
-            line.position.y += size.y / 2 + 0.002; // 표면보다 살짝 위
+            // 렌더링 순서를 높여서 다른 객체보다 위에 그림
+            line.renderOrder = 999;
 
-            line.applyMatrix4(mesh.matrixWorld); // 월드 좌표 변환
+            // 위치 설정: localBox.max.z를 사용하여 확실한 정면에 배치
+            line.position.set(
+                center.x + offsetX,
+                center.y + offsetY,
+                localBox.max.z + 0.01 // center.z + size.z/2 보다 정확한 정면 좌표
+            );
+
+            line.applyMatrix4(mesh.matrixWorld);
             return line;
         };
 
-        // 3. 왼쪽 작은 홈 (노란색) & 오른쪽 큰 홈 (하늘색) 생성
-        // offsetX 계산: 중심에서 좌우로 일정 거리만큼 이동
-        const leftGroove = createBorder(leftWidth, grooveDepth, -size.x * 0.2, 0xffff00);
-        const rightGroove = createBorder(rightWidth, grooveDepth, size.x * 0.2, 0x00ffff);
+        // 2. 위치 값 미세 조정 (이미지 기반: 왼쪽은 중앙에 가깝고, 오른쪽은 끝에 치우침)
+        // offsetX 값을 좌우 비대칭으로 조정하여 가시성을 확보합니다.
+        const leftGroove = createFrontBorder(leftWidth, grooveHeight, -size.x * 0.15, 0, 0xffff00);
+        const rightGroove = createFrontBorder(rightWidth, grooveHeight, size.x * 0.15, 0, 0x00ffff);
 
-        // 4. 씬에 추가 및 관리
+        // 3. 씬에 추가 및 관리
         this.sceneRoot.add(leftGroove, rightGroove);
         this.debugObjects.push(leftGroove, rightGroove);
 
-        console.log(`[DamperDebug] 비대칭 홈 생성 완료: 좌(${leftWidth.toFixed(2)}), 우(${rightWidth.toFixed(2)})`);
+        console.log('[DamperDebug] 정면(XY) 홈 시각화 완료');
     }
 
     /**
