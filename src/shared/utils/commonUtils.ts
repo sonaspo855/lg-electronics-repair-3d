@@ -138,6 +138,47 @@ export const getNodeHierarchy = (node: THREE.Object3D): any => {
     return result;
 };
 
+/**
+ * EdgesGeometry를 사용하여 노드의 홈(모서리) 부분을 식별하고 하이라이트 라인을 생성하는 함수
+ * @param targetNode 대상 노드
+ * @param color 하이라이트 색상
+ * @param thresholdAngle 엣지로 판정할 최소 각도 (기본값 15도)
+ * @returns 생성된 LineSegments 객체들의 배열
+ */
+export const createGrooveHighlight = (
+    targetNode: THREE.Object3D,
+    color: number = 0x00ffff,
+    thresholdAngle: number = 15
+): THREE.LineSegments[] => {
+    const highlights: THREE.LineSegments[] = [];
+
+    // 월드 매트릭스 최신화 (정확한 좌표 추출을 위해 필수)
+    targetNode.updateMatrixWorld(true);
+
+    targetNode.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.geometry) {
+            // EdgesGeometry 생성
+            const edges = new THREE.EdgesGeometry(child.geometry, thresholdAngle);
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color,
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.8,
+                depthTest: false // 다른 객체에 가려지지 않게 설정
+            });
+
+            const lineSegments = new THREE.LineSegments(edges, lineMaterial);
+
+            // 대상 메쉬의 월드 트랜스폼 적용
+            lineSegments.applyMatrix4(child.matrixWorld);
+
+            highlights.push(lineSegments);
+        }
+    });
+
+    return highlights;
+};
+
 export const exportHierarchyToJson = (hierarchy: any, filename: string = "scene_hierarchy.json") => {
     const json = JSON.stringify(hierarchy, null, 2);
     const blob = new Blob([json], { type: "application/json" });

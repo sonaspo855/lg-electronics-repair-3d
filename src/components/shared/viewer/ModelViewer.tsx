@@ -20,6 +20,7 @@ const BUCKET_NODE_NAME = "AKC73369920_Bucket_Assembly,Ice";
 const LEFT_DOOR_LOWER_ANCHOR_NAME = "MBJ42493801_Cam,Locker_14466001";
 const LEFT_DOOR_LOWER_SHAFT_NAME = "AEH36821925_Hinge_Assembly,Center_183656_SHAFT";
 
+import { getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
 import {
   LEFT_DOOR_DAMPER_COVER_BODY_NODE,
   LEFT_DOOR_DAMPER_ASSEMBLY_NODE
@@ -306,6 +307,10 @@ export default function ModelViewer({
     };
 
     assemblyService.prepareManualAssembly(LEFT_DOOR_DAMPER_COVER_BODY_NODE, LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
+
+    // 댐퍼 홈 하이라이트 활성화
+    const damperService = getDamperAssemblyService();
+    damperService.highlightDamperGroove();
   };
 
   const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
