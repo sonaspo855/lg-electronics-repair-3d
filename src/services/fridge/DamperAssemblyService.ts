@@ -112,35 +112,26 @@ export class DamperAssemblyService {
 
         if (uniquePoints.length < 3) return;
 
-        // 2. Shape 생성 (최근접 이웃 방식으로 외곽선 연결)
-        const sortedPoints: THREE.Vector3[] = [];
-        let current = uniquePoints[0];
-        const remaining = [...uniquePoints.slice(1)];
-        sortedPoints.push(current);
+        // 3. Shape 생성 (점들을 정렬하여 연결)
+        // 여기서는 간단하게 Bounding Box 대신 정점들의 중심으로부터의 각도로 정렬하여 외곽선을 만듭니다.
+        const center = new THREE.Vector2();
+        uniquePoints.forEach(p => { center.x += p.x; center.y += p.y; });
+        center.divideScalar(uniquePoints.length);
 
-        while (remaining.length > 0) {
-            let nearestIdx = 0;
-            let minDist = Infinity;
-            for (let i = 0; i < remaining.length; i++) {
-                const dist = current.distanceTo(remaining[i]);
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearestIdx = i;
-                }
-            }
-            current = remaining[nearestIdx];
-            sortedPoints.push(current);
-            remaining.splice(nearestIdx, 1);
-        }
+        uniquePoints.sort((a, b) => {
+            const angleA = Math.atan2(a.y - center.y, a.x - center.x);
+            const angleB = Math.atan2(b.y - center.y, b.x - center.x);
+            return angleA - angleB;
+        });
 
         const shape = new THREE.Shape();
-        shape.moveTo(sortedPoints[0].x, sortedPoints[0].y);
-        for (let i = 1; i < sortedPoints.length; i++) {
-            shape.lineTo(sortedPoints[i].x, sortedPoints[i].y);
+        shape.moveTo(uniquePoints[0].x, uniquePoints[0].y);
+        for (let i = 1; i < uniquePoints.length; i++) {
+            shape.lineTo(uniquePoints[i].x, uniquePoints[i].y);
         }
         shape.closePath();
 
-        // 3. Mesh 및 Edges 생성
+        // 4. Mesh 및 Edges 생성
         const geometry = new THREE.ShapeGeometry(shape);
         const material = new THREE.MeshBasicMaterial({
             color: color,
@@ -209,30 +200,45 @@ export class DamperAssemblyService {
         const depthRange = maxZ - (localBox.min.z);
         const threshold = Math.max(depthRange * 0.1, 0.001);
 
+        // [개선] 홈 외부의 외곽 정점들을 제외하기 위한 패딩 설정
         const paddingX = (localBox.max.x - localBox.min.x) * 0.15;
         const paddingY = (localBox.max.y - localBox.min.y) * 0.15;
 
+        // [개선] 정점 간의 거리 기반 필터링을 추가하여 인접하지 않은 외곽 정점 제외
         const filterPointsByProximity = (points: THREE.Vector3[]): THREE.Vector3[] => {
             if (points.length < 3) return [];
+
+            // 1. 점들의 중심점 계산
             const localCenter = new THREE.Vector3();
             points.forEach(p => localCenter.add(p));
             localCenter.divideScalar(points.length);
+
+            // 2. 중심점에서 너무 먼 점들(외곽으로 튀는 점들) 제거
             const distances = points.map(p => p.distanceTo(localCenter));
             const avgDist = distances.reduce((a, b) => a + b, 0) / distances.length;
-            return points.filter((_, i) => distances[i] < avgDist * 1.3);
+
+            // 평균 거리의 1.0배 이상 떨어진 점들은 필터링 (임계값 더욱 강화)
+            return points.filter((_, i) => distances[i] < avgDist * 1.0);
         };
 
         const leftPoints: THREE.Vector3[] = [];
         const rightPoints: THREE.Vector3[] = [];
 
+        // [개선] 정점 분류 기준 강화: 단순히 center.x로 나누는 것이 아니라, 
+        // 실제 홈이 위치해야 할 예상 X 좌표 범위를 더 좁게 설정하여 오분류 방지
         const leftLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.4;
         const rightLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.6;
 
         for (let i = 0; i < positions.count; i++) {
             const p = new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i));
+
+            // 1. 깊이 조건: 정면보다 일정 깊이 이상 들어간 점
             if (p.z < maxZ - threshold) {
+                // 2. 외곽선 조건: 모델의 가장자리(꼭지점 등)에 있는 점들 제외
                 if (p.x > localBox.min.x + paddingX && p.x < localBox.max.x - paddingX &&
                     p.y > localBox.min.y + paddingY && p.y < localBox.max.y - paddingY) {
+
+                    // 3. X축 분류: 중앙 전선/커넥터 부위(붉은색 박스 영역)를 제외하고 확실한 좌우 홈만 선택
                     if (p.x < leftLimit) leftPoints.push(p);
                     else if (p.x > rightLimit) rightPoints.push(p);
                 }
@@ -242,7 +248,10 @@ export class DamperAssemblyService {
         const filteredLeftPoints = filterPointsByProximity(leftPoints);
         const filteredRightPoints = filterPointsByProximity(rightPoints);
 
+        // 작은 홈 (왼쪽) - Shape 기반 하이라이트
         this.createGrooveShapeHighlight(targetNode, filteredLeftPoints, 0xffff00, maxZ);
+
+        // 큰 홈 (오른쪽) - Shape 기반 하이라이트
         this.createGrooveShapeHighlight(targetNode, filteredRightPoints, 0x00ffff, maxZ);
 
         console.log('[LG CNS] 홈 형태 기반 하이라이트 완료');
