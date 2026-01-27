@@ -234,6 +234,182 @@ export class StencilOutlineHighlight {
     }
 
     /**
+     * [신규] 카메라를 기준으로 가장 먼저 보이는 면(가장 가까운 면)만
+     * 정밀하게 하이라이트합니다. Raycaster를 사용하여 교차점을 계산합니다.
+     * @param targetNode 하이라이트할 대상 노드
+     * @param camera 카메라 객체
+     * @param color 하이라이트 색상 (기본값: 빨강)
+     * @param thresholdAngle 엣지로 판정할 최소 각도 (기본값: 15도)
+     */
+    public createGrooveMeshHighlightWithCameraFilter(
+        targetNode: THREE.Object3D,
+        camera: THREE.Camera,
+        color: number = 0xff0000,
+        thresholdAngle: number = 15
+    ): void {
+        console.log('createGrooveMeshHighlightWithCameraFilter!!');
+        if (!this.sceneRoot) return;
+
+        // 월드 매트릭스 최신화
+        targetNode.updateMatrixWorld(true);
+
+        // 노드의 바운딩 박스 중심 계산
+        const box = new THREE.Box3().setFromObject(targetNode);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // Raycaster를 사용하여 교차점 찾기
+        const raycaster = new THREE.Raycaster();
+
+        // 노드 중심을 화면 좌표로 변환
+        const screenPosition = center.clone().project(camera);
+        const ndc = new THREE.Vector2(screenPosition.x, screenPosition.y);
+
+        // 카메라에서 나가는 광선 설정 (노드 중심 방향)
+        raycaster.setFromCamera(ndc, camera);
+
+        // 가장 가까운 교차점 정보를 저장
+        let closestIntersection: {
+            distance: number;
+            face: THREE.Face;
+            faceIndex: number;
+            object: THREE.Mesh;
+        } | null = null;
+
+        // 대상 노드의 모든 메쉬에 대해 교차점 계산
+        const meshes: THREE.Mesh[] = [];
+        targetNode.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                meshes.push(child);
+            }
+        });
+
+        // 모든 메쉬에 대해 Raycaster 적용
+        for (const mesh of meshes) {
+            const intersects = raycaster.intersectObject(mesh, false);
+
+            for (const intersection of intersects) {
+                if (!closestIntersection || intersection.distance < closestIntersection.distance) {
+                    closestIntersection = {
+                        distance: intersection.distance,
+                        face: intersection.face!,
+                        faceIndex: intersection.faceIndex!,
+                        object: mesh
+                    };
+                }
+            }
+        }
+
+        console.log('[StencilOutlineHighlight] 교차점 검사 결과:', closestIntersection);
+        // 가장 가까운 교차점이 있으면 해당 면만 하이라이트
+        if (closestIntersection) {
+            console.log('[StencilOutlineHighlight] 가장 가까운 면 발견:', {
+                distance: closestIntersection.distance.toFixed(2),
+                faceNormal: `(${closestIntersection.face.normal.x.toFixed(2)}, ${closestIntersection.face.normal.y.toFixed(2)}, ${closestIntersection.face.normal.z.toFixed(2)})`
+            });
+
+            // 해당 메쉬에서 가장 가까운 면의 삼각형 인덱스만 추출
+            const targetMesh = closestIntersection.object;
+
+            if (targetMesh.geometry.index) {
+                // 인덱스 버퍼가 있는 경우
+                const faceIndex = Math.floor(closestIntersection.faceIndex / 3) * 3;
+                const indices = targetMesh.geometry.index;
+                const idx1 = indices.getX(faceIndex);
+                const idx2 = indices.getX(faceIndex + 1);
+                const idx3 = indices.getX(faceIndex + 2);
+
+                this.createSingleFaceHighlight(
+                    targetMesh,
+                    [idx1, idx2, idx3],
+                    color,
+                    thresholdAngle
+                );
+            } else {
+                // 인덱스 버퍼가 없는 경우 (비인덱스 지오메트리)
+                const faceIndex = Math.floor(closestIntersection.faceIndex / 3) * 3;
+                this.createSingleFaceHighlight(
+                    targetMesh,
+                    [faceIndex, faceIndex + 1, faceIndex + 2],
+                    color,
+                    thresholdAngle
+                );
+            }
+        } else {
+            console.log('[StencilOutlineHighlight] 교차점을 찾지 못함 - 노드 중심 기준으로 폴백 하이라이트');
+            // 폴백: 노드의 중심을 기준으로 법선 필터링 방식 사용
+            this.createGrooveMeshHighlightWithNormalFilter(
+                targetNode,
+                color,
+                thresholdAngle,
+                new THREE.Vector3(0, 0, 1),  // Z축 방향 (일반적으로 전면)
+                0.3  // normalTolerance를 더 넓게 설정
+            );
+        }
+    }
+
+    /**
+     * [내부 메서드] 단일 면만 하이라이트 생성
+     */
+    private createSingleFaceHighlight(
+        originalMesh: THREE.Mesh,
+        faceIndices: number[],
+        color: number,
+        thresholdAngle: number
+    ): void {
+        if (!this.sceneRoot) return;
+
+        const positions = originalMesh.geometry.attributes.position;
+
+        // 단일 삼각형의 위치 데이터 추출
+        const facePositions = new Float32Array(9);
+        for (let i = 0; i < 3; i++) {
+            const idx = faceIndices[i];
+            facePositions[i * 3] = positions.getX(idx);
+            facePositions[i * 3 + 1] = positions.getY(idx);
+            facePositions[i * 3 + 2] = positions.getZ(idx);
+        }
+
+        // 새 지오메트리 생성
+        const faceGeometry = new THREE.BufferGeometry();
+        faceGeometry.setAttribute('position', new THREE.BufferAttribute(facePositions, 3));
+        faceGeometry.computeVertexNormals();
+
+        // EdgesGeometry로 모서리 하이라이트
+        const edgesGeometry = new THREE.EdgesGeometry(faceGeometry, thresholdAngle);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false
+        });
+
+        const edgesLine = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        edgesLine.applyMatrix4(originalMesh.matrixWorld);
+
+        // 내부 채우기 하이라이트
+        const fillMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide,
+            depthTest: false,
+            depthWrite: false
+        });
+
+        const fillMesh = new THREE.Mesh(faceGeometry, fillMaterial);
+        fillMesh.applyMatrix4(originalMesh.matrixWorld);
+
+        // 씬에 추가
+        this.sceneRoot.add(edgesLine);
+        this.sceneRoot.add(fillMesh);
+        this.activeHighlights.push(edgesLine, fillMesh);
+
+        console.log('[StencilOutlineHighlight] 단일 면 하이라이트 완료');
+    }
+
+    /**
      * [레거시] 메쉬를 클론하고 Outline Shader/Stencil Buffer 방식을 사용하여
      * 노드의 안쪽 홈 부분을 하이라이트합니다 (단일 메쉬 대상)
      * @param originalMesh 하이라이트할 원본 메쉬

@@ -6,6 +6,7 @@ import {
     DAMPER_COVER_SLOT_OFFSET
 } from '../../shared/utils/fridgeConstants';
 import { getDamperAssemblyService } from '../fridge/DamperAssemblyService';
+import { CameraMovementService } from './CameraMovementService';
 
 /**
  * 수동 조립 관리자
@@ -14,15 +15,25 @@ import { getDamperAssemblyService } from '../fridge/DamperAssemblyService';
 export class ManualAssemblyManager {
     private partAssemblyService: PartAssemblyService | null = null;
     private sceneRoot: THREE.Object3D | null = null;
+    private cameraControls: any = null;
     private assemblyProgress: number = 0;
     private isAssemblyPlaying: boolean = false;
+
+    /**
+     * 카메라 컨트롤 설정
+     * @param cameraControls OrbitControls 또는 CameraControls 객체
+     */
+    public setCameraControls(cameraControls: any): void {
+        this.cameraControls = cameraControls;
+    }
 
     /**
      * 서비스 초기화
      * @param sceneRoot 3D 씬의 루트 노드
      */
-    public initialize(sceneRoot: THREE.Object3D): void {
+    public initialize(sceneRoot: THREE.Object3D, cameraControls?: any): void {
         this.sceneRoot = sceneRoot;
+        this.cameraControls = cameraControls || null;
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
 
         // DamperAssemblyService도 초기화해야 함
@@ -146,11 +157,16 @@ export class ManualAssemblyManager {
 
     /**
      * 댐퍼 커버 조립 (충돌 방지 로직 적용)
+     * @param options 조립 옵션
+     * @param camera 카메라 객체 (선택사항, 제공되지 않으면 자동 탐색)
      */
-    public async assembleDamperCover(options?: {
-        duration?: number;
-        onComplete?: () => void;
-    }): Promise<void> {
+    public async assembleDamperCover(
+        options?: {
+            duration?: number;
+            onComplete?: () => void;
+        },
+        camera?: THREE.Camera
+    ): Promise<void> {
         if (!this.partAssemblyService || !this.sceneRoot) return;
 
         console.log('[ManualAssemblyManager] 댐퍼 커버 조립 시작 (충돌 방지 모드)');
@@ -158,32 +174,31 @@ export class ManualAssemblyManager {
         // 댐퍼 홈 하이라이트 활성화 (법선 벡터 기반)
         const damperService = getDamperAssemblyService();
 
-        // 카메라 찾기 (sceneRoot에서 활성 카메라를 찾거나, 필요 시 전달받아야 함)
-        let activeCamera: THREE.Camera | null = null;
-        if (this.sceneRoot) {
-            // 1. 먼저 sceneRoot 내에서 카메라 탐색
-            this.sceneRoot.traverse((obj) => {
-                if (obj instanceof THREE.PerspectiveCamera || obj instanceof THREE.OrthographicCamera) {
-                    activeCamera = obj;
-                }
-            });
-
-            // 2. 만약 sceneRoot 내에 없다면, 전체 씬에서 카메라 탐색 시도 (sceneRoot의 부모가 Scene인 경우)
-            if (!activeCamera && this.sceneRoot.parent) {
-                this.sceneRoot.parent.traverse((obj) => {
-                    if (obj instanceof THREE.PerspectiveCamera || obj instanceof THREE.OrthographicCamera) {
-                        activeCamera = obj;
-                    }
-                });
-            }
+        // 카메라 찾기 (매개 변수로 전달받거나 CameraMovementService 사용)
+        let activeCamera: THREE.Camera | null = camera || null;
+        if (!activeCamera && this.sceneRoot) {
+            // CameraMovementService를 통한 카메라 탐색
+            const { CameraMovementService } = await import('./CameraMovementService');
+            const cameraMovementService = new CameraMovementService(this.cameraControls, this.sceneRoot);
+            activeCamera = cameraMovementService.getCamera();
+            console.log('activeCamera000>>> ', activeCamera);
         }
 
+        console.log('activeCamera>>> ', activeCamera);
+
         if (activeCamera) {
+            damperService.highlightClosestFace(activeCamera);
+        } else {
+            console.warn('[ManualAssemblyManager] 하이라이트를 위한 카메라를 찾을 수 없습니다.');
+        }
+
+        /* if (activeCamera) {
             damperService.highlightDamperFacesByNormal(activeCamera);
+
         } else {
             console.warn('[ManualAssemblyManager] 하이라이트를 위한 카메라를 찾을 수 없습니다. 기본 하이라이트를 시도합니다.');
             damperService.highlightDamperGroove();
-        }
+        } */
 
         return;
 
@@ -280,8 +295,10 @@ export async function disassembleDamperCover(
 
 /**
  * [New] 외부에서 호출 가능한 조립 함수 export
+ * @param duration 애니메이션 지속 시간
+ * @param camera 카메라 객체 (선택사항)
  */
-export async function runDamperAssembly(duration: number = 1500): Promise<void> {
+export async function runDamperAssembly(duration: number = 1500, camera?: THREE.Camera): Promise<void> {
     const manager = getManualAssemblyManager();
-    await manager.assembleDamperCover({ duration });
+    await manager.assembleDamperCover({ duration }, camera);
 }

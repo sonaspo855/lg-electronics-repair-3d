@@ -297,4 +297,15 @@ export class CameraMovementService {
 
         return this.sceneRoot.getObjectByName(nodeName) || null;
     }
+
+    // Set camera controls reference
+    public setCameraControls(cameraControls: any): void {
+        this.cameraControls = cameraControls;
+    }
+
+    // Get the camera object
+    public getCamera(): THREE.Camera | null {
+        console.log('this.cameraControls>> ', this.cameraControls);
+        return this.cameraControls?.camera || this.cameraControls?.object || null;
+    }
 }

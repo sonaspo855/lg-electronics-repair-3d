@@ -7,6 +7,7 @@ import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 import { animatorAgent } from "../../../services/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
+import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
 import "./ModelViewer.css";
 
 const DEFAULT_MODEL = "/models/M-Next3.glb";
@@ -512,9 +513,15 @@ export default function ModelViewer({
     // CameraControls 초기화
     if (controlsRef.current) {
       animatorAgent.setCameraControls(controlsRef.current, sceneRoot);
+
+      // ManualAssemblyManager에 cameraControls 설정
+      const manualAssemblyManager = getManualAssemblyManager();
+      manualAssemblyManager.setCameraControls(controlsRef.current);
     }
 
-    removeNodesByName(sceneRoot, REMOVE_NODE_NAME);
+    // ManualAssemblyManager 초기화
+    const manualAssemblyManager = getManualAssemblyManager();
+    manualAssemblyManager.initialize(sceneRoot, controlsRef.current);
 
     const leftDoor = findNodeByName(sceneRoot, DOORS.left.nodeName);
     if (leftDoor) {

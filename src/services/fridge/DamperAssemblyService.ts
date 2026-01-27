@@ -117,6 +117,31 @@ export class DamperAssemblyService {
     }
 
     /**
+     * [신규] 카메라를 기준으로 가장 먼저 보이는 면(가장 가까운 면)만
+     * 정밀하게 하이라이트합니다. Raycaster를 사용하여 교차점을 계산합니다.
+     * @param camera 카메라 객체
+     */
+    public highlightClosestFace(camera: THREE.Camera): void {
+        console.log('highlightClosestFace - 카메라 기준 가장 가까운 면');
+        if (!this.sceneRoot || !this.stencilHighlight) return;
+
+        const targetNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
+        if (!targetNode) return;
+
+        this.clearHighlights();
+
+        // 카메라 필터링 + 메쉬 클론 + Stencil Buffer 방식 사용
+        this.stencilHighlight.createGrooveMeshHighlightWithCameraFilter(
+            targetNode,
+            camera,
+            0xff6600,  // 주황색
+            15         // thresholdAngle: 15도
+        );
+
+        console.log('[LG CNS] 가장 가까운 면 하이라이트 완료');
+    }
+
+    /**
      * [신규] 메쉬 클론 + Outline Shader/Stencil Buffer 방식으로
      * 댐퍼 어셈블리의 정면(XY) 홈 영역을 정밀하게 하이라이트합니다.
      * 법선 벡터 기반 필터링으로 홈 내부 굴곡을 따라 정밀하게 하이라이트합니다.
