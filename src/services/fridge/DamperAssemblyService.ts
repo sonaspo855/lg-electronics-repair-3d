@@ -19,7 +19,7 @@ export class DamperAssemblyService {
     // 조립 관련 기능은 ManualAssemblyManager로 이동됨
     // 이 클래스는 간단한 상태 관리만 담당
     private sceneRoot: THREE.Object3D | null = null;
-    private activeHighlights: THREE.LineSegments[] = [];
+    private activeHighlights: THREE.Object3D[] = [];
     private debugObjects: THREE.Object3D[] = [];
 
     public initialize(sceneRoot: THREE.Object3D): void {
@@ -94,264 +94,145 @@ export class DamperAssemblyService {
     }
 
     /**
-     * [핵심 로직] 홈의 실제 형태를 따라가는 하이라이트를 생성합니다.
+     * [핵심 로직] 메쉬를 클론하고 Outline Shader/Stencil Buffer 방식을 사용하여
+     * 노드의 안쪽 홈 부분을 하이라이트합니다.
      */
-    private createGrooveShapeHighlight(mesh: THREE.Mesh, points: THREE.Vector3[], color: number, maxZ: number): void {
-        if (points.length < 3) return;
+    private createGrooveMeshHighlight(originalMesh: THREE.Mesh, color: number): void {
+        if (!this.sceneRoot) return;
 
-        // 1. XY 평면상의 점들 추출 및 중복 제거
-        const uniquePoints: THREE.Vector3[] = [];
-        const seen = new Set<string>();
-        for (const p of points) {
-            const key = `${p.x.toFixed(4)},${p.y.toFixed(4)}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                uniquePoints.push(new THREE.Vector3(p.x, p.y, 0));
-            }
-        }
+        // 1. 원본 메쉬의 월드 매트릭스 업데이트
+        originalMesh.updateMatrixWorld(true);
 
-        if (uniquePoints.length < 3) return;
+        // 2. 메쉬 클론 (안쪽 홈 부분 하이라이트용)
+        const highlightMesh = originalMesh.clone();
 
-        // 3. Shape 생성 (점들을 정렬하여 연결)
-        // 여기서는 간단하게 Bounding Box 대신 정점들의 중심으로부터의 각도로 정렬하여 외곽선을 만듭니다.
-        const center = new THREE.Vector2();
-        uniquePoints.forEach(p => { center.x += p.x; center.y += p.y; });
-        center.divideScalar(uniquePoints.length);
+        // 월드 좌표를 유지하기 위해 matrixWorld 적용
+        highlightMesh.applyMatrix4(originalMesh.matrixWorld);
 
-        uniquePoints.sort((a, b) => {
-            const angleA = Math.atan2(a.y - center.y, a.x - center.x);
-            const angleB = Math.atan2(b.y - center.y, b.x - center.x);
-            return angleA - angleB;
-        });
-
-        const shape = new THREE.Shape();
-        shape.moveTo(uniquePoints[0].x, uniquePoints[0].y);
-        for (let i = 1; i < uniquePoints.length; i++) {
-            shape.lineTo(uniquePoints[i].x, uniquePoints[i].y);
-        }
-        shape.closePath();
-
-        // 4. Mesh 및 Edges 생성
-        const geometry = new THREE.ShapeGeometry(shape);
-        const material = new THREE.MeshBasicMaterial({
+        // 3. 안쪽 홈 하이라이트용 재질 설정 (Stencil Buffer 사용)
+        const highlightMaterial = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.6,
             side: THREE.DoubleSide,
-            depthTest: false
+            depthTest: false,
+            depthWrite: false,
+            stencilWrite: true,
+            stencilFunc: THREE.AlwaysStencilFunc,
+            stencilRef: 1,
+            stencilZPass: THREE.ReplaceStencilOp
         });
 
-        const highlightMesh = new THREE.Mesh(geometry, material);
-        highlightMesh.position.z = maxZ + 0.005;
-        highlightMesh.applyMatrix4(mesh.matrixWorld);
+        highlightMesh.material = highlightMaterial;
 
-        const edgesGeometry = new THREE.EdgesGeometry(geometry);
-        const edgesMaterial = new THREE.LineBasicMaterial({
+        // 4. Outline 메쉬 생성 (BackSide 렌더링으로 외곽선 효과)
+        const outlineMesh = originalMesh.clone();
+        outlineMesh.applyMatrix4(originalMesh.matrixWorld);
+
+        // 스케일을 약간 확대하여 외곽선 효과 생성
+        outlineMesh.scale.multiplyScalar(1.03);
+
+        // Outline용 재질 설정 (BackSide만 렌더링)
+        const outlineMaterial = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
             opacity: 0.8,
-            depthTest: false
+            side: THREE.BackSide,
+            depthTest: false,
+            depthWrite: false,
+            stencilWrite: true,
+            stencilFunc: THREE.EqualStencilFunc,
+            stencilRef: 1,
+            stencilFail: THREE.KeepStencilOp,
+            stencilZFail: THREE.KeepStencilOp,
+            stencilZPass: THREE.KeepStencilOp
         });
-        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-        edges.position.copy(highlightMesh.position);
-        edges.quaternion.copy(highlightMesh.quaternion);
-        edges.scale.copy(highlightMesh.scale);
 
-        // 애니메이션 추가
-        gsap.to([material, edgesMaterial], {
-            opacity: 0.1,
-            duration: 0.8,
+        outlineMesh.material = outlineMaterial;
+
+        // 5. 렌더링 순서 보장
+        highlightMesh.renderOrder = 998;
+        outlineMesh.renderOrder = 999;
+
+        // 6. 애니메이션 추가 (하이라이트와 아웃라인 동시에)
+        gsap.to(highlightMaterial, {
+            opacity: 0.3,
+            duration: 1.0,
             repeat: -1,
             yoyo: true,
             ease: "sine.inOut"
         });
 
-        this.debugObjects.push(highlightMesh, edges);
-        this.sceneRoot?.add(highlightMesh, edges);
+        gsap.to(outlineMaterial, {
+            opacity: 0.4,
+            duration: 1.0,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+        });
+
+        this.activeHighlights.push(highlightMesh, outlineMesh);
+
+        // sceneRoot에 추가
+        this.sceneRoot.add(highlightMesh);
+        this.sceneRoot.add(outlineMesh);
+
+        // [디버그] 추가 여부 확인
+        console.log('[DamperAssemblyService] Stencil/Outline 하이라이트 추가됨:', {
+            highlightMesh: highlightMesh.name,
+            outlineMesh: outlineMesh.name,
+            position: highlightMesh.position,
+            scale: highlightMesh.scale
+        });
     }
 
     /**
      * 댐퍼 어셈블리의 정면(XY) 홈 영역을 분석하여 시각화합니다.
+     * EdgesGeometry를 사용하여 홈 부분(급격한 각도 변화가 있는 모서리)만 하이라이트합니다.
      */
     public highlightDamperGroove(): void {
         console.log('highlightDamperGroove!!!');
         if (!this.sceneRoot) return;
 
         const targetNode = this.sceneRoot.getObjectByName(LEFT_DOOR_DAMPER_ASSEMBLY_NODE);
-        if (!(targetNode instanceof THREE.Mesh)) return;
+        if (!targetNode) return;
 
         this.clearHighlights();
 
-        const geometry = targetNode.geometry;
-        const positions = geometry.attributes.position;
-        if (!positions) return;
+        // EdgesGeometry를 사용하여 홈 부분만 하이라이트
+        const grooveHighlights = createGrooveHighlight(targetNode, 0xffff00, 15);
 
-        geometry.computeBoundingBox();
-        const localBox = geometry.boundingBox!;
-        const center = new THREE.Vector3();
-        localBox.getCenter(center);
+        // 하이라이트 라인들을 씬에 추가
+        grooveHighlights.forEach((lineSegments) => {
+            this.activeHighlights.push(lineSegments);
+            this.sceneRoot!.add(lineSegments);
 
-        let maxZ = -Infinity;
-        for (let i = 0; i < positions.count; i++) {
-            const z = positions.getZ(i);
-            if (z > maxZ) maxZ = z;
-        }
-
-        const depthRange = maxZ - (localBox.min.z);
-        const threshold = Math.max(depthRange * 0.1, 0.001);
-
-        // [개선] 홈 외부의 외곽 정점들을 제외하기 위한 패딩 설정
-        const paddingX = (localBox.max.x - localBox.min.x) * 0.15;
-        const paddingY = (localBox.max.y - localBox.min.y) * 0.15;
-
-        // [개선] 정점 간의 거리 기반 필터링을 추가하여 인접하지 않은 외곽 정점 제외
-        const filterPointsByProximity = (points: THREE.Vector3[]): THREE.Vector3[] => {
-            if (points.length < 3) return [];
-
-            // 1. 점들의 중심점 계산
-            const localCenter = new THREE.Vector3();
-            points.forEach(p => localCenter.add(p));
-            localCenter.divideScalar(points.length);
-
-            // 2. 중심점에서 너무 먼 점들(외곽으로 튀는 점들) 제거
-            const distances = points.map(p => p.distanceTo(localCenter));
-            const avgDist = distances.reduce((a, b) => a + b, 0) / distances.length;
-
-            // 평균 거리의 1.0배 이상 떨어진 점들은 필터링 (임계값 더욱 강화)
-            return points.filter((_, i) => distances[i] < avgDist * 1.0);
-        };
-
-        const leftPoints: THREE.Vector3[] = [];
-        const rightPoints: THREE.Vector3[] = [];
-
-        // [개선] 정점 분류 기준 강화: 단순히 center.x로 나누는 것이 아니라, 
-        // 실제 홈이 위치해야 할 예상 X 좌표 범위를 더 좁게 설정하여 오분류 방지
-        const leftLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.4;
-        const rightLimit = localBox.min.x + (localBox.max.x - localBox.min.x) * 0.6;
-
-        for (let i = 0; i < positions.count; i++) {
-            const p = new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i));
-
-            // 1. 깊이 조건: 정면보다 일정 깊이 이상 들어간 점
-            if (p.z < maxZ - threshold) {
-                // 2. 외곽선 조건: 모델의 가장자리(꼭지점 등)에 있는 점들 제외
-                if (p.x > localBox.min.x + paddingX && p.x < localBox.max.x - paddingX &&
-                    p.y > localBox.min.y + paddingY && p.y < localBox.max.y - paddingY) {
-
-                    // 3. X축 분류: 중앙 전선/커넥터 부위(붉은색 박스 영역)를 제외하고 확실한 좌우 홈만 선택
-                    if (p.x < leftLimit) leftPoints.push(p);
-                    else if (p.x > rightLimit) rightPoints.push(p);
-                }
-            }
-        }
-
-        const filteredLeftPoints = filterPointsByProximity(leftPoints);
-        const filteredRightPoints = filterPointsByProximity(rightPoints);
-
-        // 작은 홈 (왼쪽) - Shape 기반 하이라이트
-        this.createGrooveShapeHighlight(targetNode, filteredLeftPoints, 0xffff00, maxZ);
-
-        // 큰 홈 (오른쪽) - Shape 기반 하이라이트
-        this.createGrooveShapeHighlight(targetNode, filteredRightPoints, 0x00ffff, maxZ);
-
-        console.log('[LG CNS] 홈 형태 기반 하이라이트 완료');
-    }
-
-    /**
-     * 계산된 Box3를 기반으로 실제 Plane 테두리를 생성하여 씬에 추가합니다.
-     */
-    private createBorderFromBox(mesh: THREE.Mesh, box: THREE.Box3, color: number, maxZ: number): void {
-        const size = new THREE.Vector3();
-        const center = new THREE.Vector3();
-        box.getSize(size);
-        box.getCenter(center);
-
-        // 정면(XY) 기준 PlaneGeometry 생성
-        const geom = new THREE.PlaneGeometry(size.x, size.y);
-        const edges = new THREE.EdgesGeometry(geom);
-        const line = new THREE.LineSegments(
-            edges,
-            new THREE.LineBasicMaterial({ color, linewidth: 2, depthTest: false })
-        );
-
-        line.renderOrder = 999;
-        // 위치: 분석된 영역의 중앙, Z축은 모델의 가장 앞면(maxZ)에 밀착
-        line.position.set(center.x, center.y, maxZ + 0.005);
-        line.applyMatrix4(mesh.matrixWorld);
-
-        this.sceneRoot?.add(line);
-        this.debugObjects.push(line);
-    }
-
-    /**
-     * [핵심 로직] 모델의 모든 정점을 조사하여 "안쪽으로 들어간" 영역의 바운딩 박스를 찾습니다.
-     */
-    private findGrooveBounds(mesh: THREE.Mesh): { left: THREE.Box3, right: THREE.Box3 } | null {
-        const geometry = mesh.geometry;
-        const positions = geometry.attributes.position;
-        if (!positions) return null;
-
-        geometry.computeBoundingBox();
-        const localBox = geometry.boundingBox!;
-        const center = new THREE.Vector3();
-        localBox.getCenter(center);
-
-        // 1. Z축 데이터 범위 분석 (정밀 디버깅용)
-        let minZ = Infinity;
-        let maxZ = -Infinity;
-        for (let i = 0; i < positions.count; i++) {
-            const z = positions.getZ(i);
-            if (z < minZ) minZ = z;
-            if (z > maxZ) maxZ = z;
-        }
-
-        // 홈의 깊이를 판단할 임계값 (전체 두께의 10% 또는 최소 0.001로 자동 설정)
-        const depthRange = maxZ - minZ;
-        const threshold = Math.max(depthRange * 0.1, 0.001);
-
-        console.log(`[DamperDebug] 모델 분석 정보:`, {
-            maxZ: maxZ.toFixed(4),
-            minZ: minZ.toFixed(4),
-            depthRange: depthRange.toFixed(4),
-            appliedThreshold: threshold.toFixed(4),
-            localCenterX: center.x.toFixed(4)
+            // GSAP 애니메이션 추가 (맥동 효과)
+            gsap.to(lineSegments.material, {
+                opacity: 0.3,
+                duration: 1.0,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut"
+            });
         });
 
-        const leftPoints: THREE.Vector3[] = [];
-        const rightPoints: THREE.Vector3[] = [];
-
-        // 2. 정점 수집 (중앙 좌표 center.x를 기준으로 좌우 분류)
-        for (let i = 0; i < positions.count; i++) {
-            const p = new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i));
-
-            // 정면(maxZ)보다 일정 깊이 이상 들어간 점만 수집
-            if (p.z < maxZ - threshold) {
-                // 단순 0이 아닌 모델의 로컬 중심(center.x) 기준으로 좌우 나눔
-                if (p.x < center.x) leftPoints.push(p);
-                else rightPoints.push(p);
-            }
-        }
-
-        if (leftPoints.length === 0 || rightPoints.length === 0) {
-            console.warn(`[DamperDebug] 정점을 찾지 못함: 좌(${leftPoints.length}), 우(${rightPoints.length})`);
-            return null;
-        }
-
-        return {
-            left: new THREE.Box3().setFromPoints(leftPoints),
-            right: new THREE.Box3().setFromPoints(rightPoints)
-        };
+        console.log('[LG CNS] EdgesGeometry 기반 홈 하이라이트 완료:', {
+            highlightCount: grooveHighlights.length
+        });
     }
 
     /**
      * 적용된 모든 하이라이트를 제거합니다.
      */
     public clearHighlights(): void {
-        this.activeHighlights.forEach((line) => {
-            gsap.killTweensOf(line.material);
-            this.sceneRoot?.remove(line);
-            if (line.geometry) line.geometry.dispose();
-            if (line.material instanceof THREE.Material) line.material.dispose();
+        this.activeHighlights.forEach((obj) => {
+            if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
+                gsap.killTweensOf(obj.material);
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material instanceof THREE.Material) obj.material.dispose();
+            }
+            this.sceneRoot?.remove(obj);
         });
         this.activeHighlights = [];
 
