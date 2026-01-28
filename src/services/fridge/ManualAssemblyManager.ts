@@ -224,33 +224,22 @@ export class ManualAssemblyManager {
             pivotSphere.position.copy(virtualPivot.position);
             this.sceneRoot.add(pivotSphere);
 
-            // 커버 피벗 위치도 시각화
-            if (coverPivot) {
-                const coverPivotSphere = new THREE.Mesh(pivotSphereGeometry, pivotSphereMaterial);
-                coverPivotSphere.position.copy(coverPivot.position);
-                this.sceneRoot.add(coverPivotSphere);
+            // 4. 타겟 상태 계산 (가상 피벗 간의 차이를 이용한 선형 이동)
+            if (!coverPivot) {
+                console.error('[Error] 커버의 피벗을 찾을 수 없어 이동 경로를 계산할 수 없습니다.');
+                return;
             }
 
-            // 4. 타겟 상태 계산
-            // 최종 조립 상태의 쿼터니언 (어셈블리와 동일하게 정렬)
-            const targetWorldQuat = new THREE.Quaternion();
-            damperAssembly.getWorldQuaternion(targetWorldQuat);
-
-            // 커버의 로컬 피벗 위치 계산 (커버의 원점 기준)
-            const coverLocalPivot = new THREE.Vector3();
-            if (coverPivot) {
-                coverLocalPivot.copy(coverPivot.position);
-                damperCover.worldToLocal(coverLocalPivot);
-            } else {
-                // 커버 피벗을 못 찾으면 메타데이터 오프셋 활용
-                const insertionOffset = config?.insertion.offset || new THREE.Vector3(0, 0, 0);
-                coverLocalPivot.copy(insertionOffset).negate();
-            }
-
-            // 최종 조립 위치: 어셈블리 피벗 위치 - (회전된 커버 로컬 피벗)
-            const finalWorldPos = virtualPivot.position.clone().sub(
-                coverLocalPivot.clone().applyQuaternion(targetWorldQuat)
+            // [수정] 분홍색 홈 피벗(virtualPivot)과 녹색 돌기 피벗(coverPivot) 사이의 월드 좌표 차이 계산
+            const worldOffset = new THREE.Vector3().subVectors(
+                virtualPivot.position,
+                coverPivot.position
             );
+
+            // 현재 커버의 월드 위치에 해당 오프셋을 더해 최종 월드 위치 계산
+            const currentWorldPos = new THREE.Vector3();
+            damperCover.getWorldPosition(currentWorldPos);
+            const finalWorldPos = currentWorldPos.clone().add(worldOffset);
 
             const finalLocalPos = finalWorldPos.clone();
             if (damperCover.parent) {
@@ -258,17 +247,11 @@ export class ManualAssemblyManager {
                 damperCover.parent.worldToLocal(finalLocalPos);
             }
 
-            const finalLocalQuat = targetWorldQuat.clone();
-            if (damperCover.parent) {
-                const parentWorldQuat = new THREE.Quaternion();
-                damperCover.parent.getWorldQuaternion(parentWorldQuat);
-                finalLocalQuat.premultiply(parentWorldQuat.invert());
-            }
+            // 회전은 현재 상태 유지 (사용하지 않음)
 
             // 5. 애니메이션 설정 (선형 이동)
             const duration = options?.duration || 1500;
             const startPos = damperCover.position.clone();
-            const startQuat = damperCover.quaternion.clone();
 
             await new Promise<void>((resolve) => {
                 const animObj = { progress: 0 };
@@ -280,9 +263,9 @@ export class ManualAssemblyManager {
                     onUpdate: () => {
                         const p = animObj.progress;
 
-                        // 선형 보간을 사용하여 위치와 회전을 동시에 보간
+                        // 위치만 선형 보간 (회전 없음)
                         damperCover.position.lerpVectors(startPos, finalLocalPos, p);
-                        damperCover.quaternion.slerpQuaternions(startQuat, finalLocalQuat, p);
+                        // 회전은 시작 상태 유지
                     },
                     onComplete: () => {
                         console.log('[ManualAssemblyManager] 조립 완료 (선형 이동 방식)');
