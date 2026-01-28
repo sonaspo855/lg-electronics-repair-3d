@@ -10,6 +10,9 @@ import { PartAssemblyService } from "../../../services/fridge/PartAssemblyServic
 import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
 import "./ModelViewer.css";
 
+import { DamperAssemblyService, getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
+
+
 const DEFAULT_MODEL = "/models/M-Next3.glb";
 
 const DOOR_NODE_NAME = "ADC30035606_Door_Assembly,Refrigerator(Left)";
@@ -223,6 +226,10 @@ function CameraManager({
       target: controlsRef.current?.target || new THREE.Vector3(0, 0, 0),
       update: () => controlsRef.current?.update(),
     }); */
+
+
+    // Damper Assembly 노드 구조 출력 (디버깅용)
+    getDamperAssemblyService().debugPrintDamperStructure();
 
     highlightedRef.current = true;
   }, [scene, camera, controlsRef]);

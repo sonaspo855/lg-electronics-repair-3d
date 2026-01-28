@@ -330,6 +330,36 @@ export class DamperAssemblyService {
         const mid = Math.floor(sorted.length / 2);
         return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
     }
+
+    // ==================== 디버깅용 메서드들 ====================
+
+    /**
+     * 노드의 모든 자식 노드 이름을 콘솔에 출력합니다.
+     */
+    private printNodeNames(node: THREE.Object3D | null | undefined, prefix: string = ''): void {
+        if (!node) return;
+        console.log('prefix>> ' + prefix + node.name);
+        node.children.forEach(child => this.printNodeNames(child, prefix + '  '));
+    }
+
+    /**
+     * [디버깅] Damper Assembly와 Cover의 노드 구조를 콘솔에 출력합니다.
+     */
+    public debugPrintDamperStructure(): void {
+        if (!this.sceneRoot) {
+            console.warn('[DamperAssemblyService] sceneRoot가 초기화되지 않았습니다.');
+            return;
+        }
+
+        const damperAssembly = this.sceneRoot.getObjectByName('ACV74674704_Damper_Assembly_13473');
+        const damperCover = this.sceneRoot.getObjectByName('MCK71751101_Cover,Body_3117001');
+
+        console.log('=== Damper Assembly 노드 구조 ===');
+        this.printNodeNames(damperAssembly);
+
+        console.log('=== Damper Cover 노드 구조 ===');
+        this.printNodeNames(damperCover);
+    }
 }
 
 /**
