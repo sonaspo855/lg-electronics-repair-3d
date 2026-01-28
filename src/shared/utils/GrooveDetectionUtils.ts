@@ -330,6 +330,32 @@ export class GrooveDetectionUtils {
     }
 
     /**
+     * 정점 법선 벡터 분석을 통한 다중 가상 피벗(Multiple Virtual Pivots) 계산
+     * @param targetNode 대상 노드
+     * @param normalFilter 필터링할 방향 법선 벡터
+     * @param normalTolerance 법선 허용 오차
+     * @param clusterThreshold 클러스터링 거리 임계값
+     */
+    public static calculateMultipleVirtualPivotsByNormalAnalysis(
+        targetNode: THREE.Object3D,
+        normalFilter: THREE.Vector3 = new THREE.Vector3(0, 0, 1),
+        normalTolerance: number = 0.2,
+        clusterThreshold: number = 0.05
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        return NormalBasedHighlight.calculateMultipleVirtualPivotsByNormalAnalysis(
+            targetNode,
+            normalFilter,
+            normalTolerance,
+            clusterThreshold
+        );
+    }
+
+    /**
      * 정점 법선 벡터 분석을 통한 가상 피벗(Virtual Pivot) 계산
      * NormalBasedHighlight의 정적 메서드를 활용하여 가상 회전축을 생성합니다.
      * @param targetNode 대상 노드 (홈이 있는 부품)

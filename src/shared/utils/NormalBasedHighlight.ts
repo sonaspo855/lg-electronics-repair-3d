@@ -441,6 +441,136 @@ export class NormalBasedHighlight {
     }
 
     /**
+     * 정점 법선 벡터 분석을 통한 다중 가상 피벗(Multiple Virtual Pivots) 계산
+     * 홈이 여러 개인 경우 각 홈의 중심점을 클러스터링을 통해 추출합니다.
+     * @param targetNode 대상 노드
+     * @param normalFilter 필터링할 방향 법선 벡터
+     * @param normalTolerance 법선 허용 오차
+     * @param clusterThreshold 클러스터링 거리 임계값 (기본: 0.05m)
+     */
+    public static calculateMultipleVirtualPivotsByNormalAnalysis(
+        targetNode: THREE.Object3D,
+        normalFilter: THREE.Vector3 = new THREE.Vector3(0, 0, 1),
+        normalTolerance: number = 0.2,
+        clusterThreshold: number = 0.05
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        try {
+            targetNode.updateMatrixWorld(true);
+
+            const filteredVertices: THREE.Vector3[] = [];
+            const filteredNormals: THREE.Vector3[] = [];
+
+            targetNode.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.geometry) {
+                    const geometry = child.geometry;
+                    if (!geometry.attributes.normal) geometry.computeVertexNormals();
+
+                    const positions = geometry.attributes.position;
+                    const normals = geometry.attributes.normal;
+                    const indices = geometry.index;
+                    const worldQuat = new THREE.Quaternion();
+                    child.getWorldQuaternion(worldQuat);
+
+                    const processFace = (idx1: number, idx2: number, idx3: number) => {
+                        const avgNormal = NormalBasedHighlight.calculateAverageNormal(normals, idx1, idx2, idx3, worldQuat);
+                        const dotProduct = Math.abs(avgNormal.dot(normalFilter));
+                        if (dotProduct > (1 - normalTolerance)) {
+                            const v1 = new THREE.Vector3().fromBufferAttribute(positions, idx1).applyMatrix4(child.matrixWorld);
+                            const v2 = new THREE.Vector3().fromBufferAttribute(positions, idx2).applyMatrix4(child.matrixWorld);
+                            const v3 = new THREE.Vector3().fromBufferAttribute(positions, idx3).applyMatrix4(child.matrixWorld);
+
+                            // [수정] 면의 정점 3개를 모두 추가하여 Box 계산의 정확도 향상
+                            filteredVertices.push(v1.clone(), v2.clone(), v3.clone());
+                            filteredNormals.push(avgNormal.clone(), avgNormal.clone(), avgNormal.clone());
+                        }
+                    };
+
+                    if (indices) {
+                        for (let i = 0; i < indices.count; i += 3) {
+                            processFace(indices.getX(i), indices.getX(i + 1), indices.getX(i + 2));
+                        }
+                    } else {
+                        for (let i = 0; i < positions.count; i += 3) {
+                            processFace(i, i + 1, i + 2);
+                        }
+                    }
+                }
+            });
+
+            if (filteredVertices.length === 0) return [];
+
+            // 6. 클러스터링 (간단한 거리 기반 그룹화)
+            const clusters: Array<{ vertices: THREE.Vector3[], normals: THREE.Vector3[] }> = [];
+
+            for (let i = 0; i < filteredVertices.length; i++) {
+                const v = filteredVertices[i];
+                const n = filteredNormals[i];
+                let closestCluster = null;
+                let minDistance = clusterThreshold;
+
+                for (const cluster of clusters) {
+                    // 클러스터의 '중심'과 비교하여 더 안정적인 거리 측정
+                    const clusterCenter = new THREE.Vector3();
+                    const sampleSize = Math.min(cluster.vertices.length, 9); // 최대 9개 샘플링하여 평균 위치 계산
+                    for (let j = 0; j < sampleSize; j++) {
+                        clusterCenter.add(cluster.vertices[j]);
+                    }
+                    clusterCenter.divideScalar(sampleSize);
+
+                    const dist = v.distanceTo(clusterCenter);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestCluster = cluster;
+                    }
+                }
+
+                if (closestCluster) {
+                    closestCluster.vertices.push(v);
+                    closestCluster.normals.push(n);
+                } else {
+                    clusters.push({ vertices: [v], normals: [n] });
+                }
+            }
+
+            // 7. 각 클러스터별 피벗 정보 생성
+            return clusters.map(cluster => {
+                // [개선] 산술 평균 대신 클러스터 정점들의 Bounding Box 중심 사용
+                const clusterBox = new THREE.Box3();
+                cluster.vertices.forEach(v => clusterBox.expandByPoint(v));
+
+                const position = new THREE.Vector3();
+                clusterBox.getCenter(position);
+
+                const avgNormal = new THREE.Vector3();
+                cluster.normals.forEach(n => avgNormal.add(n));
+                avgNormal.divideScalar(cluster.normals.length).normalize();
+
+                const worldUp = new THREE.Vector3(0, 1, 0);
+                let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
+                if (rotationAxis.length() < 0.01) {
+                    rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
+                }
+
+                return {
+                    position,
+                    rotationAxis,
+                    insertionDirection: avgNormal,
+                    filteredVerticesCount: cluster.vertices.length * 3 // 면 중심점 기준이므로 대략적인 정점 수
+                };
+            });
+
+        } catch (error) {
+            console.error('[NormalBasedHighlight] 다중 가상 피벗 계산 실패:', error);
+            return [];
+        }
+    }
+
+    /**
      * 정점 법선 벡터 분석을 통한 가상 피벗(Virtual Pivot) 계산
      * 홈의 방향성을 분석하여 가상 회전축을 생성합니다.
      * @param targetNode 대상 노드 (홈이 있는 부품)

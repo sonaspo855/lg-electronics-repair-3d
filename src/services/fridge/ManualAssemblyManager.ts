@@ -179,7 +179,7 @@ export class ManualAssemblyManager {
         startPosition: THREE.Vector3,
         endPosition: THREE.Vector3,
         plugPosition?: THREE.Vector3,
-        holePosition?: THREE.Vector3
+        holePosition?: THREE.Vector3 | THREE.Vector3[]
     ): void {
         // 기존 디버그 객체 정리
         this.clearDebugObjects();
@@ -266,41 +266,46 @@ export class ManualAssemblyManager {
             this.sceneRoot.add(plugToStartLine);
         }
 
-        // 5. 홈 위치 (마젠타색 구)
-        if (holePosition) {
-            const holeGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
-            const holeMaterial = new THREE.MeshBasicMaterial({
-                color: 0xff00ff,
-                depthTest: false,
-                depthWrite: false,
-                transparent: true
-            });
-            const holePoint = new THREE.Mesh(holeGeometry, holeMaterial);
-            holePoint.position.copy(holePosition);
-            holePoint.renderOrder = debugRenderOrder;
-            this.debugObjects.push(holePoint);
-            this.sceneRoot.add(holePoint);
+        // 5. 홈 위치 (마젠타색 구) - 다중 홈 지원
+        if (holePosition && this.sceneRoot) {
+            const holePositions = Array.isArray(holePosition) ? holePosition : [holePosition];
+            const root = this.sceneRoot;
 
-            // 홈에서 종료 위치로 연결선
-            const holeToEnd = new THREE.BufferGeometry().setFromPoints([holePosition, endPosition]);
-            const holeToEndLine = new THREE.Line(
-                holeToEnd,
-                new THREE.LineBasicMaterial({
+            holePositions.forEach((hPos) => {
+                const holeGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
+                const holeMaterial = new THREE.MeshBasicMaterial({
                     color: 0xff00ff,
-                    transparent: true,
-                    opacity: 0.5,
                     depthTest: false,
-                    depthWrite: false
-                })
-            );
-            holeToEndLine.renderOrder = debugRenderOrder;
-            this.debugObjects.push(holeToEndLine);
-            this.sceneRoot.add(holeToEndLine);
+                    depthWrite: false,
+                    transparent: true
+                });
+                const holePoint = new THREE.Mesh(holeGeometry, holeMaterial);
+                holePoint.position.copy(hPos);
+                holePoint.renderOrder = debugRenderOrder;
+                this.debugObjects.push(holePoint);
+                root.add(holePoint);
+
+                // 홈에서 종료 위치로 연결선
+                const holeToEnd = new THREE.BufferGeometry().setFromPoints([hPos, endPosition]);
+                const holeToEndLine = new THREE.Line(
+                    holeToEnd,
+                    new THREE.LineBasicMaterial({
+                        color: 0xff00ff,
+                        transparent: true,
+                        opacity: 0.5,
+                        depthTest: false,
+                        depthWrite: false
+                    })
+                );
+                holeToEndLine.renderOrder = debugRenderOrder;
+                this.debugObjects.push(holeToEndLine);
+                root.add(holeToEndLine);
+            });
         }
 
         // 6. 이동 벡터 화살표
         const direction = new THREE.Vector3().subVectors(endPosition, startPosition);
-        if (direction.length() > 0.0001) {
+        if (direction.length() > 0.0001 && this.sceneRoot) {
             const arrowHelper = new THREE.ArrowHelper(
                 direction.clone().normalize(),
                 startPosition,
@@ -326,14 +331,15 @@ export class ManualAssemblyManager {
             시작위치: `(${startPosition.x.toFixed(3)}, ${startPosition.y.toFixed(3)}, ${startPosition.z.toFixed(3)})`,
             종료위치: `(${endPosition.x.toFixed(3)}, ${endPosition.y.toFixed(3)}, ${endPosition.z.toFixed(3)})`,
             돌출부: plugPosition ? `(${plugPosition.x.toFixed(3)}, ${plugPosition.y.toFixed(3)}, ${plugPosition.z.toFixed(3)})` : '없음',
-            홈: holePosition ? `(${holePosition.x.toFixed(3)}, ${holePosition.y.toFixed(3)}, ${holePosition.z.toFixed(3)})` : '없음',
+            홈: Array.isArray(holePosition)
+                ? `${holePosition.length}개 탐지`
+                : (holePosition ? `(${holePosition.x.toFixed(3)}, ${holePosition.y.toFixed(3)}, ${holePosition.z.toFixed(3)})` : '없음'),
             이동거리: direction.length().toFixed(4)
         });
     }
-
     /**
-     * 디버그 객체 일괄 정리
-     */
+         * 디버그 객체 일괄 정리
+         */
     private clearDebugObjects(): void {
         this.debugObjects.forEach((obj) => {
             this.sceneRoot?.remove(obj);
@@ -387,27 +393,33 @@ export class ManualAssemblyManager {
             0.5
         );
 
-        // 5. [Assembly 분석] 결합 홈(Hole) 탐지
-        const holeAnalysis = GrooveDetectionUtils.calculateVirtualPivotByNormalAnalysis(
+        // 5. [Assembly 분석] 결합 홈(Hole) 탐지 - 다중 홈 탐지 적용
+        const holeAnalyses = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             assemblyNode,
             new THREE.Vector3(0, 0, 1),
-            0.5
+            0.6, // [수정] 0.5에서 0.6으로 허용 오차 확대 (작은 홈 탐지력 강화)
+            0.03 // [수정] 5cm에서 3cm로 조정 (큰 홈 병합 유지 및 작은 홈 분리 탐지)
         );
 
         let targetPosition = new THREE.Vector3();
         let plugWorldPos: THREE.Vector3 | null = null;
-        let holeWorldPos: THREE.Vector3 | null = null;
+        let holeWorldPositions: THREE.Vector3[] = [];
 
         // 6. 결합 위치 계산
-        if (plugAnalysis && holeAnalysis) {
-            console.log('[Assembly] Auto-Snap: 정점 분석 성공. 정밀 좌표 계산 중...');
+        if (plugAnalysis && holeAnalyses.length > 0) {
+            console.log(`[Assembly] Auto-Snap: 정점 분석 성공. ${holeAnalyses.length}개의 홈 탐지됨.`);
 
             const currentCoverPos = coverNode.position.clone();
             plugWorldPos = plugAnalysis.position;
-            holeWorldPos = holeAnalysis.position;
+
+            // 모든 홈 위치 수집
+            holeWorldPositions = holeAnalyses.map(a => a.position);
+
+            // 조립 기준은 첫 번째 홈으로 설정 (또는 가장 가까운 홈)
+            const primaryHoleWorldPos = holeWorldPositions[0];
 
             // 이동 벡터(Delta) 계산: 홈 위치 - 돌출부 위치
-            const moveDelta = new THREE.Vector3().subVectors(holeWorldPos, plugWorldPos);
+            const moveDelta = new THREE.Vector3().subVectors(primaryHoleWorldPos, plugWorldPos);
 
             // 목표 위치 설정
             targetPosition.addVectors(currentCoverPos, moveDelta);
@@ -420,6 +432,7 @@ export class ManualAssemblyManager {
 
             if (holeCenter) {
                 targetPosition.copy(holeCenter);
+                holeWorldPositions = [holeCenter];
                 // 부모가 있다면 로컬 좌표로 변환
                 if (coverNode.parent) {
                     coverNode.parent.worldToLocal(targetPosition);
@@ -439,12 +452,12 @@ export class ManualAssemblyManager {
             targetWorldPos.copy(targetPosition);
         }
 
-        // 디버그 시각화 호출 (시작, 종료, 돌출부, 홈)
+        // 디버그 시각화 호출 (시작, 종료, 돌출부, 홈 배열)
         this.visualizeAssemblyPath(
             currentCoverWorldPos,
             targetWorldPos,
             plugWorldPos || undefined,
-            holeWorldPos || undefined
+            holeWorldPositions.length > 0 ? holeWorldPositions : undefined
         );
 
         // 8. 애니메이션 실행
