@@ -197,9 +197,9 @@ export class ManualAssemblyManager {
             // GrooveDetectionUtils가 World 좌표를 반환한다고 가정 (이전 답변 수정사항 적용 필)
             const grooveCenter = GrooveDetectionUtils.calculateGrooveCenterByBoundingBox(
                 damperAssembly,
-                0.3
+                config?.grooveDetection.innerBoundRatio || 0.3
             );
-
+            console.log('grooveCenter>> ', grooveCenter);
             if (!grooveCenter) {
                 console.error('홈 중심점을 계산할 수 없습니다.');
                 return;
@@ -212,7 +212,7 @@ export class ManualAssemblyManager {
             const debugGeom = new THREE.SphereGeometry(debugRadius, 16, 16);
 
             const debugMat = new THREE.MeshBasicMaterial({
-                color: 0xff0000,
+                color: 0x800080,
                 depthTest: false,
                 transparent: true,
                 opacity: 0.8

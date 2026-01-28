@@ -7,7 +7,7 @@
             "partNode": "MCK71751101_Cover,Body_3117001",
             "grooveDetection": {
                 "method": "bounding_box",
-                "innerBoundRatio": 0.3,
+                "innerBoundRatio": 0.2,
                 "normalFilter": {
                     "x": 0,
                     "y": 0,
@@ -17,7 +17,7 @@
             },
             "insertion": {
                 "offset": {
-                    "x": 0,
+                    "x": -0.001,
                     "y": 0,
                     "z": 0
                 },
