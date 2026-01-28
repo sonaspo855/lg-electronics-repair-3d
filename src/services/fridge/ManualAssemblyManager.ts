@@ -167,6 +167,13 @@ export class ManualAssemblyManager {
      * @param endPosition 종료 위치 (월드 좌표)
      * @param plugPosition 돌출부 위치 (월드 좌표)
      * @param holePosition 홈 위치 (월드 좌표)
+     * 
+     * 시작 위치: 빨간 구
+        종료 위치: 초록 구
+        조립 경로: 노란색 점선
+        돌출부(Plug): 파란색 구 + 연결선
+        홈(Hole): 마젠타색 구 + 연결선
+        이동 벡터: 노란색 화살표
      */
     private visualizeAssemblyPath(
         startPosition: THREE.Vector3,
