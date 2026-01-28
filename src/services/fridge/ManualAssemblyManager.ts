@@ -13,7 +13,7 @@ import { GrooveDetectionUtils } from '../../shared/utils/GrooveDetectionUtils';
 
 /**
  * 수동 조립 관리자
- * 조립/분해 관련 함수를集中管理
+ * 조립/분해 관련 함수를 중앙 집중식 관리
  */
 export class ManualAssemblyManager {
     private partAssemblyService: PartAssemblyService | null = null;
@@ -192,9 +192,9 @@ export class ManualAssemblyManager {
             // [중요] 초기 오프셋을 0으로 설정하여 정확한 위치로 가는지 먼저 확인 권장
             // Z값이 크면 부품이 타겟의 로컬 축 방향(아래일 수 있음)으로 날아갑니다.
             const insertionOffset = config?.insertion.offset || new THREE.Vector3(0, 0, 0);
+            console.log('[ManualAssemblyManager] 적용된 오프셋:', insertionOffset);
 
-            // 3. 홈 중심점 계산 (World 좌표)
-            // GrooveDetectionUtils가 World 좌표를 반환한다고 가정 (이전 답변 수정사항 적용 필)
+            // 3. 바운딩 박스의 중심점을 기준점으로 계산 (세부 위치는 오프셋으로 조정)
             const grooveCenter = GrooveDetectionUtils.calculateGrooveCenterByBoundingBox(
                 damperAssembly,
                 config?.grooveDetection.innerBoundRatio || 0.3

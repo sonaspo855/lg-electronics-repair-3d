@@ -65,20 +65,26 @@ export class MetadataLoader {
      * @param filePath 메타데이터 파일 경로 (기본값: '/metadata/assembly-offsets.json')
      */
     public async loadMetadata(filePath: string = '/metadata/assembly-offsets.json'): Promise<AssemblyOffsetMetadata> {
-        // 이미 로딩된 메타데이터가 있으면 반환
+        // 캐시를 무시하고 항상 새로 고침 (개발 중 편의성 및 최신 데이터 보장)
         if (this.metadata) {
             return this.metadata;
         }
 
         try {
-            const response = await fetch(filePath);
+            // 브라우저 캐시 방지를 위해 타임스탬프 추가
+            const cacheBuster = `?t=${Date.now()}`;
+            const response = await fetch(filePath + cacheBuster);
             if (!response.ok) {
                 throw new Error(`Failed to load metadata: ${response.statusText}`);
             }
 
             const loadedMetadata = await response.json() as AssemblyOffsetMetadata;
             this.metadata = loadedMetadata;
-            console.log('[MetadataLoader] 메타데이터 로딩 완료:', loadedMetadata.version);
+
+            // 기존 캐시 초기화 (새로운 메타데이터 로딩 시)
+            this.cache.clear();
+
+            console.log('[MetadataLoader] 메타데이터 로딩 완료 (캐시 우회):', loadedMetadata.version);
 
             return loadedMetadata;
         } catch (error) {
@@ -118,14 +124,14 @@ export class MetadataLoader {
         assemblyName: string,
         metadataPath: string = '/metadata/assembly-offsets.json'
     ): Promise<AssemblyConfig | null> {
-        // 캐시 확인
-        if (this.cache.has(assemblyName)) {
-            console.log('[MetadataLoader] 캐시에서 설정 로딩:', assemblyName);
-            return this.cache.get(assemblyName)!;
-        }
+        // 항상 최신 데이터를 로딩하기 위해 캐시 확인 로직을 뒤로 미룸
+        // if (this.cache.has(assemblyName)) {
+        //     console.log('[MetadataLoader] 캐시에서 설정 로딩:', assemblyName);
+        //     return this.cache.get(assemblyName)!;
+        // }
 
         try {
-            // 메타데이터 로딩
+            // 메타데이터 로딩 (내부적으로 캐시 우회 및 브라우저 캐시 방지 처리됨)
             await this.loadMetadata(metadataPath);
 
             if (!this.metadata) {
