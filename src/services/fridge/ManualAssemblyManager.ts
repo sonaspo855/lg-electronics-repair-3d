@@ -157,6 +157,95 @@ export class ManualAssemblyManager {
     }
 
     /**
+     * 스텐실 아웃라인 하이라이트 적용
+     * 대상 노드를 카메라 방향 기준으로 필터링하여 하이라이트
+     */
+    private StencilOutlineWithHighlight(activeCamera: THREE.Camera): void {
+        const targetNodeName = LEFT_DOOR_DAMPER_ASSEMBLY_NODE;
+        const targetNode = this.sceneRoot?.getObjectByName(targetNodeName);
+
+        if (targetNode) {
+            // StencilOutlineHighlight 인스턴스 생성 및 초기화
+            const stencilHighlight = new StencilOutlineHighlight();
+            stencilHighlight.initialize(this.sceneRoot!);
+
+            // 카메라 방향 벡터 가져오기
+            const cameraDirection = new THREE.Vector3();
+            activeCamera.getWorldDirection(cameraDirection);
+            cameraDirection.normalize();
+
+            // 대상 노드의 메쉬를 순회하며 필터링
+            const filteredIndices: number[] = [];
+            targetNode.updateMatrixWorld(true);
+
+            targetNode.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.geometry) {
+                    const geometry = child.geometry;
+                    const normals = geometry.attributes.normal;
+                    const indices = geometry.index;
+
+                    if (!normals) {
+                        geometry.computeVertexNormals();
+                    }
+
+                    const worldQuat = new THREE.Quaternion();
+                    child.getWorldQuaternion(worldQuat);
+                    const faceCount = indices ? indices.count / 3 : geometry.attributes.position.count / 3;
+
+                    for (let i = 0; i < faceCount; i++) {
+                        let idx1, idx2, idx3;
+                        if (indices) {
+                            idx1 = indices.getX(i * 3);
+                            idx2 = indices.getX(i * 3 + 1);
+                            idx3 = indices.getX(i * 3 + 2);
+                        } else {
+                            idx1 = i * 3;
+                            idx2 = i * 3 + 1;
+                            idx3 = i * 3 + 2;
+                        }
+
+                        // 평균 법선 계산 (월드 좌표로 변환)
+                        const normal1 = new THREE.Vector3().fromBufferAttribute(normals, idx1).applyQuaternion(worldQuat);
+                        const normal2 = new THREE.Vector3().fromBufferAttribute(normals, idx2).applyQuaternion(worldQuat);
+                        const normal3 = new THREE.Vector3().fromBufferAttribute(normals, idx3).applyQuaternion(worldQuat);
+                        const avgNormal = new THREE.Vector3().addVectors(normal1, normal2).add(normal3).normalize();
+
+                        // 카메라 방향과 내적하여 카메라를 향하는 면 판정
+                        const dotProduct = avgNormal.dot(cameraDirection);
+                        if (dotProduct < -0.3) { // 카메라를 향하는 면
+                            filteredIndices.push(idx1, idx2, idx3);
+                        }
+                    }
+                }
+            });
+
+            // 필터링된 면이 있으면 StencilOutlineHighlight로 하이라이트
+            if (filteredIndices.length > 0) {
+                // 순회 중 발견한 첫 번째 메쉬 사용
+                let originalMesh: THREE.Mesh | null = null;
+                targetNode.traverse((child) => {
+                    if (!originalMesh && child instanceof THREE.Mesh) {
+                        originalMesh = child;
+                    }
+                });
+
+                if (originalMesh) {
+                    stencilHighlight.createFilteredMeshHighlight(
+                        originalMesh,
+                        filteredIndices,
+                        0xff0000, // 빨강색
+                        15,       // thresholdAngle
+                        0.6       // opacity
+                    );
+                    console.log('[ManualAssemblyManager] StencilOutlineHighlight로 하이라이트 적용 완료');
+                }
+            }
+        } else {
+            console.warn('[ManualAssemblyManager] 대상 노드를 찾을 수 없습니다:', targetNodeName);
+        }
+    }
+
+    /**
      * 댐퍼 커버 조립 (충돌 방지 로직 적용)
      * @param options 조립 옵션
      * @param camera 카메라 객체 (선택사항, 제공되지 않으면 자동 탐색)
@@ -188,100 +277,11 @@ export class ManualAssemblyManager {
         console.log('activeCamera>>> ', activeCamera);
 
         if (activeCamera) {
-            // StencilOutlineHighlight를 사용한 하이라이트로 대체
-            const targetNodeName = LEFT_DOOR_DAMPER_ASSEMBLY_NODE;
-            const targetNode = this.sceneRoot?.getObjectByName(targetNodeName);
-
-            if (targetNode) {
-                // StencilOutlineHighlight 인스턴스 생성 및 초기화
-                const stencilHighlight = new StencilOutlineHighlight();
-                stencilHighlight.initialize(this.sceneRoot!);
-
-                // 카메라 방향 벡터 가져오기
-                const cameraDirection = new THREE.Vector3();
-                activeCamera.getWorldDirection(cameraDirection);
-                cameraDirection.normalize();
-
-                // 대상 노드의 메쉬를 순회하며 필터링
-                const filteredIndices: number[] = [];
-                targetNode.updateMatrixWorld(true);
-
-                targetNode.traverse((child) => {
-                    if (child instanceof THREE.Mesh && child.geometry) {
-                        const geometry = child.geometry;
-                        const normals = geometry.attributes.normal;
-                        const indices = geometry.index;
-
-                        if (!normals) {
-                            geometry.computeVertexNormals();
-                        }
-
-                        const worldQuat = new THREE.Quaternion();
-                        child.getWorldQuaternion(worldQuat);
-                        const faceCount = indices ? indices.count / 3 : geometry.attributes.position.count / 3;
-
-                        for (let i = 0; i < faceCount; i++) {
-                            let idx1, idx2, idx3;
-                            if (indices) {
-                                idx1 = indices.getX(i * 3);
-                                idx2 = indices.getX(i * 3 + 1);
-                                idx3 = indices.getX(i * 3 + 2);
-                            } else {
-                                idx1 = i * 3;
-                                idx2 = i * 3 + 1;
-                                idx3 = i * 3 + 2;
-                            }
-
-                            // 평균 법선 계산 (월드 좌표로 변환)
-                            const normal1 = new THREE.Vector3().fromBufferAttribute(normals, idx1).applyQuaternion(worldQuat);
-                            const normal2 = new THREE.Vector3().fromBufferAttribute(normals, idx2).applyQuaternion(worldQuat);
-                            const normal3 = new THREE.Vector3().fromBufferAttribute(normals, idx3).applyQuaternion(worldQuat);
-                            const avgNormal = new THREE.Vector3().addVectors(normal1, normal2).add(normal3).normalize();
-
-                            // 카메라 방향과 내적하여 카메라를 향하는 면 판정
-                            const dotProduct = avgNormal.dot(cameraDirection);
-                            if (dotProduct < -0.3) { // 카메라를 향하는 면
-                                filteredIndices.push(idx1, idx2, idx3);
-                            }
-                        }
-                    }
-                });
-
-                // 필터링된 면이 있으면 StencilOutlineHighlight로 하이라이트
-                if (filteredIndices.length > 0) {
-                    // 순회 중 발견한 첫 번째 메쉬 사용
-                    let originalMesh: THREE.Mesh | null = null;
-                    targetNode.traverse((child) => {
-                        if (!originalMesh && child instanceof THREE.Mesh) {
-                            originalMesh = child;
-                        }
-                    });
-
-                    if (originalMesh) {
-                        stencilHighlight.createFilteredMeshHighlight(
-                            originalMesh,
-                            filteredIndices,
-                            0xff0000, // 빨강색
-                            15,       // thresholdAngle
-                            0.6       // opacity
-                        );
-                        console.log('[ManualAssemblyManager] StencilOutlineHighlight로 하이라이트 적용 완료');
-                    }
-                }
-            } else {
-                console.warn('[ManualAssemblyManager] 대상 노드를 찾을 수 없습니다:', targetNodeName);
-            }
+            this.StencilOutlineWithHighlight(activeCamera);
         } else {
             console.warn('[ManualAssemblyManager] 하이라이트를 위한 카메라를 찾을 수 없습니다.');
         }
 
-        /* if (activeCamera) {
-            damperService.highlightDamperFacesByNormal(activeCamera);
-
-        } else {
-            console.warn('[ManualAssemblyManager] 하이라이트를 위한 카메라를 찾을 수 없습니다. 기본 하이라이트를 시도합니다.');
-            damperService.highlightDamperGroove();
-        } */
 
         return;
 
