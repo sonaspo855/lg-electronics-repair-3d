@@ -385,20 +385,20 @@ export class ManualAssemblyManager {
 
         console.log('[Assembly] Starting Vertex Normal Analysis for Auto-Snap...');
 
-        // 4. [Cover 분석] 결합 돌출부(Plug) 탐지
-        // 댐퍼 커버의 핀이 향하는 방향(예: 로컬 Z 또는 Y)에 맞춰 벡터를 조정하세요.
-        const plugAnalysis = GrooveDetectionUtils.calculateVirtualPivotByNormalAnalysis(
+        // 4. [Cover 분석] 결합 돌출부(Plug) 탐지 - 다중 분석 후 최적의 클러스터 선택
+        const plugAnalyses = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             coverNode,
             new THREE.Vector3(0, 0, 1),
-            0.5
+            0.5,
+            0.02 // 돌출부는 더 촘촘하게 클러스터링
         );
 
         // 5. [Assembly 분석] 결합 홈(Hole) 탐지 - 다중 홈 탐지 적용
         const holeAnalyses = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             assemblyNode,
             new THREE.Vector3(0, 0, 1),
-            0.6, // [수정] 0.5에서 0.6으로 허용 오차 확대 (작은 홈 탐지력 강화)
-            0.03 // [수정] 5cm에서 3cm로 조정 (큰 홈 병합 유지 및 작은 홈 분리 탐지)
+            0.6,
+            0.02 // [수정] 3cm에서 2cm로 더 정밀하게 조정 (작은 홈 분리 탐지 강화)
         );
 
         let targetPosition = new THREE.Vector3();
@@ -406,22 +406,33 @@ export class ManualAssemblyManager {
         let holeWorldPositions: THREE.Vector3[] = [];
 
         // 6. 결합 위치 계산
-        if (plugAnalysis && holeAnalyses.length > 0) {
-            console.log(`[Assembly] Auto-Snap: 정점 분석 성공. ${holeAnalyses.length}개의 홈 탐지됨.`);
+        if (plugAnalyses.length > 0 && holeAnalyses.length > 0) {
+            console.log(`[Assembly] Auto-Snap: 탐지 결과 - Plug: ${plugAnalyses.length}개, Hole: ${holeAnalyses.length}개`);
 
-            const currentCoverPos = coverNode.position.clone();
-            plugWorldPos = plugAnalysis.position;
+            // [개선] 돌출부(Plug) 중 가장 유의미한 것 선택 (보통 정점 수가 적당하고 중심에 가까운 것)
+            // 여기서는 단순화를 위해 가장 많은 정점을 가진 클러스터를 메인 Plug로 간주
+            const primaryPlug = plugAnalyses.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0];
+            plugWorldPos = primaryPlug.position;
 
             // 모든 홈 위치 수집
             holeWorldPositions = holeAnalyses.map(a => a.position);
 
-            // 조립 기준은 첫 번째 홈으로 설정 (또는 가장 가까운 홈)
-            const primaryHoleWorldPos = holeWorldPositions[0];
+            // [개선] 여러 홈 중 Plug와 가장 가까운 홈을 기준으로 조립 (또는 첫 번째)
+            // 현재 coverNode의 위치에서 plugWorldPos를 뺀 상대 좌표를 고려하여 가장 가까운 hole 선택
+            const currentCoverWorldPos = new THREE.Vector3();
+            coverNode.getWorldPosition(currentCoverWorldPos);
+
+            const primaryHoleWorldPos = holeWorldPositions.sort((a, b) => {
+                const distA = a.distanceTo(plugWorldPos!);
+                const distB = b.distanceTo(plugWorldPos!);
+                return distA - distB;
+            })[0];
 
             // 이동 벡터(Delta) 계산: 홈 위치 - 돌출부 위치
             const moveDelta = new THREE.Vector3().subVectors(primaryHoleWorldPos, plugWorldPos);
 
-            // 목표 위치 설정
+            // 목표 위치 설정 (로컬 좌표계 기준)
+            const currentCoverPos = coverNode.position.clone();
             targetPosition.addVectors(currentCoverPos, moveDelta);
 
         } else {

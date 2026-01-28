@@ -462,8 +462,14 @@ export class NormalBasedHighlight {
         try {
             targetNode.updateMatrixWorld(true);
 
-            const filteredVertices: THREE.Vector3[] = [];
-            const filteredNormals: THREE.Vector3[] = [];
+            // 면(Face) 정보를 담을 구조체
+            interface FaceInfo {
+                center: THREE.Vector3;
+                vertices: THREE.Vector3[];
+                normal: THREE.Vector3;
+            }
+
+            const filteredFaces: FaceInfo[] = [];
 
             targetNode.traverse((child) => {
                 if (child instanceof THREE.Mesh && child.geometry) {
@@ -478,15 +484,23 @@ export class NormalBasedHighlight {
 
                     const processFace = (idx1: number, idx2: number, idx3: number) => {
                         const avgNormal = NormalBasedHighlight.calculateAverageNormal(normals, idx1, idx2, idx3, worldQuat);
+
+                        // 법선 필터링 (절대값이 아닌 방향까지 고려하려면 Math.abs 제거 가능하지만, 
+                        // 홈의 바닥면이 뒤집혀 있을 수도 있으므로 일단 유지하되 tolerance를 엄격하게 적용 가능)
                         const dotProduct = Math.abs(avgNormal.dot(normalFilter));
+
                         if (dotProduct > (1 - normalTolerance)) {
                             const v1 = new THREE.Vector3().fromBufferAttribute(positions, idx1).applyMatrix4(child.matrixWorld);
                             const v2 = new THREE.Vector3().fromBufferAttribute(positions, idx2).applyMatrix4(child.matrixWorld);
                             const v3 = new THREE.Vector3().fromBufferAttribute(positions, idx3).applyMatrix4(child.matrixWorld);
 
-                            // [수정] 면의 정점 3개를 모두 추가하여 Box 계산의 정확도 향상
-                            filteredVertices.push(v1.clone(), v2.clone(), v3.clone());
-                            filteredNormals.push(avgNormal.clone(), avgNormal.clone(), avgNormal.clone());
+                            const faceCenter = new THREE.Vector3().add(v1).add(v2).add(v3).divideScalar(3);
+
+                            filteredFaces.push({
+                                center: faceCenter,
+                                vertices: [v1, v2, v3],
+                                normal: avgNormal.clone()
+                            });
                         }
                     };
 
@@ -502,67 +516,89 @@ export class NormalBasedHighlight {
                 }
             });
 
-            if (filteredVertices.length === 0) return [];
+            if (filteredFaces.length === 0) return [];
 
-            // 6. 클러스터링 (간단한 거리 기반 그룹화)
-            const clusters: Array<{ vertices: THREE.Vector3[], normals: THREE.Vector3[] }> = [];
+            // 6. 클러스터링 (면 중심점 거리 기반 그룹화 - 개선된 연결성 로직)
+            const clusters: Array<{ faces: FaceInfo[] }> = [];
 
-            for (let i = 0; i < filteredVertices.length; i++) {
-                const v = filteredVertices[i];
-                const n = filteredNormals[i];
-                let closestCluster = null;
-                let minDistance = clusterThreshold;
+            for (const face of filteredFaces) {
+                let targetCluster = null;
 
                 for (const cluster of clusters) {
-                    // 클러스터의 '중심'과 비교하여 더 안정적인 거리 측정
-                    const clusterCenter = new THREE.Vector3();
-                    const sampleSize = Math.min(cluster.vertices.length, 9); // 최대 9개 샘플링하여 평균 위치 계산
-                    for (let j = 0; j < sampleSize; j++) {
-                        clusterCenter.add(cluster.vertices[j]);
-                    }
-                    clusterCenter.divideScalar(sampleSize);
+                    // 클러스터 내의 면들 중 하나라도 임계값 이내에 있으면 같은 그룹으로 간주
+                    // 성능을 위해 모든 면을 검사하는 대신, 최근 추가된 면들이나 샘플링된 면들과 비교
+                    const isConnected = cluster.faces.some(clusterFace =>
+                        face.center.distanceTo(clusterFace.center) < clusterThreshold
+                    );
 
-                    const dist = v.distanceTo(clusterCenter);
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        closestCluster = cluster;
+                    if (isConnected) {
+                        targetCluster = cluster;
+                        break;
                     }
                 }
 
-                if (closestCluster) {
-                    closestCluster.vertices.push(v);
-                    closestCluster.normals.push(n);
+                if (targetCluster) {
+                    targetCluster.faces.push(face);
                 } else {
-                    clusters.push({ vertices: [v], normals: [n] });
+                    clusters.push({ faces: [face] });
                 }
             }
 
-            // 7. 각 클러스터별 피벗 정보 생성
-            return clusters.map(cluster => {
-                // [개선] 산술 평균 대신 클러스터 정점들의 Bounding Box 중심 사용
-                const clusterBox = new THREE.Box3();
-                cluster.vertices.forEach(v => clusterBox.expandByPoint(v));
+            // [추가] 인접한 클러스터끼리 병합 (위의 로직에서 놓칠 수 있는 경우 대비)
+            let merged;
+            do {
+                merged = false;
+                for (let i = 0; i < clusters.length; i++) {
+                    for (let j = i + 1; j < clusters.length; j++) {
+                        const c1 = clusters[i];
+                        const c2 = clusters[j];
 
-                const position = new THREE.Vector3();
-                clusterBox.getCenter(position);
+                        // 두 클러스터 간의 최소 거리 확인
+                        const isNear = c1.faces.some(f1 =>
+                            c2.faces.some(f2 => f1.center.distanceTo(f2.center) < clusterThreshold)
+                        );
 
-                const avgNormal = new THREE.Vector3();
-                cluster.normals.forEach(n => avgNormal.add(n));
-                avgNormal.divideScalar(cluster.normals.length).normalize();
-
-                const worldUp = new THREE.Vector3(0, 1, 0);
-                let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
-                if (rotationAxis.length() < 0.01) {
-                    rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
+                        if (isNear) {
+                            c1.faces.push(...c2.faces);
+                            clusters.splice(j, 1);
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (merged) break;
                 }
+            } while (merged);
 
-                return {
-                    position,
-                    rotationAxis,
-                    insertionDirection: avgNormal,
-                    filteredVerticesCount: cluster.vertices.length * 3 // 면 중심점 기준이므로 대략적인 정점 수
-                };
-            });
+            // 7. 각 클러스터별 피벗 정보 생성
+            return clusters
+                .filter(cluster => cluster.faces.length >= 2) // 노이즈 제거 (최소 2개 이상의 면)
+                .map(cluster => {
+                    const clusterBox = new THREE.Box3();
+                    const avgNormal = new THREE.Vector3();
+
+                    cluster.faces.forEach(face => {
+                        face.vertices.forEach(v => clusterBox.expandByPoint(v));
+                        avgNormal.add(face.normal);
+                    });
+
+                    const position = new THREE.Vector3();
+                    clusterBox.getCenter(position);
+
+                    avgNormal.divideScalar(cluster.faces.length).normalize();
+
+                    const worldUp = new THREE.Vector3(0, 1, 0);
+                    let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
+                    if (rotationAxis.length() < 0.01) {
+                        rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
+                    }
+
+                    return {
+                        position,
+                        rotationAxis,
+                        insertionDirection: avgNormal,
+                        filteredVerticesCount: cluster.faces.length * 3
+                    };
+                });
 
         } catch (error) {
             console.error('[NormalBasedHighlight] 다중 가상 피벗 계산 실패:', error);
@@ -589,144 +625,18 @@ export class NormalBasedHighlight {
         filteredVerticesCount: number; // 필터링된 정점 수
     } | null {
         try {
-            // 1. 월드 매트릭스 업데이트
-            targetNode.updateMatrixWorld(true);
+            // 다중 피벗 분석 함수를 호출하여 가장 유의미한(정점이 가장 많은) 피벗 하나를 반환
+            const analyses = NormalBasedHighlight.calculateMultipleVirtualPivotsByNormalAnalysis(
+                targetNode,
+                normalFilter,
+                normalTolerance,
+                0.05 // 기본 임계값
+            );
 
-            // 2. 필터링된 정점들과 법선들을 저장할 배열
-            const filteredVertices: THREE.Vector3[] = [];
-            const filteredNormals: THREE.Vector3[] = [];
-            let totalProcessedMeshes = 0;
-            let totalProcessedFaces = 0;
+            if (analyses.length === 0) return null;
 
-            // 3. 노드의 모든 메쉬 순회
-            targetNode.traverse((child) => {
-                if (child instanceof THREE.Mesh && child.geometry) {
-                    const geometry = child.geometry;
-                    totalProcessedMeshes++;
-
-                    // 법선 벡터가 없으면 계산
-                    if (!geometry.attributes.normal) {
-                        geometry.computeVertexNormals();
-                    }
-
-                    const positions = geometry.attributes.position;
-                    const normals = geometry.attributes.normal;
-                    const indices = geometry.index;
-
-                    // 메쉬의 월드 쿼터니언 가져오기 (법선 변환용)
-                    const worldQuat = new THREE.Quaternion();
-                    child.getWorldQuaternion(worldQuat);
-
-                    // 4. 인덱스 여부에 따라 처리
-                    if (indices) {
-                        const faceCount = indices.count / 3;
-                        totalProcessedFaces += faceCount;
-
-                        for (let i = 0; i < indices.count; i += 3) {
-                            const idx1 = indices.getX(i);
-                            const idx2 = indices.getX(i + 1);
-                            const idx3 = indices.getX(i + 2);
-
-                            // 평균 법선 계산 (월드 좌표로 변환)
-                            const avgNormal = NormalBasedHighlight.calculateAverageNormal(
-                                normals, idx1, idx2, idx3, worldQuat
-                            );
-
-                            // 법선 필터링 (내적값으로 비교)
-                            const dotProduct = Math.abs(avgNormal.dot(normalFilter));
-                            if (dotProduct > (1 - normalTolerance)) {
-                                // 필터링된 면의 정점들을 월드 좌표로 변환하여 추가
-                                const v1 = new THREE.Vector3().fromBufferAttribute(positions, idx1);
-                                const v2 = new THREE.Vector3().fromBufferAttribute(positions, idx2);
-                                const v3 = new THREE.Vector3().fromBufferAttribute(positions, idx3);
-
-                                v1.applyMatrix4(child.matrixWorld);
-                                v2.applyMatrix4(child.matrixWorld);
-                                v3.applyMatrix4(child.matrixWorld);
-
-                                filteredVertices.push(v1, v2, v3);
-                                filteredNormals.push(avgNormal.clone());
-                            }
-                        }
-                    } else {
-                        const faceCount = positions.count / 3;
-                        totalProcessedFaces += faceCount;
-
-                        for (let i = 0; i < positions.count; i += 3) {
-                            const idx1 = i;
-                            const idx2 = i + 1;
-                            const idx3 = i + 2;
-
-                            const avgNormal = NormalBasedHighlight.calculateAverageNormal(
-                                normals, idx1, idx2, idx3, worldQuat
-                            );
-
-                            const dotProduct = Math.abs(avgNormal.dot(normalFilter));
-                            if (dotProduct > (1 - normalTolerance)) {
-                                const v1 = new THREE.Vector3().fromBufferAttribute(positions, idx1);
-                                const v2 = new THREE.Vector3().fromBufferAttribute(positions, idx2);
-                                const v3 = new THREE.Vector3().fromBufferAttribute(positions, idx3);
-
-                                v1.applyMatrix4(child.matrixWorld);
-                                v2.applyMatrix4(child.matrixWorld);
-                                v3.applyMatrix4(child.matrixWorld);
-
-                                filteredVertices.push(v1, v2, v3);
-                                filteredNormals.push(avgNormal.clone());
-                            }
-                        }
-                    }
-                }
-            });
-
-            // 5. 필터링된 정점이 없으면 null 반환
-            if (filteredVertices.length === 0) {
-                console.warn('[NormalBasedHighlight] 필터링된 면이 없습니다. 가상 피벗을 계산할 수 없습니다.', {
-                    normalFilter: `(${normalFilter.x}, ${normalFilter.y}, ${normalFilter.z})`,
-                    normalTolerance,
-                    processedMeshes: totalProcessedMeshes,
-                    processedFaces: totalProcessedFaces
-                });
-                return null;
-            }
-
-            // 6. 피벗 위치 계산 (필터링된 정점들의 중심점)
-            const pivotPosition = new THREE.Vector3();
-            filteredVertices.forEach((v) => pivotPosition.add(v));
-            pivotPosition.divideScalar(filteredVertices.length);
-
-            // 7. 평균 법선 벡터 계산 (삽입 방향)
-            const avgNormal = new THREE.Vector3();
-            filteredNormals.forEach((n) => avgNormal.add(n));
-            avgNormal.divideScalar(filteredNormals.length).normalize();
-
-            // 8. 회전축 계산 (법선 벡터와 수직인 방향)
-            // 월드 Up 벡터(0, 1, 0)와 평균 법선의 외적으로 회전축 계산
-            const worldUp = new THREE.Vector3(0, 1, 0);
-            let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
-
-            // 외적 결과가 너무 작으면 (평행한 경우) 다른 축 사용
-            if (rotationAxis.length() < 0.01) {
-                const worldRight = new THREE.Vector3(1, 0, 0);
-                rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldRight).normalize();
-            }
-
-            console.log('[NormalBasedHighlight] 가상 피벗 계산 완료:', {
-                pivotPosition: `(${pivotPosition.x.toFixed(4)}, ${pivotPosition.y.toFixed(4)}, ${pivotPosition.z.toFixed(4)})`,
-                rotationAxis: `(${rotationAxis.x.toFixed(4)}, ${rotationAxis.y.toFixed(4)}, ${rotationAxis.z.toFixed(4)})`,
-                insertionDirection: `(${avgNormal.x.toFixed(4)}, ${avgNormal.y.toFixed(4)}, ${avgNormal.z.toFixed(4)})`,
-                filteredVerticesCount: filteredVertices.length,
-                filteredFacesCount: filteredVertices.length / 3,
-                processedMeshes: totalProcessedMeshes,
-                processedFaces: totalProcessedFaces
-            });
-
-            return {
-                position: pivotPosition,
-                rotationAxis,
-                insertionDirection: avgNormal,
-                filteredVerticesCount: filteredVertices.length
-            };
+            // 정점 수가 가장 많은 클러스터를 메인 피벗으로 선택
+            return analyses.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0];
         } catch (error) {
             console.error('[NormalBasedHighlight] 가상 피벗 계산 실패:', error);
             return null;
