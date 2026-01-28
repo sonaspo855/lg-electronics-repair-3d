@@ -186,19 +186,33 @@ export class ManualAssemblyManager {
 
         if (!this.sceneRoot) return;
         const ellipse = 0.0005;
-        // 1. 시작 위치 (빨간 구) - depthTest: false로 항상前面에 렌더링
+        const debugRenderOrder = 999;
+
+        // 1. 시작 위치 (빨간 구)
         const startGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
-        const startMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false });
+        const startMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true
+        });
         const startPoint = new THREE.Mesh(startGeometry, startMaterial);
         startPoint.position.copy(startPosition);
+        startPoint.renderOrder = debugRenderOrder;
         this.debugObjects.push(startPoint);
         this.sceneRoot.add(startPoint);
 
         // 2. 종료 위치 (초록 구)
         const endGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
-        const endMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, depthTest: false });
+        const endMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true
+        });
         const endPoint = new THREE.Mesh(endGeometry, endMaterial);
         endPoint.position.copy(endPosition);
+        endPoint.renderOrder = debugRenderOrder;
         this.debugObjects.push(endPoint);
         this.sceneRoot.add(endPoint);
 
@@ -210,19 +224,28 @@ export class ManualAssemblyManager {
             dashSize: 0.05,
             gapSize: 0.02,
             linewidth: 2,
-            depthTest: false
+            depthTest: false,
+            depthWrite: false,
+            transparent: true
         });
         const pathLine = new THREE.Line(pathGeometry, pathMaterial);
-        pathLine.computeLineDistances(); // 점선 계산을 위해 필요
+        pathLine.computeLineDistances();
+        pathLine.renderOrder = debugRenderOrder;
         this.debugObjects.push(pathLine);
         this.sceneRoot.add(pathLine);
 
         // 4. 돌출부 위치 (파란색 구)
         if (plugPosition) {
             const plugGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
-            const plugMaterial = new THREE.MeshBasicMaterial({ color: 0x0088ff, depthTest: false });
+            const plugMaterial = new THREE.MeshBasicMaterial({
+                color: 0x0088ff,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true
+            });
             const plugPoint = new THREE.Mesh(plugGeometry, plugMaterial);
             plugPoint.position.copy(plugPosition);
+            plugPoint.renderOrder = debugRenderOrder;
             this.debugObjects.push(plugPoint);
             this.sceneRoot.add(plugPoint);
 
@@ -230,8 +253,15 @@ export class ManualAssemblyManager {
             const plugToStart = new THREE.BufferGeometry().setFromPoints([plugPosition, startPosition]);
             const plugToStartLine = new THREE.Line(
                 plugToStart,
-                new THREE.LineBasicMaterial({ color: 0x0088ff, transparent: true, opacity: 0.5, depthTest: false })
+                new THREE.LineBasicMaterial({
+                    color: 0x0088ff,
+                    transparent: true,
+                    opacity: 0.5,
+                    depthTest: false,
+                    depthWrite: false
+                })
             );
+            plugToStartLine.renderOrder = debugRenderOrder;
             this.debugObjects.push(plugToStartLine);
             this.sceneRoot.add(plugToStartLine);
         }
@@ -239,9 +269,15 @@ export class ManualAssemblyManager {
         // 5. 홈 위치 (마젠타색 구)
         if (holePosition) {
             const holeGeometry = new THREE.SphereGeometry(ellipse, 16, 16);
-            const holeMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff, depthTest: false });
+            const holeMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true
+            });
             const holePoint = new THREE.Mesh(holeGeometry, holeMaterial);
             holePoint.position.copy(holePosition);
+            holePoint.renderOrder = debugRenderOrder;
             this.debugObjects.push(holePoint);
             this.sceneRoot.add(holePoint);
 
@@ -249,33 +285,42 @@ export class ManualAssemblyManager {
             const holeToEnd = new THREE.BufferGeometry().setFromPoints([holePosition, endPosition]);
             const holeToEndLine = new THREE.Line(
                 holeToEnd,
-                new THREE.LineBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, depthTest: false })
+                new THREE.LineBasicMaterial({
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.5,
+                    depthTest: false,
+                    depthWrite: false
+                })
             );
+            holeToEndLine.renderOrder = debugRenderOrder;
             this.debugObjects.push(holeToEndLine);
             this.sceneRoot.add(holeToEndLine);
         }
 
-        // 6. 이동 벡터 화살표, 노란색 (depthTest: false 추가)
+        // 6. 이동 벡터 화살표
         const direction = new THREE.Vector3().subVectors(endPosition, startPosition);
-        const arrowHelper = new THREE.ArrowHelper(
-            direction.normalize(),
-            startPosition,
-            direction.length(),
-            0xffff00
-        );
-        // ArrowHelper의 라인材质에 depthTest: false 적용
-        const arrowMaterials = Array.isArray(arrowHelper.line.material)
-            ? arrowHelper.line.material
-            : [arrowHelper.line.material];
-        arrowMaterials.forEach(mat => { mat.depthTest = false; mat.depthWrite = false; });
+        if (direction.length() > 0.0001) {
+            const arrowHelper = new THREE.ArrowHelper(
+                direction.clone().normalize(),
+                startPosition,
+                direction.length(),
+                0xffff00
+            );
 
-        const coneMaterials = Array.isArray(arrowHelper.cone.material)
-            ? arrowHelper.cone.material
-            : [arrowHelper.cone.material];
-        coneMaterials.forEach(mat => { mat.depthTest = false; mat.depthWrite = false; });
+            arrowHelper.renderOrder = debugRenderOrder;
+            const arrowMaterials = [arrowHelper.line.material, arrowHelper.cone.material].flat();
+            arrowMaterials.forEach(mat => {
+                if (mat instanceof THREE.Material) {
+                    mat.depthTest = false;
+                    mat.depthWrite = false;
+                    mat.transparent = true;
+                }
+            });
 
-        this.debugObjects.push(arrowHelper);
-        this.sceneRoot.add(arrowHelper);
+            this.debugObjects.push(arrowHelper);
+            this.sceneRoot.add(arrowHelper);
+        }
 
         console.log('[Assembly Debug] 경로 시각화 생성:', {
             시작위치: `(${startPosition.x.toFixed(3)}, ${startPosition.y.toFixed(3)}, ${startPosition.z.toFixed(3)})`,
