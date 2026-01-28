@@ -235,11 +235,8 @@ export class ManualAssemblyManager {
             const rotatedOffset = insertionOffset.clone().applyQuaternion(targetWorldQuat);
             const targetWorldPos = grooveCenter.clone().add(rotatedOffset);
 
-            // 5. 로컬 좌표 및 회전값 변환 (World -> Local)
+            // 5. 로컬 좌표 변환 (World -> Local)
             const targetLocalPos = targetWorldPos.clone();
-
-            // [수정] 회전은 변경하지 않고 현재 회전을 유지하도록 설정 (to-be.png의 비정상 회전 방지)
-            const targetLocalQuat = damperCover.quaternion.clone();
 
             if (damperCover.parent) {
                 // [보정] 부모의 월드 행렬을 최신화한 후 좌표 변환 수행
@@ -247,11 +244,6 @@ export class ManualAssemblyManager {
 
                 // 위치 변환: Three.js 내장 메서드 사용 (가장 안전)
                 damperCover.parent.worldToLocal(targetLocalPos);
-
-                // 회전 변환: 부모의 월드 회전을 역산하여 적용
-                const parentWorldQuat = new THREE.Quaternion();
-                damperCover.parent.getWorldQuaternion(parentWorldQuat);
-                targetLocalQuat.premultiply(parentWorldQuat.invert());
             }
 
             // 6. 애니메이션 실행 (GSAP)
