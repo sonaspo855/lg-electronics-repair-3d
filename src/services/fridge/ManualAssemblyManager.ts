@@ -10,6 +10,7 @@ import { getDamperAssemblyService } from '../fridge/DamperAssemblyService';
 import { getMetadataLoader } from '../../shared/utils/MetadataLoader';
 import { GrooveDetectionUtils } from '../../shared/utils/GrooveDetectionUtils';
 import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
+import { NormalBasedHoleVisualizer } from '../../components/highlight';
 
 /**
  * 수동 조립 관리자
@@ -23,6 +24,7 @@ export class ManualAssemblyManager {
     private isAssemblyPlaying: boolean = false;
 
     private debugObjects: THREE.Object3D[] = [];
+    private holeVisualizer: NormalBasedHoleVisualizer = new NormalBasedHoleVisualizer();
 
     public setCameraControls(cameraControls: any): void {
         this.cameraControls = cameraControls;
@@ -35,6 +37,8 @@ export class ManualAssemblyManager {
 
         const damperService = getDamperAssemblyService();
         damperService.initialize(sceneRoot);
+
+        this.holeVisualizer.initialize(sceneRoot);
 
         console.log('[ManualAssemblyManager] 초기화 완료');
     }
@@ -123,6 +127,7 @@ export class ManualAssemblyManager {
     }
 
     public dispose(): void {
+        this.holeVisualizer.dispose();
         this.partAssemblyService?.dispose();
         this.partAssemblyService = null;
         this.sceneRoot = null;
@@ -286,6 +291,8 @@ export class ManualAssemblyManager {
     }
 
     private clearDebugObjects(): void {
+        this.holeVisualizer.clearVisualizations();
+
         this.debugObjects.forEach((obj) => {
             this.sceneRoot?.remove(obj);
             if (obj instanceof THREE.Mesh) {
@@ -384,7 +391,13 @@ export class ManualAssemblyManager {
         );
         console.log('[NormalBasedHighlight] 다중 홈 탐지 결과:', normalBasedHoleAnalyses);
 
-        return;
+        // 다중 홈 시각화
+        this.holeVisualizer.visualizeHoles(normalBasedHoleAnalyses);
+
+
+
+
+
 
 
 
