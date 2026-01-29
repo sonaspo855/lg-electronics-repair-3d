@@ -1,4 +1,4 @@
-# 홈영역 파악 및 돌출부 삽입.md
+# home-area-identification-and-protrusion-insertion.md
 
 ##  ■■ Description ■■
 - **'홈(Hole/Groove) 영역 파악 및 돌출부 삽입'** 작업은 디지털 트윈 및 가상 조립 매뉴얼 구현에서 매우 높은 정밀도를 요구하는 작업이다.

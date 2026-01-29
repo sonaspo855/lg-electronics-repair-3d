@@ -686,4 +686,184 @@ export class NormalBasedHighlight {
             .add(normal3)
             .normalize();
     }
+
+    /**
+     * 엣지 기반 돌출부(Plug) 탐지
+     * 노드의 바깥쪽 테두리에서 돌출된 부분을 찾습니다.
+     * @param targetNode 대상 노드
+     * @param searchDirection 탐색 방향 (기본: 위쪽 Y축)
+     * @param edgeThreshold 엣지로 간주할 최소 각도 (기본: 30도)
+     * @param clusterThreshold 클러스터링 거리 임계값 (기본: 0.02m)
+     */
+    public static calculatePlugByEdgeAnalysis(
+        targetNode: THREE.Object3D,
+        searchDirection: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
+        edgeThreshold: number = 30,
+        clusterThreshold: number = 0.02
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        try {
+            targetNode.updateMatrixWorld(true);
+
+            // 엣지 정보를 담을 구조체
+            interface EdgeInfo {
+                start: THREE.Vector3;
+                end: THREE.Vector3;
+                center: THREE.Vector3;
+                direction: THREE.Vector3;
+                length: number;
+            }
+
+            const edges: EdgeInfo[] = [];
+
+            targetNode.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.geometry) {
+                    const geometry = child.geometry;
+                    const positions = geometry.attributes.position;
+                    const indices = geometry.index;
+                    const worldMatrix = child.matrixWorld;
+
+                    // EdgesGeometry를 사용하여 엣지 추출
+                    const edgesGeometry = new THREE.EdgesGeometry(geometry, edgeThreshold);
+                    const edgePositions = edgesGeometry.attributes.position;
+
+                    for (let i = 0; i < edgePositions.count; i += 2) {
+                        const v1 = new THREE.Vector3(
+                            edgePositions.getX(i),
+                            edgePositions.getY(i),
+                            edgePositions.getZ(i)
+                        );
+                        const v2 = new THREE.Vector3(
+                            edgePositions.getX(i + 1),
+                            edgePositions.getY(i + 1),
+                            edgePositions.getZ(i + 1)
+                        );
+
+                        // 월드 좌표로 변환
+                        v1.applyMatrix4(worldMatrix);
+                        v2.applyMatrix4(worldMatrix);
+
+                        const center = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+                        const direction = new THREE.Vector3().subVectors(v2, v1).normalize();
+                        const length = v1.distanceTo(v2);
+
+                        edges.push({
+                            start: v1,
+                            end: v2,
+                            center,
+                            direction,
+                            length
+                        });
+                    }
+                }
+            });
+
+            if (edges.length === 0) return [];
+
+            // 바운딩 박스 계산
+            const boundingBox = new THREE.Box3();
+            edges.forEach(edge => {
+                boundingBox.expandByPoint(edge.start);
+                boundingBox.expandByPoint(edge.end);
+            });
+
+            const boxCenter = new THREE.Vector3();
+            const boxSize = new THREE.Vector3();
+            boundingBox.getCenter(boxCenter);
+            boundingBox.getSize(boxSize);
+
+            // 바운딩 박스 테두리에 있는 엣지만 필터링
+            // [개선] 탐색 방향(searchDirection)에 따른 경계면 필터링 강화
+            // 단순히 모든 경계면을 찾는 것이 아니라, 탐색 방향 쪽의 경계면을 우선시함
+            const borderThreshold = Math.min(boxSize.x, boxSize.y, boxSize.z) * 0.15;
+
+            const borderEdges = edges.filter(edge => {
+                const dists = [
+                    { val: Math.abs(edge.center.x - boundingBox.min.x), dir: new THREE.Vector3(-1, 0, 0) },
+                    { val: Math.abs(edge.center.x - boundingBox.max.x), dir: new THREE.Vector3(1, 0, 0) },
+                    { val: Math.abs(edge.center.y - boundingBox.min.y), dir: new THREE.Vector3(0, -1, 0) },
+                    { val: Math.abs(edge.center.y - boundingBox.max.y), dir: new THREE.Vector3(0, 1, 0) },
+                    { val: Math.abs(edge.center.z - boundingBox.min.z), dir: new THREE.Vector3(0, 0, -1) },
+                    { val: Math.abs(edge.center.z - boundingBox.max.z), dir: new THREE.Vector3(0, 0, 1) }
+                ];
+
+                // 탐색 방향과 일치하는 면의 엣지인지 확인 (예: searchDirection이 위쪽이면 상단 경계면 엣지만 선택)
+                return dists.some(d => d.val < borderThreshold && d.dir.dot(searchDirection) > 0.5);
+            });
+
+            if (borderEdges.length === 0) return [];
+
+            // 탐색 방향과 일치하는 엣지 필터링
+            const filteredEdges = borderEdges.filter(edge => {
+                const edgeDirection = edge.direction.clone();
+                const dotProduct = Math.abs(edgeDirection.dot(searchDirection));
+                return dotProduct > 0.5; // 탐색 방향과 60도 이내의 엣지만 선택
+            });
+
+            if (filteredEdges.length === 0) return [];
+
+            // 클러스터링 (엣지 중심점 거리 기반)
+            const clusters: Array<{ edges: EdgeInfo[] }> = [];
+
+            for (const edge of filteredEdges) {
+                let targetCluster = null;
+
+                for (const cluster of clusters) {
+                    for (const clusterEdge of cluster.edges) {
+                        if (edge.center.distanceTo(clusterEdge.center) < clusterThreshold) {
+                            targetCluster = cluster;
+                            break;
+                        }
+                    }
+                    if (targetCluster) break;
+                }
+
+                if (targetCluster) {
+                    targetCluster.edges.push(edge);
+                } else {
+                    clusters.push({ edges: [edge] });
+                }
+            }
+
+            // 각 클러스터별 돌출부 정보 생성
+            return clusters
+                .filter(cluster => cluster.edges.length >= 3) // 최소 3개의 엣지가 필요
+                .map(cluster => {
+                    const clusterBox = new THREE.Box3();
+                    const avgDirection = new THREE.Vector3();
+
+                    cluster.edges.forEach(edge => {
+                        clusterBox.expandByPoint(edge.start);
+                        clusterBox.expandByPoint(edge.end);
+                        avgDirection.add(edge.direction);
+                    });
+
+                    const position = new THREE.Vector3();
+                    clusterBox.getCenter(position);
+
+                    avgDirection.divideScalar(cluster.edges.length).normalize();
+
+                    const worldUp = new THREE.Vector3(0, 1, 0);
+                    let rotationAxis = new THREE.Vector3().crossVectors(avgDirection, worldUp).normalize();
+                    if (rotationAxis.length() < 0.01) {
+                        rotationAxis = new THREE.Vector3().crossVectors(avgDirection, new THREE.Vector3(1, 0, 0)).normalize();
+                    }
+
+                    return {
+                        position,
+                        rotationAxis,
+                        insertionDirection: avgDirection,
+                        filteredVerticesCount: cluster.edges.length * 2
+                    };
+                });
+
+        } catch (error) {
+            console.error('[NormalBasedHighlight] 엣지 기반 돌출부 탐지 실패:', error);
+            return [];
+        }
+    }
 }

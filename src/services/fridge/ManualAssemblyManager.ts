@@ -338,8 +338,8 @@ export class ManualAssemblyManager {
         });
     }
     /**
-         * 디버그 객체 일괄 정리
-         */
+     * 디버그 객체 일괄 정리
+     */
     private clearDebugObjects(): void {
         this.debugObjects.forEach((obj) => {
             this.sceneRoot?.remove(obj);
@@ -352,6 +352,66 @@ export class ManualAssemblyManager {
             }
         });
         this.debugObjects = [];
+    }
+
+    /**
+     * 클러스터 정점 위치 시각화
+     * @param plugAnalyses 돌출부 클러스터 분석 결과
+     * @param holeAnalyses 홈 클러스터 분석 결과
+     */
+    private visualizeClusterVertices(
+        plugAnalyses: any[],
+        holeAnalyses: any[]
+    ): void {
+        console.log('visualizeClusterVertices!!!');
+        if (!this.sceneRoot) return;
+
+        const pointSize = 0.0005; // 정점 포인트 크기
+        const debugRenderOrder = 999;
+
+        // 돌출부 클러스터 시각화 (파란색 계열)
+        plugAnalyses.forEach((analysis, index) => {
+            const color = new THREE.Color(0x0088ff); // 파란색
+            const geometry = new THREE.SphereGeometry(pointSize, 8, 8);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.8
+            });
+            const point = new THREE.Mesh(geometry, material);
+            point.position.copy(analysis.position);
+            point.renderOrder = debugRenderOrder;
+            this.debugObjects.push(point);
+            this.sceneRoot!.add(point);
+
+            // 클러스터 정보를 담은 라벨 추가 (콘솔용)
+            console.log(`[Cluster Debug] Plug ${index + 1}: 위치(${analysis.position.x.toFixed(4)}, ${analysis.position.y.toFixed(4)}, ${analysis.position.z.toFixed(4)}), 정점수: ${analysis.filteredVerticesCount}`);
+        });
+
+        // 홈 클러스터 시각화 (마젠타색 계열)
+        holeAnalyses.forEach((analysis, index) => {
+            const color = new THREE.Color(0xff00ff); // 마젠타색
+            const geometry = new THREE.SphereGeometry(pointSize, 8, 8);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.8
+            });
+            const point = new THREE.Mesh(geometry, material);
+            point.position.copy(analysis.position);
+            point.renderOrder = debugRenderOrder;
+            this.debugObjects.push(point);
+            this.sceneRoot!.add(point);
+
+            // 클러스터 정보를 담은 라벨 추가 (콘솔용)
+            console.log(`[Cluster Debug] Hole ${index + 1}: 위치(${analysis.position.x.toFixed(4)}, ${analysis.position.y.toFixed(4)}, ${analysis.position.z.toFixed(4)}), 정점수: ${analysis.filteredVerticesCount}`);
+        });
+
+        console.log(`[Cluster Debug] 총 ${plugAnalyses.length}개의 돌출부 클러스터와 ${holeAnalyses.length}개의 홈 클러스터를 시각화했습니다.`);
     }
 
     /**
@@ -387,14 +447,14 @@ export class ManualAssemblyManager {
 
         console.log('[Assembly] Starting Vertex Normal Analysis for Auto-Snap...');
 
-        // 4. [Cover 분석] 결합 돌출부(Plug) 탐지 - 다중 분석 후 최적의 클러스터 선택
-        const plugAnalyses = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
+        // 4. [Cover 분석] 결합 돌출부(Plug) 탐지 - 엣지 기반 탐지 (바깥쪽 테두리)
+        const plugAnalyses = GrooveDetectionUtils.calculatePlugByEdgeAnalysis(
             coverNode,
-            new THREE.Vector3(0, 0, -1),
-            0.5,
-            0.02 // 돌출부는 더 촘촘하게 클러스터링
+            new THREE.Vector3(0, -1, 0), // 위쪽 방향 탐색
+            60, // 엣지 각도 임계값
+            0.0055 // 클러스터링 거리 임계값
         );
-
+        console.log('plugAnalyses>> ', plugAnalyses.length);
         // 5. [Assembly 분석] 결합 홈(Hole) 탐지 - 다중 홈 탐지 적용
         const holeAnalysesRaw = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             assemblyNode,
@@ -408,7 +468,6 @@ export class ManualAssemblyManager {
         const assemblyBox = new THREE.Box3().setFromObject(assemblyNode);
         const assemblySize = new THREE.Vector3();
         assemblyBox.getSize(assemblySize);
-        const maxHoleSize = Math.max(assemblySize.x, assemblySize.y, assemblySize.z) * 0.5;
 
         const holeAnalyses = holeAnalysesRaw.filter(analysis => {
             // 클러스터의 정점 수나 범위를 체크 (여기서는 간단히 로그 출력 후 필터링)
@@ -417,6 +476,9 @@ export class ManualAssemblyManager {
             // 너무 넓게 퍼진 클러스터는 홈이 아닐 가능성이 높음 (임시로 정점 수로 제한하거나 그대로 둠)
             return analysis.filteredVerticesCount < 5000; // 예: 너무 거대한 면은 제외
         });
+
+        // 클러스터 정점 위치 시각화
+        this.visualizeClusterVertices(plugAnalyses, holeAnalyses);
 
         let targetPosition = new THREE.Vector3();
         let plugWorldPos: THREE.Vector3 | null = null;
@@ -427,10 +489,11 @@ export class ManualAssemblyManager {
             console.log(`[Assembly] Auto-Snap: 탐지 결과 - Plug: ${plugAnalyses.length}개, Hole: ${holeAnalyses.length}개`);
 
             // [개선] 돌출부(Plug) 중 가장 유의미한 것 선택
-            // 정점 수가 너무 많지 않은(거대 평면이 아닌) 것 중 선택
-            const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 2000);
+            // NormalBasedHighlight에서 이미 searchDirection(위쪽) 방향의 엣지만 필터링하므로,
+            // 그 중 가장 정점 데이터가 풍부한 클러스터를 선택합니다.
+            const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 5000);
             const primaryPlug = validPlugs.length > 0
-                ? validPlugs.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0]
+                ? validPlugs.sort((a, b) => b.position.y - a.position.y)[0]
                 : plugAnalyses[0];
 
             plugWorldPos = primaryPlug.position;

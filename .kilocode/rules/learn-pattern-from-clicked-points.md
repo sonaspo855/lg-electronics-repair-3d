@@ -1,4 +1,4 @@
-# 클릭한 지점을 패턴 학습.md
+# learn-pattern-from-clicked-points.md
 
 ##  ■■ Description ■■
 - 자동화된 알고리즘이 사용자의 의도를 완벽히 파악하지 못할 때, 

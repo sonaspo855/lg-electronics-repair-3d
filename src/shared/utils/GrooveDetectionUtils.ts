@@ -380,4 +380,31 @@ export class GrooveDetectionUtils {
             normalTolerance
         );
     }
+
+    /**
+     * 엣지 기반 돌출부(Plug) 탐지
+     * 노드의 바깥쪽 테두리에서 돌출된 부분을 찾습니다.
+     * @param targetNode 대상 노드
+     * @param searchDirection 탐색 방향 (기본: 위쪽 Y축)
+     * @param edgeThreshold 엣지로 간주할 최소 각도 (기본: 30도)
+     * @param clusterThreshold 클러스터링 거리 임계값 (기본: 0.02m)
+     */
+    public static calculatePlugByEdgeAnalysis(
+        targetNode: THREE.Object3D,
+        searchDirection: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
+        edgeThreshold: number = 30,
+        clusterThreshold: number = 0.02
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        return NormalBasedHighlight.calculatePlugByEdgeAnalysis(
+            targetNode,
+            searchDirection,
+            edgeThreshold,
+            clusterThreshold
+        );
+    }
 }

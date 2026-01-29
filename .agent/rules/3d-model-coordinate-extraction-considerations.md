@@ -1,4 +1,7 @@
-# (공통) 3D 모델의 좌표 추출시 고려사항.md
+---
+trigger: always_on
+---
+
 
 `src\shared\utils\commonUtils.ts` 파일의 `getPreciseBoundingBox` 함수 참고
 
