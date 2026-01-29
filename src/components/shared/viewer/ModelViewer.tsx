@@ -8,6 +8,7 @@ import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 import { animatorAgent } from "../../../services/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
 import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
+import { getClickPointMarker, resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
 import "./ModelViewer.css";
 
 import { DamperAssemblyService, getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
@@ -255,7 +256,7 @@ function SelectionManager({
     const pointer = new THREE.Vector2();
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!event.ctrlKey || event.button !== 0) {
+      if (!event.shiftKey || event.button !== 0) {
         return;
       }
       const rect = gl.domElement.getBoundingClientRect();
@@ -276,6 +277,12 @@ function SelectionManager({
         }
         console.log('최종 선택된 노드: ', targetNode);
         onNodeSelect(targetNode);
+
+        // 클릭한 지점에 파란색 구 마커 생성
+        const clickPoint = hits[0].point;
+        const normal = hits[0].face?.normal || new THREE.Vector3(0, 1, 0);
+        const clickPointMarker = getClickPointMarker(scene as THREE.Scene);
+        clickPointMarker.createMarker(clickPoint, normal, targetNode.name);
       }
     };
 
@@ -360,6 +367,8 @@ export default function ModelViewer({
       if (modelUrl) {
         useGLTF.clear(modelUrl);
       }
+      // ClickPointMarker 인스턴스 리셋
+      resetClickPointMarker();
     };
   }, [modelUrl]);
 
