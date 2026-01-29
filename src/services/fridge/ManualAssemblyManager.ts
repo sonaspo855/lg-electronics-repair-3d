@@ -9,6 +9,7 @@ import {
 import { getDamperAssemblyService } from '../fridge/DamperAssemblyService';
 import { getMetadataLoader } from '../../shared/utils/MetadataLoader';
 import { GrooveDetectionUtils } from '../../shared/utils/GrooveDetectionUtils';
+import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
 
 /**
  * 수동 조립 관리자
@@ -367,6 +368,25 @@ export class ManualAssemblyManager {
             grooveParams.edgeAngleThreshold ?? 60,
             grooveParams.plugClusteringDistance ?? 0.005
         );
+
+        // [NormalBasedHighlight] 법선 벡터 기반 다중 홈 탐지
+        const normalBasedHoleAnalyses = NormalBasedHighlight.calculateMultipleVirtualPivotsByNormalAnalysis(
+            assemblyNode,
+            grooveParams.normalFilter
+                ? new THREE.Vector3(
+                    grooveParams.normalFilter.x,
+                    grooveParams.normalFilter.y,
+                    grooveParams.normalFilter.z
+                )
+                : new THREE.Vector3(0, 0, 1),
+            grooveParams.normalTolerance ?? 0.2,
+            grooveParams.holeClusteringDistance ?? 0.005
+        );
+        console.log('[NormalBasedHighlight] 다중 홈 탐지 결과:', normalBasedHoleAnalyses);
+
+        return;
+
+
 
         // [Assembly 분석] 결합 홈(Hole) 탐지
         const holeAnalysesRaw = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
