@@ -381,10 +381,13 @@ export class ManualAssemblyManager {
             grooveParams.normalTolerance ?? 0.2,
             grooveParams.holeClusteringDistance ?? 0.005
         );
+        console.log('holeAnalysesRaw000>> ', holeAnalysesRaw);
 
         const holeAnalyses = holeAnalysesRaw.filter(analysis =>
             analysis.filteredVerticesCount < (grooveParams.maxVerticesThreshold ?? 2000)
         );
+        console.log('holeAnalyses111>>> ', holeAnalyses);
+
 
         if (plugAnalyses.length > 0 && holeAnalyses.length > 0) {
             console.log(`[Assembly] Vertex Analysis success. Plug: ${plugAnalyses.length}, Hole: ${holeAnalyses.length}`);
