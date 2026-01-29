@@ -166,55 +166,62 @@ export class ManualAssemblyManager {
         camera.getWorldDirection(cameraDirection);
 
         // 3. 시각적 하이라이트 적용 (카메라 필터 기반)
-        // 카메라가 바라보는 방향의 면들을 하이라이트
-        this.normalBasedHighlight.highlightFacesByCameraFilter(
+        // 카메라가 바라보는 방향의 면들을 하이라이트 (빨간색: 정면, 노란색: 측면/배면)
+        // 하이라이트된 정면 면(빨간색 메쉬를 구성하는 폴리곤들) 데이터를 직접 반환받습니다.
+        const highlightedFaces = this.normalBasedHighlight.highlightFacesByCameraFilter(
             targetNode,
             camera,
             0xff0000, // 정면: 빨강
             15        // 임계 각도
         );
 
-        // 4. 홈 탐지 및 중심점 계산 (법선 분석 기반)
-        // 카메라 방향의 반대 방향(홈 안쪽으로 들어가는 방향)을 필터로 사용
-        const normalFilter = cameraDirection.clone().negate();
-        console.log('normalFilter>>> ', normalFilter);
+        // '면(Face)'은 3D 모델의 최소 단위인 삼각형(Polygon)을 의미합니다.
+        // 하이라이트된 메쉬 하나는 수십 개의 삼각형으로 구성될 수 있습니다.
+        console.log(`[ManualAssemblyManager] 하이라이트 메쉬를 구성하는 폴리곤 수: ${highlightedFaces.length}`);
 
-        const holeAnalyses = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
-            targetNode,
-            normalFilter,
-            0.3,  // 허용 오차 (약간 넉넉하게)
-            0.02  // 클러스터링 거리 (2cm)
+        // 4. 홈 탐지 및 중심점 계산
+        // 하이라이트된 메쉬의 폴리곤들을 공간적으로 그룹화(Clustering)하여 개별 홈 영역을 탐지
+        const holeAnalyses = GrooveDetectionUtils.clusterFacesToGrooves(
+            highlightedFaces,
+            0.005
         );
 
         console.log(`[ManualAssemblyManager] ${holeAnalyses.length}개의 홈이 탐지되었습니다.`);
 
-        // 5. 탐지된 중심점에 마커 표시
+        // 5. 탐지된 각 홈을 서로 다른 색상으로 하이라이트
+        const highlightColors = [0x00ff00, 0x0088ff, 0xff00ff, 0xffff00, 0xff8800];
+        this.normalBasedHighlight.highlightClusters(holeAnalyses, highlightColors);
+
+        // 6. 탐지된 중심점에 마커 표시 (하이라이트 색상과 동기화)
         if (holeAnalyses.length > 0) {
-            const holePositions = holeAnalyses.map(a => a.position);
-            this.visualizeHoleCenters(holePositions);
+            this.visualizeHoleCenters(holeAnalyses, highlightColors);
         }
     }
 
     /**
      * 탐지된 홈 중심점들에 시각적 마커를 표시합니다.
      */
-    private visualizeHoleCenters(positions: THREE.Vector3[]): void {
+    private visualizeHoleCenters(
+        analyses: Array<{ position: THREE.Vector3 }>,
+        colors: number[]
+    ): void {
         if (!this.sceneRoot) return;
 
         const markerSize = 0.002; // 마커 크기 (2mm)
         const debugRenderOrder = 1000;
 
-        positions.forEach((pos, index) => {
+        analyses.forEach((analysis, index) => {
+            const color = colors[index % colors.length];
             const geometry = new THREE.SphereGeometry(markerSize, 16, 16);
             const material = new THREE.MeshBasicMaterial({
-                color: 0x00ff00, // 탐지된 홈은 초록색으로 표시
+                color: color, // 하이라이트와 동일한 색상 사용
                 depthTest: false,
                 depthWrite: false,
                 transparent: true,
                 opacity: 0.8
             });
             const marker = new THREE.Mesh(geometry, material);
-            marker.position.copy(pos);
+            marker.position.copy(analysis.position);
             marker.renderOrder = debugRenderOrder;
             marker.name = `hole_marker_${index}`;
 
@@ -222,7 +229,7 @@ export class ManualAssemblyManager {
             this.sceneRoot?.add(marker);
         });
 
-        console.log(`[ManualAssemblyManager] ${positions.length}개의 홈 중심점 마커 생성 완료`);
+        console.log(`[ManualAssemblyManager] ${analyses.length}개의 홈 중심점 마커 생성 완료`);
     }
 
     private visualizeAssemblyPath(
@@ -502,6 +509,8 @@ export class ManualAssemblyManager {
 
         return;
 
+
+
         // [Assembly 분석] 결합 홈(Hole) 탐지
         const holeAnalysesRaw = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             assemblyNode,
@@ -554,8 +563,9 @@ export class ManualAssemblyManager {
         coverNode.getWorldPosition(currentCoverWorldPos);
 
         const targetWorldPos = new THREE.Vector3();
-        if (coverNode.parent) {
-            coverNode.parent.localToWorld(targetWorldPos.copy(targetPosition));
+        const parentNode = coverNode.parent;
+        if (parentNode) {
+            (parentNode as THREE.Object3D).localToWorld(targetWorldPos.copy(targetPosition));
         } else {
             targetWorldPos.copy(targetPosition);
         }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from './commonUtils';
-import { NormalBasedHighlight } from './NormalBasedHighlight';
+import { NormalBasedHighlight, FaceInfo } from './NormalBasedHighlight';
 
 /**
  * 홈(Groove) 영역 식별 유틸리티
@@ -330,6 +330,25 @@ export class GrooveDetectionUtils {
     }
 
     /**
+     * 제공된 면(Face) 데이터를 기반으로 클러스터링을 수행하여 홈 영역을 탐지합니다.
+     * @param faces 필터링된 면 데이터 배열
+     * @param clusterThreshold 클러스터링 거리 임계값
+     * @returns 탐지된 홈 정보 배열
+     */
+    public static clusterFacesToGrooves(
+        faces: FaceInfo[],
+        clusterThreshold: number = 0.015
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+        vertices: THREE.Vector3[];
+    }> {
+        return NormalBasedHighlight.clusterFaces(faces, clusterThreshold);
+    }
+
+    /**
      * 정점 법선 벡터 분석을 통한 다중 가상 피벗(Multiple Virtual Pivots) 계산
      * @param targetNode 대상 노드
      * @param normalFilter 필터링할 방향 법선 벡터
@@ -346,6 +365,7 @@ export class GrooveDetectionUtils {
         rotationAxis: THREE.Vector3;
         insertionDirection: THREE.Vector3;
         filteredVerticesCount: number;
+        vertices?: THREE.Vector3[];
     }> {
         return NormalBasedHighlight.calculateMultipleVirtualPivotsByNormalAnalysis(
             targetNode,

@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 
 /**
+ * 면(Face) 정보를 담을 구조체
+ */
+export interface FaceInfo {
+    center: THREE.Vector3;
+    vertices: THREE.Vector3[];
+    normal: THREE.Vector3;
+}
+
+/**
  * 법선 벡터(Normal Vector) 기반 필터링을 사용하여 하이라이트하는 컴포넌트
  * 카메라를 향하는 면이나 특정 방향의 면만 선택하여 하이라이트 효과를 적용합니다
  */
@@ -58,15 +67,17 @@ export class NormalBasedHighlight {
      * @param camera 카메라 객체
      * @param color 하이라이트 색상 (기본값: 빨강)
      * @param thresholdAngle 엣지로 판정할 최소 각도 (기본값: 15도)
+     * @returns 하이라이트된 정면 면(빨간색) 정보 배열
      */
     public highlightFacesByCameraFilter(
         targetNode: THREE.Object3D,
         camera: THREE.Camera,
         color: number = 0xff0000,
         thresholdAngle: number = 15
-    ): void {
+    ): FaceInfo[] {
         console.log('highlightFacesByCameraFilter - Threshold Based!!');
-        if (!this.sceneRoot) return;
+        const frontFaces: FaceInfo[] = [];
+        if (!this.sceneRoot) return frontFaces;
 
         this.clearHighlights();
 
@@ -124,6 +135,18 @@ export class NormalBasedHighlight {
                     // 1. 정면을 바라보는 면 (내적이 -0.5 미만) -> 지정된 색상 (기본 빨강)
                     if (dotProduct < -0.5) {
                         filteredIndices.push(idx1, idx2, idx3);
+
+                        // 면 정보 수집 (홈 탐지용)
+                        const v1 = new THREE.Vector3().fromBufferAttribute(positions, idx1).applyMatrix4(child.matrixWorld);
+                        const v2 = new THREE.Vector3().fromBufferAttribute(positions, idx2).applyMatrix4(child.matrixWorld);
+                        const v3 = new THREE.Vector3().fromBufferAttribute(positions, idx3).applyMatrix4(child.matrixWorld);
+                        const center = new THREE.Vector3().add(v1).add(v2).add(v3).divideScalar(3);
+
+                        frontFaces.push({
+                            center,
+                            vertices: [v1, v2, v3],
+                            normal: avgNormal.clone()
+                        });
                     }
                     // 2. 그 외 모든 면 (측면 및 배면 포함) -> 노란색으로 채움
                     // 카메라를 등지는 면이라도 홈의 일부일 수 있으므로 모두 포함하여 노란색으로 색상화
@@ -157,6 +180,7 @@ export class NormalBasedHighlight {
         });
 
         console.log('[NormalBasedHighlight] 카메라 방향 기반 다중 면 하이라이트 완료');
+        return frontFaces;
     }
 
     /**
@@ -335,6 +359,67 @@ export class NormalBasedHighlight {
     }
 
     /**
+     * [신규] 탐지된 클러스터(홈 영역)들을 개별적인 색상으로 하이라이트합니다.
+     * @param clusters 탐지된 클러스터 정보 배열
+     * @param colors 사용할 색상 배열 (없으면 기본 색상 순환)
+     */
+    public highlightClusters(
+        clusters: Array<{ vertices?: THREE.Vector3[] }>,
+        colors: number[] = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff]
+    ): void {
+        if (!this.sceneRoot) return;
+
+        clusters.forEach((cluster, index) => {
+            if (!cluster.vertices || cluster.vertices.length === 0) return;
+
+            const color = colors[index % colors.length];
+
+            // 1. 클러스터 정점들로 지오메트리 생성
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(cluster.vertices.length * 3);
+
+            cluster.vertices.forEach((v, i) => {
+                positions[i * 3] = v.x;
+                positions[i * 3 + 1] = v.y;
+                positions[i * 3 + 2] = v.z;
+            });
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.computeVertexNormals();
+
+            // 2. EdgesGeometry 생성 (테두리)
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 15);
+            const edgesMaterial = new THREE.LineBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.9,
+                depthTest: false,
+                depthWrite: false
+            });
+            const edgesLine = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+
+            // 3. 내부 채우기 (면)
+            const fillMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide,
+                depthTest: false,
+                depthWrite: false
+            });
+            const fillMesh = new THREE.Mesh(geometry, fillMaterial);
+
+            // 4. 씬에 추가 (이미 월드 좌표이므로 matrixWorld 적용 불필요)
+            this.sceneRoot?.add(edgesLine);
+            this.sceneRoot?.add(fillMesh);
+
+            this.activeHighlights.push(edgesLine, fillMesh);
+        });
+
+        console.log(`[NormalBasedHighlight] ${clusters.length}개의 클러스터 하이라이트 완료`);
+    }
+
+    /**
      * [레거시] 법선 벡터 기반 필터링을 사용하여 카메라를 향하는 면만 하이라이트합니다
      * @param targetNode 하이라이트할 타겟 노드
      * @param camera 카메라 객체
@@ -441,6 +526,105 @@ export class NormalBasedHighlight {
     }
 
     /**
+     * [신규] 면(Face) 데이터를 기반으로 클러스터링을 수행합니다.
+     * @param faces 면 데이터 배열
+     * @param clusterThreshold 클러스터링 거리 임계값
+     * @returns 클러스터링된 홈 정보 배열
+     */
+    public static clusterFaces(
+        faces: FaceInfo[],
+        clusterThreshold: number = 0.05
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+        vertices: THREE.Vector3[];
+    }> {
+        if (faces.length === 0) return [];
+
+        const clusters: Array<{ faces: FaceInfo[] }> = [];
+
+        for (const face of faces) {
+            let targetCluster = null;
+
+            for (const cluster of clusters) {
+                for (let i = cluster.faces.length - 1; i >= 0; i--) {
+                    if (face.center.distanceTo(cluster.faces[i].center) < clusterThreshold) {
+                        targetCluster = cluster;
+                        break;
+                    }
+                }
+                if (targetCluster) break;
+            }
+
+            if (targetCluster) {
+                targetCluster.faces.push(face);
+            } else {
+                clusters.push({ faces: [face] });
+            }
+        }
+
+        let merged;
+        do {
+            merged = false;
+            for (let i = 0; i < clusters.length; i++) {
+                for (let j = i + 1; j < clusters.length; j++) {
+                    const c1 = clusters[i];
+                    const c2 = clusters[j];
+
+                    const isNear = c1.faces.some(f1 =>
+                        c2.faces.some(f2 => f1.center.distanceTo(f2.center) < clusterThreshold)
+                    );
+
+                    if (isNear) {
+                        c1.faces.push(...c2.faces);
+                        clusters.splice(j, 1);
+                        merged = true;
+                        break;
+                    }
+                }
+                if (merged) break;
+            }
+        } while (merged);
+
+        return clusters
+            .filter(cluster => cluster.faces.length >= 2)
+            .map(cluster => {
+                const clusterBox = new THREE.Box3();
+                const avgNormal = new THREE.Vector3();
+                const allVertices: THREE.Vector3[] = [];
+
+                cluster.faces.forEach(face => {
+                    face.vertices.forEach(v => {
+                        clusterBox.expandByPoint(v);
+                        allVertices.push(v);
+                    });
+                    avgNormal.add(face.normal);
+                });
+
+                const position = new THREE.Vector3();
+                clusterBox.getCenter(position);
+
+                avgNormal.divideScalar(cluster.faces.length).normalize();
+
+                const worldUp = new THREE.Vector3(0, 1, 0);
+                let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
+                if (rotationAxis.length() < 0.01) {
+                    rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
+                }
+
+                return {
+                    position,
+                    rotationAxis,
+                    insertionDirection: avgNormal,
+                    filteredVerticesCount: cluster.faces.length * 3,
+                    vertices: allVertices
+                };
+            });
+    }
+
+    /**
      * 정점 법선 벡터 분석을 통한 다중 가상 피벗(Multiple Virtual Pivots) 계산
      * 홈이 여러 개인 경우 각 홈의 중심점을 클러스터링을 통해 추출합니다.
      * @param targetNode 대상 노드
@@ -458,6 +642,7 @@ export class NormalBasedHighlight {
         rotationAxis: THREE.Vector3;
         insertionDirection: THREE.Vector3;
         filteredVerticesCount: number;
+        vertices?: THREE.Vector3[]; // 클러스터에 포함된 모든 정점 (하이라이트용)
     }> {
         try {
             targetNode.updateMatrixWorld(true);
@@ -518,95 +703,8 @@ export class NormalBasedHighlight {
 
             if (filteredFaces.length === 0) return [];
 
-            // 6. 클러스터링 (면 중심점 거리 기반 그룹화 - 개선된 연결성 로직)
-            // 홈의 바닥면과 모델의 윗면을 분리하기 위해 매우 정밀한 거리 체크가 필요함
-            const clusters: Array<{ faces: FaceInfo[] }> = [];
-
-            for (const face of filteredFaces) {
-                let targetCluster = null;
-
-                for (const cluster of clusters) {
-                    // 클러스터 내의 면들 중 하나라도 임계값 이내에 있으면 같은 그룹으로 간주
-                    // [개선] 모든 면을 검사하되, 성능을 위해 역순으로 검사 (인접한 면이 최근에 추가되었을 확률이 높음)
-                    for (let i = cluster.faces.length - 1; i >= 0; i--) {
-                        if (face.center.distanceTo(cluster.faces[i].center) < clusterThreshold) {
-                            targetCluster = cluster;
-                            break;
-                        }
-                    }
-                    if (targetCluster) break;
-                }
-
-                if (targetCluster) {
-                    targetCluster.faces.push(face);
-                } else {
-                    clusters.push({ faces: [face] });
-                }
-            }
-
-            // [추가] 인접한 클러스터끼리 병합
-            let merged;
-            do {
-                merged = false;
-                for (let i = 0; i < clusters.length; i++) {
-                    for (let j = i + 1; j < clusters.length; j++) {
-                        const c1 = clusters[i];
-                        const c2 = clusters[j];
-
-                        // 두 클러스터 간의 최소 거리 확인
-                        const isNear = c1.faces.some(f1 =>
-                            c2.faces.some(f2 => f1.center.distanceTo(f2.center) < clusterThreshold)
-                        );
-
-                        if (isNear) {
-                            c1.faces.push(...c2.faces);
-                            clusters.splice(j, 1);
-                            merged = true;
-                            break;
-                        }
-                    }
-                    if (merged) break;
-                }
-            } while (merged);
-
-            // 7. 각 클러스터별 피벗 정보 생성
-            return clusters
-                .filter(cluster => cluster.faces.length >= 2) // [수정] 다시 2개로 완화 (아주 작은 홈 탐지 허용)
-                .map(cluster => {
-                    const clusterBox = new THREE.Box3();
-                    const avgNormal = new THREE.Vector3();
-
-                    cluster.faces.forEach(face => {
-                        face.vertices.forEach(v => clusterBox.expandByPoint(v));
-                        avgNormal.add(face.normal);
-                    });
-
-                    const position = new THREE.Vector3();
-                    clusterBox.getCenter(position);
-
-                    avgNormal.divideScalar(cluster.faces.length).normalize();
-
-                    const worldUp = new THREE.Vector3(0, 1, 0);
-                    let rotationAxis = new THREE.Vector3().crossVectors(avgNormal, worldUp).normalize();
-                    if (rotationAxis.length() < 0.01) {
-                        rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
-                    }
-
-                    return {
-                        position,
-                        rotationAxis,
-                        insertionDirection: avgNormal,
-                        filteredVerticesCount: cluster.faces.length * 3
-                    };
-                })
-                // [추가] 클러스터 크기(Bounding Box)를 기준으로 너무 큰 클러스터(모델 윗면 등)는 제외하고 
-                // 실제 홈으로 보이는 것들만 필터링하는 로직 추가 가능
-                .filter(pivot => {
-                    // 모델 전체 크기에 비해 너무 큰 클러스터는 홈이 아닐 가능성이 높음
-                    // 여기서는 일단 모든 클러스터를 반환하되, 호출부에서 처리하도록 함
-                    return true;
-                });
-
+            // 6. 클러스터링 및 피벗 정보 생성 (공통 로직 사용)
+            return NormalBasedHighlight.clusterFaces(filteredFaces, clusterThreshold);
         } catch (error) {
             console.error('[NormalBasedHighlight] 다중 가상 피벗 계산 실패:', error);
             return [];
