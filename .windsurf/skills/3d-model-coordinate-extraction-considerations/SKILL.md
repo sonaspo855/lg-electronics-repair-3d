@@ -1,5 +1,5 @@
 ---
-name: considerations-when-extracting-coordinates-from-a-3d-model
+name: 3d-model-coordinate-extraction-considerations
 description: A brief description, shown to the model to help it understand when to use this skill
 ---
 

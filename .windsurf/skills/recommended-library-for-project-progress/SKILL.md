@@ -3,15 +3,6 @@ name: recommended-library-for-project-progress
 description: A brief description, shown to the model to help it understand when to use this skill
 ---
 
-## 0. ■■ Reference ■■
-
-- ## **Meeting Minutes:**
-    
-- ## **Resources:**
-    
-- ## **Reference Materials:**
-    
-
 ## 1. Recommended Tech Stack & Libraries
 
 To manage complex component disassembly scenarios smoothly and with scalability, we propose the following library combinations:

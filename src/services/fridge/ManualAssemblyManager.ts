@@ -459,8 +459,8 @@ export class ManualAssemblyManager {
         const holeAnalysesRaw = GrooveDetectionUtils.calculateMultipleVirtualPivotsByNormalAnalysis(
             assemblyNode,
             new THREE.Vector3(0, 0, 1),
-            0.2, // [수정] 0.6에서 0.2로 대폭 강화 (평면도가 높은 면만 추출)
-            0.005 // [수정] 2cm에서 5mm로 대폭 축소 (홈 바닥과 모델 윗면 분리 유도)
+            0.5, // [수정] 0.6에서 0.2로 대폭 강화 (평면도가 높은 면만 추출)
+            0.5 // [수정] 2cm에서 5mm로 대폭 축소 (홈 바닥과 모델 윗면 분리 유도)
         );
 
         // [추가] 너무 큰 클러스터(모델 윗면 등) 제외 로직
@@ -474,7 +474,7 @@ export class ManualAssemblyManager {
             console.log(`[Assembly] 탐지된 클러스터: 위치(${analysis.position.x.toFixed(3)}, ${analysis.position.y.toFixed(3)}), 정점수: ${analysis.filteredVerticesCount}`);
 
             // 너무 넓게 퍼진 클러스터는 홈이 아닐 가능성이 높음 (임시로 정점 수로 제한하거나 그대로 둠)
-            return analysis.filteredVerticesCount < 5000; // 예: 너무 거대한 면은 제외
+            return analysis.filteredVerticesCount < 2000; // 예: 너무 거대한 면은 제외
         });
 
         // 클러스터 정점 위치 시각화
@@ -491,7 +491,7 @@ export class ManualAssemblyManager {
             // [개선] 돌출부(Plug) 중 가장 유의미한 것 선택
             // NormalBasedHighlight에서 이미 searchDirection(위쪽) 방향의 엣지만 필터링하므로,
             // 그 중 가장 정점 데이터가 풍부한 클러스터를 선택합니다.
-            const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 5000);
+            const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 2000);
             const primaryPlug = validPlugs.length > 0
                 ? validPlugs.sort((a, b) => b.position.y - a.position.y)[0]
                 : plugAnalyses[0];
