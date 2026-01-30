@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getNodeNameLoader } from './NodeNameLoader';
 
 /**
  * 조립 오프셋 메타데이터 인터페이스
@@ -120,7 +121,27 @@ export class MetadataLoader {
     }
 
     /**
-     * 어셈블리 설정을 로딩하고 변환합니다.
+     * 노드 참조를 실제 노드 이름으로 해결합니다.
+     * @param nodeValue 노드 값 (예: "ref:fridge.leftDoor.damperAssembly" 또는 직접 노드 이름)
+     * @returns 해결된 노드 이름
+     */
+    private resolveNodeReference(nodeValue: string): string {
+        if (nodeValue.startsWith('ref:')) {
+            const path = nodeValue.substring(4); // "ref:" 접두사 제거
+            const loader = getNodeNameLoader();
+            const resolvedName = loader.getNodeName(path);
+            if (resolvedName) {
+                console.log(`[MetadataLoader] 참조 해결: ${nodeValue} → ${resolvedName}`);
+                return resolvedName;
+            }
+            console.warn(`[MetadataLoader] 참조를 찾을 수 없습니다: ${nodeValue}`);
+            return nodeValue; // 원본 반환
+        }
+        return nodeValue; // 일반 노드 이름은 그대로 반환
+    }
+
+    /**
+     * 특정 어셈블리 설정을 로딩하고 변환합니다.
      * @param assemblyName 어셈블리 이름
      * @param metadataPath 메타데이터 파일 경로
      * @returns 어셈블리 설정 또는 null
@@ -129,14 +150,7 @@ export class MetadataLoader {
         assemblyName: string,
         metadataPath: string = '/metadata/assembly-offsets.json'
     ): Promise<AssemblyConfig | null> {
-        // 항상 최신 데이터를 로딩하기 위해 캐시 확인 로직을 뒤로 미룸
-        // if (this.cache.has(assemblyName)) {
-        //     console.log('[MetadataLoader] 캐시에서 설정 로딩:', assemblyName);
-        //     return this.cache.get(assemblyName)!;
-        // }
-
         try {
-            // 메타데이터 로딩 (내부적으로 캐시 우회 및 브라우저 캐시 방지 처리됨)
             await this.loadMetadata(metadataPath);
 
             if (!this.metadata) {
@@ -147,6 +161,10 @@ export class MetadataLoader {
             const config = this.metadata.assemblies[assemblyName];
 
             if (config) {
+                // 노드 참조 해결
+                config.targetNode = this.resolveNodeReference(config.targetNode);
+                config.partNode = this.resolveNodeReference(config.partNode);
+
                 // Vector3, Euler 변환
                 config.grooveDetection.normalFilter = new THREE.Vector3(
                     config.grooveDetection.normalFilter.x,

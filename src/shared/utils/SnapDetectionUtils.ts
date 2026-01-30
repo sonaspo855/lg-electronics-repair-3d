@@ -158,9 +158,11 @@ export class SnapDetectionUtils {
         targetPos: THREE.Vector3,
         threshold: number,
         color: number = 0x00ff00
-    ): THREE.Mesh {
+    ): THREE.Mesh | null {
         const nodeNameManager = getNodeNameManager();
-        const helperName = nodeNameManager.getNodeName('helpers.snapZoneHelper') || 'SnapZoneHelper';
+        const helperName = nodeNameManager.getNodeName('helpers.snapZoneHelper');
+        if (!helperName) return null;
+
 
         const geometry = new THREE.SphereGeometry(threshold, 16, 16);
         const material = new THREE.MeshBasicMaterial({
@@ -188,7 +190,9 @@ export class SnapDetectionUtils {
      */
     static removeSnapZoneHelper(scene: THREE.Scene): void {
         const nodeNameManager = getNodeNameManager();
-        const helperName = nodeNameManager.getNodeName('helpers.snapZoneHelper') || 'SnapZoneHelper';
+        const helperName = nodeNameManager.getNodeName('helpers.snapZoneHelper');
+        if (!helperName) return;
+
         const helper = scene.getObjectByName(helperName);
         if (helper) {
             scene.remove(helper);

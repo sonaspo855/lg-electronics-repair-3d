@@ -44,7 +44,11 @@ export class ManualAssemblyManager {
         this.assemblyStateManager.startAssembly();
 
         const nodeNameManager = getNodeNameManager();
-        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
+        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody');
+
+        if (!damperCoverBodyNode) {
+            throw new Error('[ManualAssemblyManager] damperCoverBodyNode를 찾을 수 없습니다.');
+        }
 
         try {
             await this.partAssemblyService.disassemblePart(

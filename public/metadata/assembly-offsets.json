@@ -1,10 +1,8 @@
 {
-    "version": "1.0.0",
-    "lastUpdated": "2026-01-28",
     "assemblies": {
         "damper_cover_assembly": {
-            "targetNode": "ACV74674704_Damper_Assembly_13473",
-            "partNode": "MCK71751101_Cover,Body_3117001",
+            "targetNode": "ref:fridge.leftDoor.damperAssembly",
+            "partNode": "ref:fridge.leftDoor.damperCoverBody",
             "grooveDetection": {
                 "method": "normal_filter",
                 "innerBoundRatio": 0.2,

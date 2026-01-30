@@ -964,7 +964,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           };
           const cameraMessage = 'Camera moved to damper position';
           if (this.animationHistoryService) {
-            console.log('Recording camera movement to history');
             this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
           } else {
             console.warn('Animation history service not available');
