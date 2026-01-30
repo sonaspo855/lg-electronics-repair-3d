@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
 import { getMetadataLoader } from '../../shared/utils/MetadataLoader';
-import { GrooveDetectionUtils } from '../../shared/utils/GrooveDetectionUtils';
+import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
 import { getAssemblyPathVisualizer } from '../../shared/utils/AssemblyPathVisualizer';
 import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
 
@@ -72,9 +72,7 @@ export class DamperCoverAssemblyService {
 
         if (!metadataLoader.isLoaded()) {
             try {
-                console.log('[DamperCoverAssemblyService] Loading metadata from /metadata/assembly-offsets.json...');
                 await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
-                console.log('[DamperCoverAssemblyService] Metadata loaded successfully');
             } catch (error) {
                 console.error('[DamperCoverAssemblyService] Metadata loading failed:', error);
                 throw new Error('[DamperCoverAssemblyService] Failed to load metadata');
@@ -86,12 +84,10 @@ export class DamperCoverAssemblyService {
             throw new Error(`[DamperCoverAssemblyService] Config not found for key: ${assemblyKey}`);
         }
 
-        console.log('[DamperCoverAssemblyService] Applying metadata-based assembly with grooveDetection parameters.');
-
         const grooveParams = config.grooveDetection;
 
         // [Cover 분석] 결합 돌출부(Plug) 탐지
-        const plugAnalyses = GrooveDetectionUtils.calculatePlugByEdgeAnalysis(
+        const plugAnalyses = NormalBasedHighlight.calculatePlugByEdgeAnalysis(
             coverNode,
             grooveParams.plugSearchDirection
                 ? new THREE.Vector3(
@@ -184,7 +180,6 @@ export class DamperCoverAssemblyService {
         this.assemblyPathVisualizer.dispose();
         this.grooveDetectionService.dispose();
         this.sceneRoot = null;
-        console.log('[DamperCoverAssemblyService] 서비스 정리 완료');
     }
 }
 

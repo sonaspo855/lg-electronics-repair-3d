@@ -44,7 +44,6 @@ export class DamperAssemblyService {
         this.normalHighlight?.dispose();
         this.normalHighlight = null;
         this.sceneRoot = null;
-        console.log('[DamperAssemblyService] 서비스 정리 완료');
     }
 
     // ==================== 디버깅용 메서드들 ====================

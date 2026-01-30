@@ -229,7 +229,7 @@ function CameraManager({
 
 
     // Damper Assembly 노드 구조 출력 (디버깅용)
-    getDamperAssemblyService().debugPrintDamperStructure();
+    // getDamperAssemblyService().debugPrintDamperStructure();
 
     highlightedRef.current = true;
   }, [scene, camera, controlsRef]);

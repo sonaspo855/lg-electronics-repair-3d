@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GrooveDetectionUtils } from './GrooveDetectionUtils';
 import { NormalBasedHighlight } from './NormalBasedHighlight';
 import { getHoleCenterManager } from './HoleCenterManager';
 
@@ -23,7 +22,6 @@ export class GrooveDetectionService {
         this.cameraControls = cameraControls || null;
         this.normalBasedHighlight.initialize(sceneRoot);
         this.holeCenterManager.initialize(sceneRoot);
-        console.log('[GrooveDetectionService] 초기화 완료');
     }
 
     /**
@@ -33,13 +31,13 @@ export class GrooveDetectionService {
      */
     public async detectAndHighlightGrooves(nodeName: string): Promise<void> {
         if (!this.sceneRoot || !this.cameraControls) {
-            console.warn('[GrooveDetectionService] sceneRoot 또는 cameraControls가 초기화되지 않았습니다.');
+            console.warn('sceneRoot 또는 cameraControls가 초기화되지 않았습니다.');
             return;
         }
 
         const targetNode = this.sceneRoot.getObjectByName(nodeName);
         if (!targetNode) {
-            console.warn(`[GrooveDetectionService] 노드를 찾을 수 없습니다: ${nodeName}`);
+            console.warn(`노드를 찾을 수 없습니다: ${nodeName}`);
             return;
         }
 
@@ -59,10 +57,8 @@ export class GrooveDetectionService {
             15        // 임계 각도
         );
 
-        console.log(`[GrooveDetectionService] 하이라이트 메쉬를 구성하는 폴리곤 수: ${highlightedFaces.length}`);
-
         // 4. 홈 탐지 및 중심점 계산
-        const holeAnalyses = GrooveDetectionUtils.clusterFacesToGrooves(
+        const holeAnalyses = NormalBasedHighlight.clusterFaces(
             highlightedFaces,
             0.02
         );
