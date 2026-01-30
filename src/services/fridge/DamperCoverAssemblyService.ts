@@ -14,6 +14,12 @@ export class DamperCoverAssemblyService {
     private sceneRoot: THREE.Object3D | null = null;
     private assemblyPathVisualizer = getAssemblyPathVisualizer();
     private grooveDetectionService = getGrooveDetectionService();
+    private detectedPlugs: Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> = [];
 
     /**
      * 댐퍼 커버 조립 서비스를 초기화합니다.
@@ -96,6 +102,13 @@ export class DamperCoverAssemblyService {
             grooveParams.plugClusteringDistance ?? 0.005
         );
 
+        // 탐지된 돌출부 필터링 (너무 가까운 포인트 중복 제거)
+        this.detectedPlugs = this.filterDuplicatePlugs(
+            plugAnalyses,
+            (grooveParams.plugClusteringDistance ?? 0.005) * 1.5
+        );
+        console.log('this.detectedPlugs>> ', this.detectedPlugs);
+
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
         await this.grooveDetectionService.detectAndHighlightGrooves(
             nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')!
@@ -167,12 +180,77 @@ export class DamperCoverAssemblyService {
     }
 
     /**
+     * 탐지된 돌출부 중 너무 가까운 것들을 필터링하여 하나로 합칩니다.
+     * @param plugs 탐지된 돌출부 배열
+     * @param threshold 거리 임계값
+     */
+    private filterDuplicatePlugs(
+        plugs: Array<{
+            position: THREE.Vector3;
+            rotationAxis: THREE.Vector3;
+            insertionDirection: THREE.Vector3;
+            filteredVerticesCount: number;
+        }>,
+        threshold: number
+    ): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        if (plugs.length <= 1) return plugs;
+
+        const uniquePlugs: typeof plugs = [];
+
+        plugs.forEach(plug => {
+            let isDuplicate = false;
+            for (const unique of uniquePlugs) {
+                if (plug.position.distanceTo(unique.position) < threshold) {
+                    // 이미 존재하는 포인트와 너무 가까우면, 정점 수가 더 많은 것을 선택
+                    if (plug.filteredVerticesCount > unique.filteredVerticesCount) {
+                        unique.position.copy(plug.position);
+                        unique.rotationAxis.copy(plug.rotationAxis);
+                        unique.insertionDirection.copy(plug.insertionDirection);
+                        unique.filteredVerticesCount = plug.filteredVerticesCount;
+                    }
+                    isDuplicate = true;
+                    break;
+                }
+            }
+
+            if (!isDuplicate) {
+                uniquePlugs.push({
+                    position: plug.position.clone(),
+                    rotationAxis: plug.rotationAxis.clone(),
+                    insertionDirection: plug.insertionDirection.clone(),
+                    filteredVerticesCount: plug.filteredVerticesCount
+                });
+            }
+        });
+
+        return uniquePlugs;
+    }
+
+    /**
      * 서비스를 정리합니다.
      */
     public dispose(): void {
         this.assemblyPathVisualizer.dispose();
         this.grooveDetectionService.dispose();
         this.sceneRoot = null;
+    }
+
+    /**
+     * 탐지된 돌출부(Plug) 정보를 반환합니다.
+     * @returns 탐지된 돌출부 정보 배열
+     */
+    public getDetectedPlugs(): Array<{
+        position: THREE.Vector3;
+        rotationAxis: THREE.Vector3;
+        insertionDirection: THREE.Vector3;
+        filteredVerticesCount: number;
+    }> {
+        return this.detectedPlugs;
     }
 }
 

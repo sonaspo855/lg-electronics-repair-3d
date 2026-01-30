@@ -18,8 +18,8 @@
                     "z": 0
                 },
                 "edgeAngleThreshold": 60,
-                "plugClusteringDistance": 0.005,
-                "holeClusteringDistance": 0.005,
+                "plugClusteringDistance": 0.015,
+                "holeClusteringDistance": 0.015,
                 "maxVerticesThreshold": 10000
             },
             "insertion": {
