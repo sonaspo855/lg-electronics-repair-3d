@@ -263,5 +263,4 @@ export async function sequentialAssemblyExample(sceneRoot: THREE.Object3D) {
 export function cleanupExample(assemblyService: PartAssemblyService) {
     // 컴포넌트 언마운트 시 또는 더 이상 사용하지 않을 때
     assemblyService.dispose();
-    console.log('서비스 정리 완료');
 }
