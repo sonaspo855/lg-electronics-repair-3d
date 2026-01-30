@@ -216,7 +216,6 @@ export class CameraMovementService {
 
                         const node = this.getNodeByName(nodeName);
                         if (node) {
-                            console.log(`[Highlight - Emissive] Target: ${nodeName}`);
                             // 노드 내부의 모든 Mesh를 탐색하여 재질 수정
                             node.traverse((child) => {
                                 if (child instanceof THREE.Mesh) {
@@ -238,10 +237,6 @@ export class CameraMovementService {
                         }
                     });
 
-                    // 모든 노드 하이라이트가 완료된 후 추가 확인
-                    console.log('All nodes highlighted');
-
-                    console.log('Camera movement completed');
                     resolve();
                 }
             });

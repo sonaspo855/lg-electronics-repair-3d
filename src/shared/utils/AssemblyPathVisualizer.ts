@@ -173,7 +173,7 @@ export class AssemblyPathVisualizer {
             this.sceneRoot.add(arrowHelper);
         }
 
-        console.log('[AssemblyPathVisualizer] 경로 시각화 생성:', {
+        console.log('경로 시각화 생성:', {
             시작위치: `(${startPosition.x.toFixed(3)}, ${startPosition.y.toFixed(3)}, ${startPosition.z.toFixed(3)})`,
             종료위치: `(${endPosition.x.toFixed(3)}, ${endPosition.y.toFixed(3)}, ${endPosition.z.toFixed(3)})`,
             돌출부: plugPosition ? `(${plugPosition.x.toFixed(3)}, ${plugPosition.y.toFixed(3)}, ${plugPosition.z.toFixed(3)})` : '없음',

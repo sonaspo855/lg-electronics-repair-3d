@@ -37,7 +37,6 @@ export class NormalBasedHighlight {
         targetNormal: THREE.Vector3 = new THREE.Vector3(0, 0, 1),
         normalTolerance: number = 0.2
     ): void {
-        console.log('highlightFacesByNormalFilter!!!');
         if (!this.sceneRoot) return;
 
         this.clearHighlights();
@@ -56,8 +55,6 @@ export class NormalBasedHighlight {
                 );
             }
         });
-
-        console.log('[NormalBasedHighlight] 법선 필터링 홈 하이라이트 완료');
     }
 
     /**
@@ -179,7 +176,6 @@ export class NormalBasedHighlight {
             }
         });
 
-        console.log('[NormalBasedHighlight] 카메라 방향 기반 다중 면 하이라이트 완료');
         return frontFaces;
     }
 
@@ -416,7 +412,6 @@ export class NormalBasedHighlight {
             this.activeHighlights.push(edgesLine, fillMesh);
         });
 
-        // console.log(`[NormalBasedHighlight] ${clusters.length}개의 클러스터 하이라이트 완료`);
     }
 
     /**
@@ -616,8 +611,6 @@ export class NormalBasedHighlight {
                     rotationAxis = new THREE.Vector3().crossVectors(avgNormal, new THREE.Vector3(1, 0, 0)).normalize();
                 }
 
-                console.log(`[NormalBasedHighlight] 클러스터 ${index} 분석: 면 수=${cluster.faces.length}, 중심=(${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)})`);
-
                 return {
                     position,
                     rotationAxis,
@@ -628,15 +621,12 @@ export class NormalBasedHighlight {
                 };
             });
 
-        console.log(`[NormalBasedHighlight] 최종 탐지된 클러스터 수: ${results.length}`);
-
         // [추가] 각 클러스터 내부의 구멍(Hole) 탐지 로직 적용
         const finalResults: any[] = [];
         results.forEach((cluster, index) => {
             const holes = NormalBasedHighlight.detectHolesInCluster(cluster.faces);
 
             if (holes.length > 0) {
-                console.log(`[NormalBasedHighlight] 클러스터 ${index}에서 ${holes.length}개의 구멍 탐지됨`);
                 holes.forEach((hole, hIdx) => {
                     finalResults.push({
                         position: hole.center,
@@ -697,7 +687,6 @@ export class NormalBasedHighlight {
             this.activeHighlights.push(line);
         });
 
-        console.log(`[NormalBasedHighlight] ${loops.length}개의 경계 루프 시각화 완료`);
     }
 
     /**
@@ -786,7 +775,6 @@ export class NormalBasedHighlight {
             box.getSize(size);
             // 바운딩 박스의 대각선 길이를 면적 대용으로 사용
             const area = size.length();
-            // console.log(`[NormalBasedHighlight] 루프 ${lIdx} 분석: 점 수=${loop.length}, 크기(대각선)=${area.toFixed(4)}`);
             return { center, area, loop };
         });
 
@@ -881,7 +869,7 @@ export class NormalBasedHighlight {
             // 6. 클러스터링 및 피벗 정보 생성 (공통 로직 사용)
             return NormalBasedHighlight.clusterFaces(filteredFaces, clusterThreshold);
         } catch (error) {
-            console.error('[NormalBasedHighlight] 다중 가상 피벗 계산 실패:', error);
+            console.error('다중 가상 피벗 계산 실패:', error);
             return [];
         }
     }
@@ -918,7 +906,7 @@ export class NormalBasedHighlight {
             // 정점 수가 가장 많은 클러스터를 메인 피벗으로 선택
             return analyses.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0];
         } catch (error) {
-            console.error('[NormalBasedHighlight] 가상 피벗 계산 실패:', error);
+            console.error('가상 피벗 계산 실패:', error);
             return null;
         }
     }
@@ -1133,7 +1121,7 @@ export class NormalBasedHighlight {
                 });
 
         } catch (error) {
-            console.error('[NormalBasedHighlight] 엣지 기반 돌출부 탐지 실패:', error);
+            console.error('엣지 기반 돌출부 탐지 실패:', error);
             return [];
         }
     }

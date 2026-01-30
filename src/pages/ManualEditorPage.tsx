@@ -611,28 +611,26 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   // 댐퍼 커버 조립 (assembleDamperCover)
   const handleAssembleDamperCover = async () => {
     if (!manualAssemblyManager) {
-      console.error('[ManualEditor] ManualAssemblyManager가 초기화되지 않음');
+      console.error('ManualAssemblyManager가 초기화되지 않음');
       return;
     }
 
     if (manualAssemblyManager.isPlaying()) {
-      console.warn('[ManualEditor] 애니메이션이 이미 실행 중');
+      console.warn('애니메이션이 이미 실행 중');
       return;
     }
 
-    console.log('[ManualEditor] 댐퍼 커버 조립 시작');
     setIsAssemblyPlaying(true);
 
     try {
       await manualAssemblyManager.assembleDamperCover({
         duration: 1500,
         onComplete: () => {
-          console.log('[ManualEditor] 댐퍼 커버 조립 완료');
           setIsAssemblyPlaying(false);
         }
       });
     } catch (error) {
-      console.error('[ManualEditor] 댐퍼 커버 조립 실패:', error);
+      console.error('댐퍼 커버 조립 실패:', error);
       setIsAssemblyPlaying(false);
     }
   };
@@ -641,7 +639,6 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     const json = animationHistoryService.exportToJson();
     const blob = new Blob([json], { type: 'application/json' });
     downloadBlob(blob, 'animation_history.json');
-    console.log('Exported animation history JSON:', json.length, 'bytes');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {

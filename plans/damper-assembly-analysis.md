@@ -208,7 +208,7 @@ export class MetadataLoader {
 
       return null;
     } catch (error) {
-      console.error(`[MetadataLoader] Failed to load assembly config: ${assemblyName}`, error);
+      console.error(`Failed to load assembly config: ${assemblyName}`, error);
       return null;
     }
   }

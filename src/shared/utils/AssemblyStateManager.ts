@@ -12,7 +12,7 @@ export class AssemblyStateManager {
      */
     public updateProgress(progress: number): void {
         this.assemblyProgress = Math.max(0, Math.min(1, progress));
-        console.log(`[AssemblyStateManager] 진행률 업데이트: ${(this.assemblyProgress * 100).toFixed(1)}%`);
+        console.log(`진행률 업데이트: ${(this.assemblyProgress * 100).toFixed(1)}%`);
     }
 
     /**
@@ -29,7 +29,7 @@ export class AssemblyStateManager {
      */
     public setPlaying(playing: boolean): void {
         this.isAssemblyPlaying = playing;
-        console.log(`[AssemblyStateManager] 재생 상태 설정: ${playing ? '재생 중' : '정지'}`);
+        console.log(`재생 상태 설정: ${playing ? '재생 중' : '정지'}`);
     }
 
     /**
@@ -54,7 +54,6 @@ export class AssemblyStateManager {
     public completeAssembly(): void {
         this.setPlaying(false);
         this.updateProgress(1);
-        console.log('[AssemblyStateManager] 조립 완료');
     }
 
     /**
@@ -62,7 +61,6 @@ export class AssemblyStateManager {
      */
     public stopAssembly(): void {
         this.setPlaying(false);
-        console.log('[AssemblyStateManager] 조립 중지');
     }
 
     /**
@@ -71,7 +69,6 @@ export class AssemblyStateManager {
     public reset(): void {
         this.assemblyProgress = 0;
         this.isAssemblyPlaying = false;
-        console.log('[AssemblyStateManager] 조립 상태 초기화 완료');
     }
 
     /**

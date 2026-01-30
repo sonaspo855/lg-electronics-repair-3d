@@ -89,7 +89,6 @@ export class HoleCenterManager {
             this.holeCenters.push(holeInfo);
         });
 
-        console.log(`${analyses.length}개의 홈 중심점 마커 생성 완료`);
         console.log('저장된 홈 중심점 정보:', this.holeCenters.map(h => ({
             id: h.id,
             position: `(${h.position.x.toFixed(4)}, ${h.position.y.toFixed(4)}, ${h.position.z.toFixed(4)})`,

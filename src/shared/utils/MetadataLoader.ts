@@ -90,11 +90,9 @@ export class MetadataLoader {
             // 기존 캐시 초기화 (새로운 메타데이터 로딩 시)
             this.cache.clear();
 
-            console.log('[MetadataLoader] 메타데이터 로딩 완료 (캐시 우회):', loadedMetadata.version);
-
             return loadedMetadata;
         } catch (error) {
-            console.error('[MetadataLoader] 메타데이터 로딩 실패:', error);
+            console.error('메타데이터 로딩 실패:', error);
             throw error;
         }
     }
@@ -131,10 +129,10 @@ export class MetadataLoader {
             const loader = getNodeNameLoader();
             const resolvedName = loader.getNodeName(path);
             if (resolvedName) {
-                console.log(`[MetadataLoader] 참조 해결: ${nodeValue} → ${resolvedName}`);
+                console.log(`참조 해결: ${nodeValue} → ${resolvedName}`);
                 return resolvedName;
             }
-            console.warn(`[MetadataLoader] 참조를 찾을 수 없습니다: ${nodeValue}`);
+            console.warn(`참조를 찾을 수 없습니다: ${nodeValue}`);
             return nodeValue; // 원본 반환
         }
         return nodeValue; // 일반 노드 이름은 그대로 반환
@@ -154,7 +152,7 @@ export class MetadataLoader {
             await this.loadMetadata(metadataPath);
 
             if (!this.metadata) {
-                console.warn('[MetadataLoader] 메타데이터가 로딩되지 않았습니다.');
+                console.warn('메타데이터가 로딩되지 않았습니다.');
                 return null;
             }
 
@@ -186,14 +184,14 @@ export class MetadataLoader {
 
                 // 캐시에 저장
                 this.cache.set(assemblyName, config);
-                console.log('[MetadataLoader] 어셈블리 설정 로딩 완료:', assemblyName);
+                console.log('어셈블리 설정 로딩 완료:', assemblyName);
                 return config;
             }
 
-            console.warn('[MetadataLoader] 어셈블리 설정을 찾을 수 없습니다:', assemblyName);
+            console.warn('어셈블리 설정을 찾을 수 없습니다:', assemblyName);
             return null;
         } catch (error) {
-            console.error(`[MetadataLoader] 어셈블리 설정 로딩 실패: ${assemblyName}`, error);
+            console.error(`어셈블리 설정 로딩 실패: ${assemblyName}`, error);
             return null;
         }
     }
@@ -234,7 +232,6 @@ export class MetadataLoader {
     public clearCache(): void {
         this.cache.clear();
         this.metadata = null;
-        console.log('[MetadataLoader] 캐시 정리 완료');
     }
 
     /**

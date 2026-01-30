@@ -63,8 +63,6 @@ export class GrooveDetectionService {
             0.02
         );
 
-        console.log(`${holeAnalyses.length}개의 홈이 탐지되었습니다.`);
-
         // 5. 탐지된 각 홈을 서로 다른 색상으로 하이라이트
         const highlightColors = [0x00ff00, 0x0088ff, 0xff00ff, 0xffff00, 0xff8800];
         this.normalBasedHighlight.highlightClusters(holeAnalyses, highlightColors);
