@@ -18,7 +18,6 @@ let damperAssemblyService: DamperAssemblyService | null = null;
 export function initializeDamperAssembly(sceneRoot: THREE.Object3D) {
     damperAssemblyService = getDamperAssemblyService();
     damperAssemblyService.initialize(sceneRoot);
-    console.log('✅ 댐퍼 조립 서비스 초기화 완료');
 }
 
 /**
@@ -26,11 +25,9 @@ export function initializeDamperAssembly(sceneRoot: THREE.Object3D) {
  */
 export async function onAssembleDamperCover() {
     if (!damperAssemblyService) {
-        console.error('❌ 서비스가 초기화되지 않았습니다');
+        console.error('서비스가 초기화되지 않았습니다');
         return;
     }
-
-    console.log('🚀 댐퍼 커버 조립 시작');
 
     try {
         await damperAssemblyService.assembleDamperCover({
@@ -42,7 +39,7 @@ export async function onAssembleDamperCover() {
             }
         });
     } catch (error) {
-        console.error('❌ 조립 실패:', error);
+        console.error('조립 실패:', error);
     }
 }
 

@@ -23,6 +23,11 @@ export class DamperCoverAssemblyService {
         this.sceneRoot = sceneRoot;
         this.assemblyPathVisualizer.initialize(sceneRoot);
         this.grooveDetectionService.initialize(sceneRoot);
+
+        // 메타데이터 미리 로드
+        const nodeNameManager = getNodeNameManager();
+        nodeNameManager.enableMetadataMode();
+
         console.log('[DamperCoverAssemblyService] 초기화 완료');
     }
 
