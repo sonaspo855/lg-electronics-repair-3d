@@ -17,8 +17,6 @@ import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/Ho
  */
 export class ManualAssemblyManager {
     private partAssemblyService: PartAssemblyService | null = null;
-    private sceneRoot: THREE.Object3D | null = null;
-    private cameraControls: any = null;
 
     // 서비스 인스턴스
     private damperAssemblyService = getDamperAssemblyService();
@@ -27,13 +25,7 @@ export class ManualAssemblyManager {
     private assemblyStateManager = getAssemblyStateManager();
     private holeCenterManager = getHoleCenterManager();
 
-    public setCameraControls(cameraControls: any): void {
-        this.cameraControls = cameraControls;
-    }
-
     public initialize(sceneRoot: THREE.Object3D, cameraControls?: any): void {
-        this.sceneRoot = sceneRoot;
-        this.cameraControls = cameraControls || null;
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
 
         // 서비스 초기화
@@ -145,7 +137,6 @@ export class ManualAssemblyManager {
         this.holeCenterManager.dispose();
         this.partAssemblyService?.dispose();
         this.partAssemblyService = null;
-        this.sceneRoot = null;
         console.log('[ManualAssemblyManager] 서비스 정리 완료');
     }
 }

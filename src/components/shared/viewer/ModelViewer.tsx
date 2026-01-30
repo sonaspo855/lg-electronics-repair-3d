@@ -528,10 +528,6 @@ export default function ModelViewer({
     // CameraControls 초기화
     if (controlsRef.current) {
       animatorAgent.setCameraControls(controlsRef.current, sceneRoot);
-
-      // ManualAssemblyManager에 cameraControls 설정
-      const manualAssemblyManager = getManualAssemblyManager();
-      manualAssemblyManager.setCameraControls(controlsRef.current);
     }
 
     // ManualAssemblyManager 초기화
