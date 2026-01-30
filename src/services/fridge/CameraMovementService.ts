@@ -23,6 +23,7 @@ export interface CameraMoveOptions {
 export class CameraMovementService {
     private cameraControls: any;
     private sceneRoot: THREE.Object3D | null = null;
+    private nodeNameManager = getNodeNameManager();
 
     constructor(cameraControls: any, sceneRoot?: THREE.Object3D) {
         this.cameraControls = cameraControls;
@@ -39,8 +40,7 @@ export class CameraMovementService {
         const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
 
         // LEFT_DOOR_DAMPER_COVER_BODY_NODE 노드를 하이라이트
-        const nodeNameManager = getNodeNameManager();
-        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
+        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
 
         return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
             duration: options.duration || 1000,
@@ -88,8 +88,7 @@ export class CameraMovementService {
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
 
         // 특정 노드(왼쪽 도어 댐퍼)에 대해 일관된 뷰를 제공하도록 방향 강제
-        const nodeNameManager = getNodeNameManager();
-        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
+        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
 
         // if (nodeName === damperCoverBodyNode && !options.direction) {
         if (nodeName === damperCoverBodyNode && !options.direction) {
@@ -209,7 +208,6 @@ export class CameraMovementService {
 
 
                     // 카메라 이동 완료 후 노드 하이라이트 (Emissive 방식)
-                    const nodeNameManager = getNodeNameManager();
                     const nodeColors = [
                         0x325311, // 녹색 (Cover Body) - 발광 효과를 위해 채도를 높인 값 권장
                         0xff3333, // 빨간색 (Damper Assembly)
