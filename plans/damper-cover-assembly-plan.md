@@ -105,7 +105,7 @@ public async assembleDamperCover(
     const damperCover = this.sceneRoot?.getObjectByName(LEFT_DOOR_DAMPER_COVER_BODY_NODE);
 
     if (!damperAssembly || !damperCover) {
-        console.error('[ManualAssemblyManager] 노드를 찾을 수 없습니다');
+        console.error('노드를 찾을 수 없습니다');
         return;
     }
 
@@ -116,7 +116,7 @@ public async assembleDamperCover(
     );
 
     if (!grooveCenter) {
-        console.error('[ManualAssemblyManager] 홈 중심점을 계산할 수 없습니다');
+        console.error('홈 중심점을 계산할 수 없습니다');
         return;
     }
 
@@ -137,7 +137,7 @@ public async assembleDamperCover(
             duration: (options?.duration || 1500) / 1000,
             ease: 'power2.inOut',
             onComplete: () => {
-                console.log('[ManualAssemblyManager] 댐퍼 커버 조립 완료');
+                console.log('댐퍼 커버 조립 완료');
                 options?.onComplete?.();
                 resolve();
             }

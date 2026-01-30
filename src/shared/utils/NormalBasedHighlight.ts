@@ -72,7 +72,6 @@ export class NormalBasedHighlight {
         color: number = 0xff0000,
         thresholdAngle: number = 15
     ): FaceInfo[] {
-        console.log('highlightFacesByCameraFilter - Threshold Based!!');
         const frontFaces: FaceInfo[] = [];
         if (!this.sceneRoot) return frontFaces;
 

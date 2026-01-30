@@ -35,17 +35,17 @@ export class ManualAssemblyManager {
         onComplete?: () => void;
     }): Promise<void> {
         if (!this.partAssemblyService) {
-            throw new Error('[ManualAssemblyManager] 초기화되지 않았습니다.');
+            throw new Error('초기화되지 않았습니다.');
         }
 
-        console.log('[ManualAssemblyManager] 분해 시작');
+        console.log('분해 시작');
         this.assemblyStateManager.startAssembly();
 
         const nodeNameManager = getNodeNameManager();
         const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody');
 
         if (!damperCoverBodyNode) {
-            throw new Error('[ManualAssemblyManager] damperCoverBodyNode를 찾을 수 없습니다.');
+            throw new Error('damperCoverBodyNode를 찾을 수 없습니다.');
         }
 
         try {
@@ -54,14 +54,14 @@ export class ManualAssemblyManager {
                 {
                     duration: options?.duration || 1500,
                     onComplete: () => {
-                        console.log('[ManualAssemblyManager] 분해 완료');
+                        console.log('분해 완료');
                         this.assemblyStateManager.completeAssembly();
                         options?.onComplete?.();
                     }
                 }
             );
         } catch (error) {
-            console.error('[ManualAssemblyManager] 분해 실패:', error);
+            console.error('분해 실패:', error);
             this.assemblyStateManager.stopAssembly();
             throw error;
         }
