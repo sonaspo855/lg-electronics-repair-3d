@@ -20,6 +20,12 @@ export class DamperCoverAssemblyService {
         insertionDirection: THREE.Vector3;
         filteredVerticesCount: number;
     }> = [];
+    private detectedHoles: Array<{
+        position: THREE.Vector3;
+        rotationAxis?: THREE.Vector3;
+        insertionDirection?: THREE.Vector3;
+        filteredVerticesCount?: number;
+    }> = [];
 
     /**
      * 댐퍼 커버 조립 서비스를 초기화합니다.
@@ -103,57 +109,57 @@ export class DamperCoverAssemblyService {
         console.log('this.detectedPlugs>> ', this.detectedPlugs);
 
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
-        await this.grooveDetectionService.detectAndHighlightGrooves(
+        this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
             nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')!
         );
+        console.log('this.detectedHoles>>> ', this.detectedHoles);
+
+
+
 
         // 탐지된 홈 중심점 정보 가져오기  - position은 월드 좌표로 변환된 값
         const holeCenters = this.grooveDetectionService.getHoleCenters();
         holeWorldPositions = holeCenters.map(h => h.position);
 
-        const moveDelta = new THREE.Vector3();
-        if (plugAnalyses.length > 0 && holeWorldPositions.length > 0) {
-            // [개선] 다중 돌출부/홈 매칭: 모든 돌출부와 홈을 매칭하여 최적의 이동 벡터 계산
-            const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 2000);
-            const primaryPlug = validPlugs.length > 0
-                ? validPlugs.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0]
-                : plugAnalyses[0];
-
-            // 추출된 좌표는 이미 월드 좌표임
-            plugWorldPos = primaryPlug.position;
-
-            const currentPlugWorldPos = plugWorldPos;
-            if (!currentPlugWorldPos) throw new Error('Plug position is null');
+        if (this.detectedPlugs.length > 0 && holeWorldPositions.length > 0) {
+            // 돌출부와 홈 매칭: 이미 필터링된 돌출부 정보 사용
+            const primaryPlug = this.detectedPlugs.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0];
+            const currentPlugWorldPos = primaryPlug.position;
 
             // 가장 가까운 홈 찾기 (월드 좌표계 기준 비교)
             const primaryHoleWorldPos = holeWorldPositions.sort((a, b) => {
-                const distA = a.distanceTo(currentPlugWorldPos!);
-                const distB = b.distanceTo(currentPlugWorldPos!);
+                const distA = a.distanceTo(currentPlugWorldPos);
+                const distB = b.distanceTo(currentPlugWorldPos);
                 return distA - distB;
             })[0];
 
-            // [개선] 돌출부(Plug)와 홈(Hole)의 좌표 차이를 이용하여 이동 벡터 계산
-            // moveDelta = (목표 홈 위치) - (현재 돌출부 위치)
-            moveDelta.subVectors(primaryHoleWorldPos, currentPlugWorldPos!);
+            // primaryHoleWorldPos와 일치하는 홈 정보 찾기
+            const primaryHoleInfo = this.detectedHoles.find(hole =>
+                new THREE.Vector3(hole.position.x, hole.position.y, hole.position.z)
+                    .distanceTo(primaryHoleWorldPos) < 0.001
+            );
 
-            // 1. 최종 목표 월드 좌표 계산
-            // coverNode의 현재 위치에 moveDelta를 더하면, 돌출부가 홈 위치에 정확히 일치하게 됨
+            // 돌출부에서 홈으로의 이동 벡터 계산
+            const moveVector = new THREE.Vector3().subVectors(primaryHoleWorldPos, currentPlugWorldPos);
+
+            // 커버 노드의 현재 월드 좌표
             const currentCoverWorldPos = new THREE.Vector3();
             coverNode.getWorldPosition(currentCoverWorldPos);
-            const targetWorldPos = new THREE.Vector3().addVectors(currentCoverWorldPos, moveDelta);
 
-            // 2. 메타데이터 기반 미세 조정 (월드 좌표계에 적용)
-            if (config.insertion && config.insertion.offset) {
-                const offset = new THREE.Vector3(
-                    config.insertion.offset.x || 0,
-                    config.insertion.offset.y || 0,
-                    config.insertion.offset.z || 0
-                );
-                targetWorldPos.add(offset);
-            }
+            // 목표 월드 좌표 = 현재 커버 좌표 + 이동 벡터
+            const targetWorldPos = new THREE.Vector3().addVectors(currentCoverWorldPos, moveVector);
 
+            // [개선] 홈의 insertionDirection을 사용하여 depth 오프셋 계산
             if (config.insertion && config.insertion.depth !== undefined) {
-                const insertionDir = primaryPlug.insertionDirection.clone().normalize();
+                // 홈의 insertionDirection이 있는 경우 우선 사용
+                const insertionDir = primaryHoleInfo?.insertionDirection
+                    ? new THREE.Vector3(
+                        primaryHoleInfo.insertionDirection.x,
+                        primaryHoleInfo.insertionDirection.y,
+                        primaryHoleInfo.insertionDirection.z
+                    ).normalize()
+                    : primaryPlug.insertionDirection.clone().normalize();
+
                 const depthOffset = insertionDir.multiplyScalar(config.insertion.depth * 0.01);
                 targetWorldPos.add(depthOffset);
             }
@@ -187,13 +193,13 @@ export class DamperCoverAssemblyService {
                 distanceToTarget: currentCoverWorldPos.distanceTo(targetWorldPos)
             });
 
-            // 경로 시각화
+            /* // 경로 시각화
             this.assemblyPathVisualizer.visualizeAssemblyPath(
                 currentCoverWorldPos,  // 시작점
                 targetWorldPos,  // 종료점
                 plugWorldPos || undefined,  // 돌출부
                 holeWorldPositions.length > 0 ? holeWorldPositions : undefined  // 홈
-            );
+            ); */
 
             // 3. 월드 좌표 애니메이션 상태 객체
             const animState = {
@@ -206,7 +212,9 @@ export class DamperCoverAssemblyService {
             const updatePosition = () => {
                 const currentWorldPos = new THREE.Vector3(animState.x, animState.y, animState.z);
                 if (parentNode) {
-                    parentNode.worldToLocal(coverNode.position.copy(currentWorldPos));
+                    // 월드 좌표를 복제한 후 로컬 좌표로 변환
+                    const localPos = parentNode.worldToLocal(currentWorldPos.clone());
+                    coverNode.position.copy(localPos);
                 } else {
                     coverNode.position.copy(currentWorldPos);
                 }

@@ -27,18 +27,23 @@ export class GrooveDetectionService {
     /**
      * 노드의 면을 하이라이트하고 홈을 찾아 중심점을 체크합니다.
      * @param nodeName 대상 노드 이름
-     * @returns 탐지된 홈 중심점 정보 배열
+     * @returns 탐지된 홈 분석 결과 배열
      */
-    public async detectAndHighlightGrooves(nodeName: string): Promise<void> {
+    public async detectAndHighlightGrooves(nodeName: string): Promise<Array<{
+        position: THREE.Vector3;
+        rotationAxis?: THREE.Vector3;
+        insertionDirection?: THREE.Vector3;
+        filteredVerticesCount?: number;
+    }>> {
         if (!this.sceneRoot || !this.cameraControls) {
             console.warn('sceneRoot 또는 cameraControls가 초기화되지 않았습니다.');
-            return;
+            return [];
         }
 
         const targetNode = this.sceneRoot.getObjectByName(nodeName);
         if (!targetNode) {
             console.warn(`노드를 찾을 수 없습니다: ${nodeName}`);
-            return;
+            return [];
         }
 
         // 1. 기존 하이라이트 제거
@@ -80,6 +85,8 @@ export class GrooveDetectionService {
         if (holeAnalyses.length > 0) {
             this.holeCenterManager.visualizeHoleCenters(holeAnalyses, highlightColors);
         }
+
+        return holeAnalyses;
     }
 
     /**
