@@ -134,6 +134,7 @@ export class DamperCoverAssemblyService {
 
             // 월드 좌표계에서의 이동 벡터 계산
             moveDelta.subVectors(primaryHoleWorldPos, currentPlugWorldPos!);
+            // moveDelta.x += 0.1;
 
             // 1. 최종 목표 월드 좌표 계산
             const currentCoverWorldPos = new THREE.Vector3();
@@ -208,10 +209,10 @@ export class DamperCoverAssemblyService {
 
             // 경로 시각화
             this.assemblyPathVisualizer.visualizeAssemblyPath(
-                currentCoverWorldPos,
-                targetWorldPos,
-                plugWorldPos || undefined,
-                holeWorldPositions.length > 0 ? holeWorldPositions : undefined
+                currentCoverWorldPos,  // 시작점
+                targetWorldPos,  // 종료점
+                plugWorldPos || undefined,  // 돌출부
+                holeWorldPositions.length > 0 ? holeWorldPositions : undefined  // 홈
             );
 
             // 3. 월드 좌표 애니메이션 상태 객체
