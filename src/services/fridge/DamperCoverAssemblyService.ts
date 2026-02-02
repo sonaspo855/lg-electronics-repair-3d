@@ -119,9 +119,10 @@ export class DamperCoverAssemblyService {
         holeWorldPositions = holeCenters.map(h => h.position);
 
         if (plugAnalyses.length > 0 && holeWorldPositions.length > 0) {
+            // [개선] 다중 돌출부/홈 매칭: 모든 돌출부와 홈을 매칭하여 최적의 이동 벡터 계산
             const validPlugs = plugAnalyses.filter(p => p.filteredVerticesCount < 2000);
             const primaryPlug = validPlugs.length > 0
-                ? validPlugs.sort((a, b) => b.position.y - a.position.y)[0]
+                ? validPlugs.sort((a, b) => b.filteredVerticesCount - a.filteredVerticesCount)[0]
                 : plugAnalyses[0];
 
             plugWorldPos = primaryPlug.position;
@@ -129,15 +130,48 @@ export class DamperCoverAssemblyService {
             const currentPlugPos = plugWorldPos;
             if (!currentPlugPos) throw new Error('Plug position is null');
 
+            // 가장 가까운 홈 찾기
             const primaryHoleWorldPos = holeWorldPositions.sort((a, b) => {
                 const distA = a.distanceTo(currentPlugPos!);
                 const distB = b.distanceTo(currentPlugPos!);
                 return distA - distB;
             })[0];
 
+            // 기본 이동 델타 계산
             const moveDelta = new THREE.Vector3().subVectors(primaryHoleWorldPos, currentPlugPos!);
             const currentCoverPos = coverNode.position.clone();
             targetPosition.addVectors(currentCoverPos, moveDelta);
+
+            // [개선] 메타데이터 기반 미세 조정 (Offset Mapping)
+            // Position Offset: insertion.offset 값을 최종 좌표에 추가하여 정밀 정렬
+            if (config.insertion && config.insertion.offset) {
+                const offset = new THREE.Vector3(
+                    config.insertion.offset.x || 0,
+                    config.insertion.offset.y || 0,
+                    config.insertion.offset.z || 0
+                );
+                targetPosition.add(offset);
+            }
+
+            // Insertion Depth: insertion.depth를 활용하여 홈 내부로 삽입되는 깊이 조절
+            if (config.insertion && config.insertion.depth !== undefined) {
+                const insertionDir = primaryPlug.insertionDirection.clone().normalize();
+                const depthOffset = insertionDir.multiplyScalar(config.insertion.depth * 0.01); // depth를 적절한 스케일로 변환
+                targetPosition.add(depthOffset);
+            }
+
+            // [개선] 회전 보정: insertionDirection을 활용하여 정확한 삽입 각도 보정
+            if (config.insertion && config.insertion.rotationOffset) {
+                const rotationOffset = new THREE.Vector3(
+                    config.insertion.rotationOffset.x || 0,
+                    config.insertion.rotationOffset.y || 0,
+                    config.insertion.rotationOffset.z || 0
+                );
+                // 회전 보정은 coverNode의 회전에 적용
+                coverNode.rotation.x += rotationOffset.x;
+                coverNode.rotation.y += rotationOffset.y;
+                coverNode.rotation.z += rotationOffset.z;
+            }
         } else {
             throw new Error('Vertex analysis failed. No plug or hole detected.');
         }
@@ -162,20 +196,108 @@ export class DamperCoverAssemblyService {
         );
 
         const animationConfig = config?.animation;
+        const stages = animationConfig?.stages || [
+            { name: 'approach', progress: 0.7 },
+            { name: 'insert', progress: 1.0 }
+        ];
+
+        console.log('시네마틱 조립 애니메이션: 2단계 시퀀스 (접근 단계 + 삽입 단계)');
+        // [개선] 시네마틱 조립 애니메이션: 2단계 시퀀스 (접근 단계 + 삽입 단계)
+        const approachStage = stages.find(s => s.name === 'approach') || { progress: 0.7 };
+        const insertStage = stages.find(s => s.name === 'insert') || { progress: 1.0 };
+
+        const totalDuration = options?.duration || (animationConfig?.duration ? animationConfig.duration / 1000 : 1.5);
+        const approachDuration = totalDuration * approachStage.progress;
+        const insertDuration = totalDuration * (insertStage.progress - approachStage.progress);
+
+        console.log('애니메이션 설정:', {
+            totalDuration,
+            approachDuration,
+            insertDuration,
+            approachProgress: approachStage.progress,
+            insertProgress: insertStage.progress
+        });
+
+        // 접근 단계 목적지 (홈 입구 근처) - 로컬 좌표로 계산
+        const approachWorldPos = new THREE.Vector3().lerpVectors(
+            currentCoverWorldPos,
+            targetWorldPos,
+            approachStage.progress
+        );
+        const approachTarget = new THREE.Vector3();
+        if (parentNode) {
+            (parentNode as THREE.Object3D).worldToLocal(approachTarget.copy(approachWorldPos));
+        } else {
+            approachTarget.copy(approachWorldPos);
+        }
+
+        console.log('좌표 정보:', {
+            currentCoverPos: coverNode.position,
+            approachTarget,
+            targetPosition,
+            currentCoverWorldPos,
+            targetWorldPos
+        });
 
         return new Promise((resolve) => {
-            gsap.to(coverNode.position, {
-                x: targetPosition.x,
-                y: targetPosition.y,
-                z: targetPosition.z,
-                duration: options?.duration || (animationConfig?.duration ? animationConfig.duration / 1000 : 1.5),
-                ease: animationConfig?.easing || 'power2.inOut',
+            console.log('GSAP Timeline 생성 시작');
+            // GSAP Timeline을 사용하여 2단계 시퀀스 구현
+            const timeline = gsap.timeline({
+                paused: false, // 명시적으로 실행 상태 지정
                 onComplete: () => {
+                    console.log('애니메이션 완료');
+                    this.assemblyPathVisualizer.clearDebugObjects();
+                    if (options?.onComplete) options.onComplete();
+                    resolve();
+                },
+                onReverseComplete: () => {
+                    console.log('애니메이션 역방향 완료');
                     this.assemblyPathVisualizer.clearDebugObjects();
                     if (options?.onComplete) options.onComplete();
                     resolve();
                 }
             });
+
+            console.log('1단계: 접근 단계 애니메이션 추가');
+            // 1단계: 접근 단계 (홈 입구 근처까지 부드럽게 이동)
+            timeline.to(coverNode.position, {
+                x: approachTarget.x,
+                y: approachTarget.y,
+                z: approachTarget.z,
+                duration: approachDuration,
+                ease: animationConfig?.easing || 'power2.out',
+                onStart: () => {
+                    console.log('접근 단계 시작');
+                },
+                onUpdate: () => {
+                    // Three.js 렌더링을 위해 업데이트 필요 시
+                    if (coverNode.parent) {
+                        coverNode.parent.updateMatrixWorld(true);
+                    }
+                }
+            });
+
+            console.log('2단계: 삽입 단계 애니메이션 추가');
+            // 2단계: 삽입 단계 (홈 내부로 정밀하게 결합)
+            timeline.to(coverNode.position, {
+                x: targetPosition.x,
+                y: targetPosition.y,
+                z: targetPosition.z,
+                duration: insertDuration,
+                ease: 'power1.inOut', // 삽입 시 더 부드러운 이징
+                onStart: () => {
+                    console.log('삽입 단계 시작');
+                },
+                onUpdate: () => {
+                    // Three.js 렌더링을 위해 업데이트 필요 시
+                    if (coverNode.parent) {
+                        coverNode.parent.updateMatrixWorld(true);
+                    }
+                }
+            });
+
+            console.log('Timeline 생성 완료, 재생 시작');
+            timeline.play(); // 명시적으로 재생 시작
         });
     }
 
