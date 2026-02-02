@@ -132,11 +132,12 @@ export class DamperCoverAssemblyService {
                 return distA - distB;
             })[0];
 
-            // 월드 좌표계에서의 이동 벡터 계산
+            // [개선] 돌출부(Plug)와 홈(Hole)의 좌표 차이를 이용하여 이동 벡터 계산
+            // moveDelta = (목표 홈 위치) - (현재 돌출부 위치)
             moveDelta.subVectors(primaryHoleWorldPos, currentPlugWorldPos!);
-            // moveDelta.x += 0.1;
 
             // 1. 최종 목표 월드 좌표 계산
+            // coverNode의 현재 위치에 moveDelta를 더하면, 돌출부가 홈 위치에 정확히 일치하게 됨
             const currentCoverWorldPos = new THREE.Vector3();
             coverNode.getWorldPosition(currentCoverWorldPos);
             const targetWorldPos = new THREE.Vector3().addVectors(currentCoverWorldPos, moveDelta);
