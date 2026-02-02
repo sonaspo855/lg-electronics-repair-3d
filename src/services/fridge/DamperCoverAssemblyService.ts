@@ -270,10 +270,10 @@ export class DamperCoverAssemblyService {
                     },
                     onUpdate: () => {
                         updatePosition();
-                        console.log('[디버깅] 접근 단계 진행 중:', {
+                        /* console.log('[디버깅] 접근 단계 진행 중:', {
                             progress: tl.progress(),
                             position: { x: animState.x, y: animState.y, z: animState.z }
-                        });
+                        }); */
                     },
                     onComplete: () => {
                         console.log('[디버깅] 접근 단계 완료', {
@@ -285,7 +285,7 @@ export class DamperCoverAssemblyService {
                 // [디버깅] 1단계 추가 후 타임라인 상태 확인
                 console.log('[디버깅] 1단계(접근) 추가 후 타임라인:', {
                     duration: tl.duration(),
-                    childrenCount: tl.children.length
+                    childrenCount: tl.getChildren().length
                 });
 
                 // 2단계: 삽입
@@ -320,7 +320,7 @@ export class DamperCoverAssemblyService {
                 // [디버깅] 2단계 추가 후 타임라인 상태 확인
                 console.log('[디버깅] 2단계(삽입) 추가 후 타임라인:', {
                     totalDuration: tl.duration(),
-                    childrenCount: tl.children.length,
+                    childrenCount: tl.getChildren().length,
                     timelineActive: tl.isActive()
                 });
             });
