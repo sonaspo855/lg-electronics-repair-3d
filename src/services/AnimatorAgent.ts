@@ -40,6 +40,7 @@ class OllamaClient {
 import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
 import { CameraMovementService } from './fridge/CameraMovementService';
 import { AnimationHistoryService } from './AnimationHistoryService';
+import { getManualAssemblyManager } from './fridge/ManualAssemblyManager';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -958,6 +959,15 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
           } else {
             console.warn('Animation history service not available');
+          }
+
+          // 댐퍼 커버 조립 애니메이션 실행
+          try {
+            const manualAssemblyManager = getManualAssemblyManager();
+            await manualAssemblyManager.assembleDamperCover({ duration: 1500 });
+            console.log('Damper cover assembly completed');
+          } catch (error) {
+            console.error('Error during damper cover assembly:', error);
           }
         } else {
           console.log('CameraMovementService is not initialized');
