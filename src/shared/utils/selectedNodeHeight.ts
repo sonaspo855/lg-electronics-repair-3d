@@ -35,7 +35,7 @@ export const highlightNode = (
                 child.userData.originalMaterial = child.material;
             }
             // 빛의 영향을 받지 않는 BasicMaterial 사용 -> 무조건 빨갛게 보임
-            child.material = createHighlightMaterial(0xff0000, 0.8);
+            child.material = createHighlightMaterial(0xff0000, 0.5);
             child.renderOrder = 99999; // 맨 위에 그리기
         }
     });
@@ -108,32 +108,29 @@ export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
     let targetAncestor: THREE.Object3D | null = null;
 
     while (currentNode) {
-        if (targetNodeNames.includes(currentNode.name)) {
-            targetAncestor = currentNode;
+        targetAncestor = currentNode;
 
-            let damperChild: THREE.Object3D | undefined;
-            targetAncestor.traverse((child) => {
-                if (child.name.includes(HighlightNode)) {
-                    damperChild = child as THREE.Object3D;
-                    return true;
-                }
-            });
-
-            if (damperChild) {
-                console.log(`타겟 발견: ${damperChild.name}`);
-
-                // 1. 씬 루트 찾기
-                let sceneRoot = damperChild;
-                while (sceneRoot.parent) {
-                    sceneRoot = sceneRoot.parent;
-                }
-
-                // 공통 하이라이트 함수 호출
-                highlightNode(damperChild, sceneRoot, event.camera as THREE.PerspectiveCamera);
-            } else {
-                console.log('타겟 노드를 찾을 수 없습니다.');
+        let damperChild: THREE.Object3D | undefined;
+        targetAncestor.traverse((child) => {
+            if (child.name.includes(HighlightNode)) {
+                damperChild = child as THREE.Object3D;
+                return true;
             }
-            break;
+        });
+
+        if (damperChild) {
+            // console.log(`타겟 발견: ${damperChild.name}`);
+
+            // 1. 씬 루트 찾기
+            let sceneRoot = damperChild;
+            while (sceneRoot.parent) {
+                sceneRoot = sceneRoot.parent;
+            }
+
+            // 공통 하이라이트 함수 호출
+            highlightNode(damperChild, sceneRoot, event.camera as THREE.PerspectiveCamera);
+        } else {
+            console.log('타겟 노드를 찾을 수 없습니다.');
         }
         if (!currentNode.parent) break;
         currentNode = currentNode.parent;

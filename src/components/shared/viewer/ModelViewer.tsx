@@ -193,6 +193,7 @@ function ModelContent({
   const handleClick = (event: any) => {
     event.stopPropagation();
     selectionHandlerRef.current?.handleClick(event, sceneRoot || undefined, camera as THREE.PerspectiveCamera);
+    // selectedNodeHeight(event);
   };
 
   return (
