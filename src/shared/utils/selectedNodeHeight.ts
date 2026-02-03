@@ -49,7 +49,7 @@ export const highlightNode = (
     });
     toRemove.forEach(c => c.parent?.remove(c));
 
-    console.log("빨간색 하이라이트가 오리지널 노드에 적용되었습니다.");
+    // console.log("빨간색 하이라이트가 오리지널 노드에 적용되었습니다.");
 
     // 3. [노란색 박스 하이라이트 - 노드를 따라 움직임]
     const preciseBox = getPreciseBoundingBox(targetNode);
@@ -75,7 +75,7 @@ export const highlightNode = (
     }
     targetNode.userData.boxUpdateInterval.push(updateInterval);
 
-    console.log("빨간색 하이라이트와 노란색 박스가 제자리에 적용되었습니다.");
+    // console.log("빨간색 하이라이트와 노란색 박스가 제자리에 적용되었습니다.");
 
     // 4. 카메라 이동 (오리지널 노드 기준) - 비활성화
     // if (camera) {
