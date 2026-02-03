@@ -41,6 +41,7 @@ import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDampe
 import { CameraMovementService } from './fridge/CameraMovementService';
 import { AnimationHistoryService } from './AnimationHistoryService';
 import { getManualAssemblyManager } from './fridge/ManualAssemblyManager';
+import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -969,6 +970,31 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           } catch (error) {
             console.error('Error during damper cover assembly:', error);
           }
+
+          // 스크류 분리 애니매이션 실행
+          try {
+            const manualAssemblyManager = getManualAssemblyManager();
+
+            // 왼쪽 스크류 분리
+            await manualAssemblyManager.loosenScrew(LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, {
+              duration: 1500,
+              rotationAngle: 720,
+              screwPitch: 0.005
+            });
+            console.log('Left screw 1 loosened');
+
+            await manualAssemblyManager.loosenScrew(LEFT_DOOR_SCREW2_CUSTOMIZED_NODE, {
+              duration: 1500,
+              rotationAngle: 720,
+              screwPitch: 0.005
+            });
+            console.log('Left screw 2 loosened');
+          } catch (error) {
+            console.error('Error during screw loosening:', error);
+          }
+
+
+
         } else {
           console.log('CameraMovementService is not initialized');
         }

@@ -55,26 +55,30 @@ summary:
 	- GSAP Timeline 사용, 선형 이동 애니메이션 구현 패턴
 - **DamperCoverAssemblyService.ts**: 
 	- 싱글톤 패턴, 메타데이터 기반 구조
-- **NodeHierarchy.tsx**: 
-	- `isFastener()` 함수 (`/screw|bolt/i.test()`) 이미 구현됨
+- **NodeHierarchy.tsx**: 
+	- `isFastener()` 함수 (`/screw|bolt/i.test()`) 이미 구현됨
 - **fridgeConstants.ts**: 
 	- Screw 노드 이름 상수 정의됨
+
 ### 4-1. 구현 패턴
 - 싱글톤 패턴 사용 (DamperAssemblyService.ts 참고)
 - GSAP를 활용한 애니메이션 (PartAssemblyService.ts 참고)
 - 초기화/정리 메서드 구조
-## 4. 새로운 서비스 파일 생성
-### 파일: `src/services/fridge/ScrewAnimationService.ts`
+
+## 5. 새로운 서비스 파일 생성
+### 파일: `src/services/fridge/ScrewAnimationService.ts`
 **주요 기능:**
 1. `initialize(sceneRoot)`: 씬 루트 초기화
 2. `animateScrewRotation(nodeName, options)`: Screw 회전+이동 애니메이션
 3. `isScrewNode(nodeName)`: Screw 노드 식별
 4. `dispose()`: 리소스 정리
+
 **애니메이션 구현:**
 - 회전 애니메이션: Z축 기준 회전 (720도 = 2바퀴)
 - 이동 애니메이션: 회전과 동시에 Z축 방향으로 빼냄
-- 나사산 간격(Pitch) 계산: `이동 거리 = (회전 각도 / 360°) × 나사산 간격`
+- 나사산 간격(Pitch) 계산: `이동 거리 = (회전 각도 / 360°) × 나사산 간격`
 - GSAP Timeline 사용하여 회전과 이동 동시 실행
+
 **옵션 파라미터:**
 - `duration`: 애니메이션 시간 (ms)
 - `rotationAngle`: 회전 각도 (기본값: 720도)
@@ -82,39 +86,79 @@ summary:
 - `screwPitch`: 나사산 간격 (기본값: 0.5cm)
 - `onComplete`: 완료 콜백
 
-## 5. 구현 순서
+## 6. 구현 순서
 1. **ScrewAnimationService.ts 생성**
     - 클래스 구조 정의
     - 싱글톤 패턴 구현
     - 초기화 메서드 구현
 2. **회전 애니메이션 함수 구현**
-    - `animateRotation()` 메서드
+    - `animateRotation()` 메서드
     - GSAP를 사용한 회전 애니메이션
 3. **회전+이동 동시 애니메이션 구현**
-    - `animateScrewRotation()` 메서드
+    - `animateScrewRotation()` 메서드
     - 나사산 간격 계산 로직
     - GSAP Timeline 사용
 4. **Screw 노드 감지 로직 구현**
-    - `isScrewNode()` 메서드
+    - `isScrewNode()` 메서드
     - NodeHierarchy.tsx의 isFastener() 패턴 활용
 5. **ManualAssemblyManager 연동**
-    - `loosenScrew()` 메서드 추가
+    - `loosenScrew()` 메서드 추가
     - ScrewAnimationService 인스턴스 관리
 6. **테스트**
     - Screw 노드 선택 후 "Pull Out" 동작 확인
     - 회전하면서 빠지는지 확인
     - 일반 노드는 기존대로 동작하는지 확인
-## 6. 기술적 고려사항
+
+## 7. 기술적 고려사항
 ### 회전 방향
 - 시계 방향 (오른나사 기준)
 - 음수 각도로 표현
+
 ### 나사산 간격 (Pitch)
 - 기본값: 0.5cm (일반적인 나사)
 - 옵션으로 조절 가능
+
 ### 복수 Screw 처리
 - 순차적 처리 필요 시 별도 메서드 추가
 - 현재는 단일 Screw 처리에 초점
+
 ### 좌표계
 - 로컬 좌표계 사용 (PartAssemblyService 패턴)
 - 부모 노드의 좌표계 기준
+
+## 8. 사용 예시
+### ManualAssemblyManager에서의 사용 예시
+```typescript
+const manager = getManualAssemblyManager();
+manager.initialize(sceneRoot);
+
+// Screw 노드 회전 애니메이션 실행
+await manager.loosenScrew('leftDoorScrew1', {
+    duration: 1500,
+    rotationAngle: 720,
+    screwPitch: 0.005,
+    onComplete: () => {
+        console.log('Screw 분해 완료');
+    }
+});
+```
+
+### 단독 사용 예시
+```typescript
+const screwAnimationService = getScrewAnimationService();
+screwAnimationService.initialize(sceneRoot);
+
+// Screw 회전 애니메이션 실행
+await screwAnimationService.animateScrewRotation('leftDoorScrew1', {
+    duration: 1500,
+    rotationAngle: 720,
+    screwPitch: 0.005,
+    onProgress: (progress) => {
+        console.log(`진행률: ${progress * 100}%`);
+    },
+    onComplete: () => {
+        console.log('애니메이션 완료');
+    }
+});
+```
 

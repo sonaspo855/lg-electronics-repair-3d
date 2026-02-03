@@ -6,6 +6,7 @@ import { getDamperCoverAssemblyService } from './DamperCoverAssemblyService';
 import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
 import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager';
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
+import { getScrewAnimationService } from './ScrewAnimationService';
 
 /**
  * 수동 조립 관리자
@@ -20,6 +21,7 @@ export class ManualAssemblyManager {
     private grooveDetectionService = getGrooveDetectionService();
     private assemblyStateManager = getAssemblyStateManager();
     private holeCenterManager = getHoleCenterManager();
+    private screwAnimationService = getScrewAnimationService();
 
     public initialize(sceneRoot: THREE.Object3D, cameraControls?: any): void {
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
@@ -28,6 +30,7 @@ export class ManualAssemblyManager {
         this.damperAssemblyService.initialize(sceneRoot);
         this.damperCoverAssemblyService.initialize(sceneRoot);
         this.grooveDetectionService.initialize(sceneRoot, cameraControls);
+        this.screwAnimationService.initialize(sceneRoot);
     }
 
     public async disassembleDamperCover(options?: {
@@ -130,12 +133,35 @@ export class ManualAssemblyManager {
         await this.damperCoverAssemblyService.assembleDamperCover(options);
     }
 
+    /**
+     * Screw를 돌려서 빼는 애니메이션을 실행합니다.
+     * @param nodeName 대상 노드 이름
+     * @param options 애니메이션 옵션
+     */
+    public async loosenScrew(
+        nodeName: string,
+        options?: {
+            duration?: number;
+            rotationAngle?: number;
+            screwPitch?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<void> {
+        if (!this.screwAnimationService.isScrewNode(nodeName)) {
+            console.warn(`${nodeName}은 Screw 노드가 아님`);
+            return;
+        }
+
+        await this.screwAnimationService.animateScrewRotation(nodeName, options);
+    }
+
     public dispose(): void {
         this.damperAssemblyService.dispose();
         this.damperCoverAssemblyService.dispose();
         this.grooveDetectionService.dispose();
         this.assemblyStateManager.reset();
         this.holeCenterManager.dispose();
+        this.screwAnimationService.dispose();
         this.partAssemblyService?.dispose();
         this.partAssemblyService = null;
     }
