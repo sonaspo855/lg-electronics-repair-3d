@@ -193,7 +193,7 @@ function ModelContent({
   const handleClick = (event: any) => {
     event.stopPropagation();
     selectionHandlerRef.current?.handleClick(event, sceneRoot || undefined, camera as THREE.PerspectiveCamera);
-    // selectedNodeHeight(event);
+    selectedNodeHeight(event); // 클릭시 지정한 노드 하이라이트, 테스트용으로 임시 추가
   };
 
   return (
