@@ -197,8 +197,8 @@ export class PartAssemblyService {
      * 
      * @example
      * await assemblyService.assemblePart(
-     *     'fridge.leftDoor.damperCoverBody',
-     *     'fridge.leftDoor.damperAssembly',
+     *     'fridge.leftDoorDamper.damperCoverBody',
+     *     'fridge.leftDoorDamper.damperAssembly',
      *     { duration: 2000, liftHeight: 2 }
      * );
      */
@@ -306,7 +306,7 @@ export class PartAssemblyService {
      * @returns Promise (애니메이션 완료 시 resolve)
      * 
      * @example
-     * await assemblyService.disassemblePart('fridge.leftDoor.damperCoverBody');
+     * await assemblyService.disassemblePart('fridge.leftDoorDamper.damperCoverBody');
      */
     public async disassemblePart(
         partNodeName: string,

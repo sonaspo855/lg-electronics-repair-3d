@@ -65,10 +65,10 @@ export class DamperAssemblyService {
 
         const nodeNameManager = getNodeNameManager();
         const damperAssembly = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')!
+            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
         const damperCover = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody')!
+            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!
         );
 
         this.printNodeNames(damperAssembly);

@@ -120,7 +120,7 @@ export class MetadataLoader {
 
     /**
      * 노드 참조를 실제 노드 이름으로 해결합니다.
-     * @param nodeValue 노드 값 (예: "ref:fridge.leftDoor.damperAssembly" 또는 직접 노드 이름)
+     * @param nodeValue 노드 값 (예: "ref:fridge.leftDoorDamper.damperAssembly" 또는 직접 노드 이름)
      * @returns 해결된 노드 이름
      */
     private resolveNodeReference(nodeValue: string): string {

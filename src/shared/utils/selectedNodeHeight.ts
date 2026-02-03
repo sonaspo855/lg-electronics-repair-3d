@@ -1,14 +1,9 @@
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { invalidate } from '@react-three/fiber';
-import {
-    DOOR_NODE_NAME,
-    RIGHT_DOOR_NODE_NAME,
-    LOWER_LEFT_DOOR_NODE_NAME,
-    LOWER_RIGHT_DOOR_NODE_NAME,
-} from '../../services/door/doorConstants';
+import { getNodeNameManager } from './NodeNameManager';
 
-import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from '../../utils/commonUtils';
+import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
 
 const HighlightNode = 'AKC73369920_Bucket_Assembly,Ice';
 
@@ -23,12 +18,19 @@ export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
 
     const clickedObject = event.intersections[0].object;
 
-    const doorConfig: { [key: string]: THREE.Vector3 } = {
-        [DOOR_NODE_NAME]: new THREE.Vector3(0, 0, 0),
-        [RIGHT_DOOR_NODE_NAME]: new THREE.Vector3(0, 0, 0),
-        [LOWER_LEFT_DOOR_NODE_NAME]: new THREE.Vector3(0, 0, 0),
-        [LOWER_RIGHT_DOOR_NODE_NAME]: new THREE.Vector3(0, 0, 0)
-    };
+    // NodeNameManager를 사용하여 도어 노드 이름 가져오기
+    const nodeNameManager = getNodeNameManager();
+    const doorNodeNames = [
+        nodeNameManager.getNodeName('fridge.Door.DOOR_NODE_NAME'),
+        nodeNameManager.getNodeName('fridge.Door.RIGHT_DOOR_NODE_NAME'),
+        nodeNameManager.getNodeName('fridge.Door.LOWER_LEFT_DOOR_NODE_NAME'),
+        nodeNameManager.getNodeName('fridge.Door.LOWER_RIGHT_DOOR_NODE_NAME')
+    ].filter((name): name is string => name !== null);
+
+    const doorConfig: { [key: string]: THREE.Vector3 } = {};
+    doorNodeNames.forEach(name => {
+        doorConfig[name] = new THREE.Vector3(0, 0, 0);
+    });
 
     const targetNodeNames = Object.keys(doorConfig);
     let currentNode: THREE.Object3D | null = clickedObject;

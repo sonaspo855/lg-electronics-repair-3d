@@ -85,7 +85,7 @@ export class CameraMovementService {
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
 
         // 특정 노드(왼쪽 도어 댐퍼)에 대해 일관된 뷰를 제공하도록 방향 강제
-        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody');
+        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
         if (nodeName === damperCoverBodyNode && !options.direction) {
             direction = new THREE.Vector3(0.5, -1, 0.5).normalize();

@@ -45,7 +45,7 @@ export class NodeNameManager {
 
     /**
      * 노드 이름 가져오기
-     * @param key 노드 키 (점 표기법 지원: 'fridge.leftDoor.damperCoverBody')
+     * @param key 노드 키 (점 표기법 지원: 'fridge.leftDoorDamper.damperCoverBody')
      * @returns 노드 이름 (없으면 null)
      */
     public getNodeName(key: string): string | null {

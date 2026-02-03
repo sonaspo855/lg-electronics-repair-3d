@@ -56,16 +56,16 @@ export class DamperCoverAssemblyService {
 
         const nodeNameManager = getNodeNameManager();
         const coverNode = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody')!
+            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!
         ) as THREE.Mesh;
         const assemblyNode = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')!
+            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         ) as THREE.Mesh;
 
         if (!coverNode || !assemblyNode) {
             console.error('Target nodes not found for assembly:', {
-                coverName: nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody'),
-                assemblyName: nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')
+                coverName: nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody'),
+                assemblyName: nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')
             });
             return;
         }
@@ -107,7 +107,7 @@ export class DamperCoverAssemblyService {
 
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
         this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
-            nodeNameManager.getNodeName('fridge.leftDoor.damperAssembly')!
+            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
         console.log('this.detectedHoles>>> ', this.detectedHoles);
 

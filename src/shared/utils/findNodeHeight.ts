@@ -59,7 +59,7 @@ export const findNodeHeight = (
     }
 ) => {
     const nodeNameManager = getNodeNameManager();
-    const highlightNodeName = options?.highlightNodeName ?? (nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody') || 'MCK71751101_Cover,Body_3117001');
+    const highlightNodeName = options?.highlightNodeName ?? (nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody') || 'MCK71751101_Cover,Body_3117001');
     const matchMode = options?.matchMode ?? 'includes';
     const duration = options?.duration ?? 1.0;
     const boxColor = options?.boxColor ?? 0xffff00;

@@ -36,7 +36,7 @@ export class NodeNameLoader {
 
     /**
      * 노드 이름 가져오기 (점 표기법 지원)
-     * @param path 노드 경로 (예: 'fridge.leftDoor.damperCoverBody')
+     * @param path 노드 경로 (예: 'fridge.leftDoorDamper.damperCoverBody')
      * @returns 노드 이름
      */
     public getNodeName(path: string): string | null {

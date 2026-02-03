@@ -42,7 +42,7 @@ export class ManualAssemblyManager {
         this.assemblyStateManager.startAssembly();
 
         const nodeNameManager = getNodeNameManager();
-        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoor.damperCoverBody');
+        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
         if (!damperCoverBodyNode) {
             throw new Error('damperCoverBodyNode를 찾을 수 없습니다.');

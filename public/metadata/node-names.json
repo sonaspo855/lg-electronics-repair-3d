@@ -1,12 +1,18 @@
 {
     "fridge": {
-        "leftDoor": {
+        "Door": {
+            "DOOR_NODE_NAME": "ADC30035606_Door_Assembly,Refrigerator(Left)",
+            "RIGHT_DOOR_NODE_NAME": "ADC30009336_Door_Assembly,Refrigerator(Right)",
+            "LOWER_LEFT_DOOR_NODE_NAME": "ADC30009726_Door_Assembly,Freezer(Left)",
+            "LOWER_RIGHT_DOOR_NODE_NAME": "ADC30009826_Door_Assembly,Freezer(Right)"
+        },
+        "leftDoorDamper": {
             "damperCoverBody": "MCK71751101_Cover,Body_3117001",
             "damperAssembly": "ACV74674704_Damper_Assembly_13473",
             "screw1Customized": "4J01424B_Screw,Customized_4168029",
             "screw2Customized": "4J01424B_Screw,Customized_4168028"
         },
-        "rightDoor": {
+        "rightDoorDamper": {
             "damperCoverBody": "",
             "damperAssembly": "",
             "screw1Customized": "",
