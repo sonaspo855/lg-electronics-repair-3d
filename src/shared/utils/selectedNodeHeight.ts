@@ -8,6 +8,86 @@ import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from
 const HighlightNode = 'AKC73369920_Bucket_Assembly,Ice';
 
 /**
+ * 노드에 하이라이트를 적용하는 공통 함수
+ * @param targetNode - 하이라이트할 타겟 노드
+ * @param sceneRoot - 씬 루트 노드
+ * @param camera - 카메라 (선택 사항, 카메라 이동 시 필요)
+ */
+export const highlightNode = (
+    targetNode: THREE.Object3D,
+    sceneRoot: THREE.Object3D,
+    camera?: THREE.PerspectiveCamera
+): THREE.Box3 => {
+    console.log('highlightNode!!!');
+
+    // 1. 월드 좌표 정보 추출
+    targetNode.updateMatrixWorld(true);
+    const worldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    const worldScale = new THREE.Vector3();
+    targetNode.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+
+    // 2. 오리지널 노드에 직접 붉은색 적용
+    targetNode.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+            // 원본 머티리얼 저장 (나중에 복원용)
+            if (!child.userData.originalMaterial) {
+                child.userData.originalMaterial = child.material;
+            }
+            // 빛의 영향을 받지 않는 BasicMaterial 사용 -> 무조건 빨갛게 보임
+            child.material = createHighlightMaterial(0xff0000, 0.8);
+            child.renderOrder = 99999; // 맨 위에 그리기
+        }
+    });
+
+    // 기존 하이라이트 제거 (Box3Helper만 제거)
+    const toRemove: THREE.Object3D[] = [];
+    sceneRoot.traverse((child) => {
+        if (child.type === "Box3Helper") {
+            toRemove.push(child);
+        }
+    });
+    toRemove.forEach(c => c.parent?.remove(c));
+
+    console.log("빨간색 하이라이트가 오리지널 노드에 적용되었습니다.");
+
+    // 3. [노란색 박스 하이라이트 - 노드를 따라 움직임]
+    const preciseBox = getPreciseBoundingBox(targetNode);
+
+    // Box3Helper는 월드 좌표 기준으로 생성되므로 sceneRoot에 추가
+    const boxHelper = new THREE.Box3Helper(preciseBox, 0xffff00); // 노란색
+    sceneRoot.add(boxHelper);
+
+    // 박스 헬퍼를 타겟 노드와 연결하여 업데이트 함수 생성
+    const updateBoxHelper = () => {
+        const currentBox = getPreciseBoundingBox(targetNode);
+        boxHelper.box.copy(currentBox);
+        // Box3Helper는 update 메서드가 없으므로 invalidate()로 리렌더링 유도
+        invalidate();
+    };
+
+    // 타이머로 주기적으로 업데이트 (노드 움직임 추적)
+    const updateInterval = setInterval(updateBoxHelper, 16); // 60fps
+
+    // 메모리 누수 방지를 위해 interval 저장
+    if (!targetNode.userData.boxUpdateInterval) {
+        targetNode.userData.boxUpdateInterval = [];
+    }
+    targetNode.userData.boxUpdateInterval.push(updateInterval);
+
+    console.log("빨간색 하이라이트와 노란색 박스가 제자리에 적용되었습니다.");
+
+    // 4. 카메라 이동 (오리지널 노드 기준) - 비활성화
+    // if (camera) {
+    //     debugFocusCamera(camera, preciseBox, undefined, 1.0);
+    // }
+
+    invalidate();
+
+    return preciseBox;
+};
+
+/**
  * 선택된 노드의 높이를 찾아 하이라이트하는 함수
  * @param event - 마우스 이벤트
  */
@@ -57,69 +137,8 @@ export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
                     sceneRoot = sceneRoot.parent;
                 }
 
-                // 2. 월드 좌표 정보 추출
-                damperChild.updateMatrixWorld(true);
-                const worldPos = new THREE.Vector3();
-                const worldQuat = new THREE.Quaternion();
-                const worldScale = new THREE.Vector3();
-                damperChild.matrixWorld.decompose(worldPos, worldQuat, worldScale);
-
-                // 3. 오리지널 노드에 직접 붉은색 적용
-                damperChild.traverse((child) => {
-                    if (child instanceof THREE.Mesh) {
-                        // 원본 머티리얼 저장 (나중에 복원용)
-                        if (!child.userData.originalMaterial) {
-                            child.userData.originalMaterial = child.material;
-                        }
-                        // 빛의 영향을 받지 않는 BasicMaterial 사용 -> 무조건 빨갛게 보임
-                        child.material = createHighlightMaterial(0xff0000, 0.8);
-                        child.renderOrder = 99999; // 맨 위에 그리기
-                    }
-                });
-
-                // 기존 하이라이트 제거 (Box3Helper만 제거)
-                const toRemove: THREE.Object3D[] = [];
-                sceneRoot.traverse((child) => {
-                    if (child.type === "Box3Helper") {
-                        toRemove.push(child);
-                    }
-                });
-                toRemove.forEach(c => c.parent?.remove(c));
-
-                console.log("빨간색 하이라이트가 오리지널 노드에 적용되었습니다.");
-
-                // 4. [노란색 박스 하이라이트 - 노드를 따라 움직임]
-                const preciseBox = getPreciseBoundingBox(damperChild);
-
-                // Box3Helper는 월드 좌표 기준으로 생성되므로 sceneRoot에 추가
-                const boxHelper = new THREE.Box3Helper(preciseBox, 0xffff00); // 노란색
-                sceneRoot.add(boxHelper);
-
-                // 박스 헬퍼를 타겟 노드와 연결하여 업데이트 함수 생성
-                const updateBoxHelper = () => {
-                    if (damperChild) {
-                        const currentBox = getPreciseBoundingBox(damperChild);
-                        boxHelper.box.copy(currentBox);
-                        // Box3Helper는 update 메서드가 없으므로 invalidate()로 리렌더링 유도
-                        invalidate();
-                    }
-                };
-
-                // 타이머로 주기적으로 업데이트 (노드 움직임 추적)
-                const updateInterval = setInterval(updateBoxHelper, 16); // 60fps
-
-                // 메모리 누수 방지를 위해 interval 저장
-                if (!damperChild.userData.boxUpdateInterval) {
-                    damperChild.userData.boxUpdateInterval = [];
-                }
-                damperChild.userData.boxUpdateInterval.push(updateInterval);
-
-                console.log("빨간색 하이라이트와 노란색 박스가 제자리에 적용되었습니다.");
-
-                // 5. 카메라 이동 (오리지널 노드 기준)
-                debugFocusCamera(event.camera as THREE.PerspectiveCamera, preciseBox, undefined, 1.0);
-
-                invalidate();
+                // 공통 하이라이트 함수 호출
+                highlightNode(damperChild, sceneRoot, event.camera as THREE.PerspectiveCamera);
             } else {
                 console.log('타겟 노드를 찾을 수 없습니다.');
             }

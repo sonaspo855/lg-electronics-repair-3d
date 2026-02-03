@@ -6,7 +6,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils";
 import { animatorAgent } from "../../../services/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
 import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
-import { getClickPointMarker, resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
+import { resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
 import { selectedNodeHeight } from "../../../shared/utils/selectedNodeHeight";
 import { createHighlightMaterial } from "../../../shared/utils/commonUtils";
 import { SelectionHandler } from "../../../shared/utils/SelectionHandler";
@@ -151,21 +151,56 @@ function ModelContent({
   url,
   onSceneReady,
   onLoaded,
+  onNodeSelect,
+  sceneRoot,
 }: {
   url: string;
   onSceneReady: (scene: THREE.Object3D) => void;
   onLoaded?: () => void;
+  onNodeSelect?: (node: THREE.Object3D) => void;
+  sceneRoot?: THREE.Object3D | null;
 }) {
   const { scene } = useGLTF(url);
   const clonedScene = useMemo(() => cloneSkeleton(scene), [scene]);
+  const { camera, gl } = useThree();
+  const selectionHandlerRef = useRef<SelectionHandler | null>(null);
 
   useEffect(() => {
     onSceneReady(clonedScene);
     onLoaded?.();
   }, [clonedScene, onSceneReady, onLoaded]);
 
-  return <primitive object={clonedScene} />;
-  // return <primitive object={clonedScene} onClick={removeClickedNode} />;
+  useEffect(() => {
+    if (!onNodeSelect) {
+      return;
+    }
+
+    // SelectionHandler 인스턴스 생성
+    const handler = new SelectionHandler({
+      scene: clonedScene,
+      camera: camera as THREE.PerspectiveCamera,
+      gl,
+      onNodeSelect,
+    });
+
+    selectionHandlerRef.current = handler;
+
+    return () => {
+      selectionHandlerRef.current = null;
+    };
+  }, [clonedScene, onNodeSelect, camera, gl]);
+
+  const handleClick = (event: any) => {
+    event.stopPropagation();
+    selectionHandlerRef.current?.handleClick(event, sceneRoot || undefined, camera as THREE.PerspectiveCamera);
+  };
+
+  return (
+    <primitive
+      object={clonedScene}
+      onClick={handleClick}
+    />
+  );
 }
 
 function CameraManager({
@@ -236,40 +271,6 @@ function CameraManager({
 
     highlightedRef.current = true;
   }, [scene, camera, controlsRef]);
-
-  return null;
-}
-
-function SelectionManager({
-  scene,
-  onNodeSelect,
-}: {
-  scene: THREE.Object3D | null;
-  onNodeSelect?: (node: THREE.Object3D) => void;
-}) {
-  const { camera, gl } = useThree();
-  const selectionHandlerRef = useRef<SelectionHandler | null>(null);
-
-  useEffect(() => {
-    if (!scene || !onNodeSelect) {
-      return;
-    }
-
-    // 마우스 클릭 이벤트
-    const handler = new SelectionHandler({
-      scene,
-      camera: camera as THREE.PerspectiveCamera,
-      gl,
-      onNodeSelect,
-    });
-
-    selectionHandlerRef.current = handler;
-    handler.attach();
-
-    return () => {
-      handler.detach();
-    };
-  }, [scene, onNodeSelect, camera, gl]);
 
   return null;
 }
@@ -693,10 +694,15 @@ export default function ModelViewer({
         <directionalLight position={[1, 1, 1]} intensity={0.8} />
         <directionalLight position={[-1, -1, -1]} intensity={0.4} />
         <Suspense fallback={null}>
-          <ModelContent url={modelUrl} onSceneReady={setSceneRoot} onLoaded={() => setIsLoading(false)} />
+          <ModelContent
+            url={modelUrl}
+            onSceneReady={setSceneRoot}
+            onLoaded={() => setIsLoading(false)}
+            onNodeSelect={onNodeSelect}
+            sceneRoot={sceneRoot}
+          />
         </Suspense>
         <CameraManager scene={sceneRoot} focusTarget={focusTarget} controlsRef={controlsRef} />
-        <SelectionManager scene={sceneRoot} onNodeSelect={onNodeSelect} />
         <OrbitControls
           ref={controlsRef}
           makeDefault
