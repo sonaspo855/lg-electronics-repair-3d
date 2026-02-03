@@ -1,0 +1,36 @@
+{
+    "damperAnimations": {
+        "left": {
+            "commands": [
+                {
+                    "door": "top_left",
+                    "action": "open",
+                    "degrees": 45,
+                    "speed": 3
+                },
+                {
+                    "door": "bottom_left",
+                    "action": "open",
+                    "degrees": 180,
+                    "speed": 3
+                }
+            ]
+        },
+        "right": {
+            "commands": [
+                {
+                    "door": "top_right",
+                    "action": "open",
+                    "degrees": 45,
+                    "speed": 3
+                },
+                {
+                    "door": "bottom_right",
+                    "action": "open",
+                    "degrees": 180,
+                    "speed": 3
+                }
+            ]
+        }
+    }
+}

@@ -620,7 +620,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
   // Handle door-related commands
   private async handleDoorCommand(input: string): Promise<LLMResponse> {
     // Check for complete commands (all parameters provided)
-    const completeCommand = this.parseCompleteCommand(input);
+    const completeCommand = await this.parseCompleteCommand(input);
     if (completeCommand) {
       return await this.executeAnimationCommand(completeCommand);
     }
@@ -746,13 +746,13 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
   }
 
   // Parse complete commands (all parameters in one input)
-  private parseCompleteCommand(input: string): AnimationCommand | AnimationCommand[] | null {
+  private async parseCompleteCommand(input: string): Promise<AnimationCommand | AnimationCommand[] | null> {
 
     // Damper service command detection
     // Open the refrigerator door to service the left damper.
     // Open the refrigerator door to service the right damper.
     if (isFridgeDamperCommand(input)) {
-      return getFridgeDamperAnimationCommands(input);
+      return await getFridgeDamperAnimationCommands(input);
     }
 
 
@@ -866,7 +866,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
       // Check if commands are damper commands (need simultaneous execution)
       const commandsArray = Array.isArray(commands) ? commands : [commands];
       console.log('commandsArray>> ', JSON.stringify(commandsArray.map(c => ({ door: c.door, action: c.action, degrees: c.degrees }))));
-      const isDamperCommands = areFridgeDamperCommands(commandsArray);
+      const isDamperCommands = await areFridgeDamperCommands(commandsArray);
 
       if (isDamperCommands) {
         const locale = this.lastInputLocale;
