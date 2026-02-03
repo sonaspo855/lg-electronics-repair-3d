@@ -111,16 +111,16 @@ const TreeNode = React.memo<{
         background: selected ? 'rgba(78, 205, 196, 0.15)' : 'transparent',
         border: selected ? '1px solid rgba(78, 205, 196, 0.4)' : '1px solid transparent'
       }}
-      onMouseEnter={(e) => {
-        if (!selected) {
-          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.1)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!selected) {
-          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-        }
-      }}
+        onMouseEnter={(e) => {
+          if (!selected) {
+            (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.1)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!selected) {
+            (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+          }
+        }}
       >
         {/* Expand/Collapse Button */}
         {hasChildren && (
@@ -143,14 +143,14 @@ const TreeNode = React.memo<{
             {isExpanded ? '▼' : '▶'}
           </button>
         )}
-        
+
         {/* Node Icon */}
         <span style={{ fontSize: '14px' }}>
           {hasChildren ? '📁' : '📄'}
         </span>
-        
+
         {/* Node Name */}
-        <span 
+        <span
           onClick={handleClick}
           style={{
             flex: 1,
@@ -185,7 +185,7 @@ const TreeNode = React.memo<{
             fastener
           </span>
         )}
-        
+
         {/* Node Type */}
         <span style={{
           fontSize: '10px',
@@ -299,10 +299,10 @@ const TreeNode = React.memo<{
       {isExpanded && hasChildren && (
         <div style={{ marginTop: '4px' }}>
           {children.map((child: THREE.Object3D, index: number) => (
-            <TreeNode 
-              key={`${child.id}-${index}`} 
-              node={child} 
-              depth={depth + 1} 
+            <TreeNode
+              key={`${child.id}-${index}`}
+              node={child}
+              depth={depth + 1}
               onNodeSelect={onNodeSelect}
               getChildren={getChildren}
               getFastenersForNode={getFastenersForNode}
@@ -349,7 +349,7 @@ const ChatBox = React.memo(() => {
       timestamp: new Date()
     };
     setMessages([welcomeMessage]);
-    
+
     // Check service status on mount
     checkServiceStatus();
   }, []);
@@ -360,7 +360,7 @@ const ChatBox = React.memo(() => {
       await animatorAgent.refreshServiceStatus();
       const status = animatorAgent.getServiceStatus();
       setServiceStatus(status);
-      
+
       if (status.isRunning) {
         const models = await animatorAgent.getAvailableModels();
         setAvailableModels(models);
@@ -379,7 +379,7 @@ const ChatBox = React.memo(() => {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, newMessage]);
-    
+
     // Auto-scroll to bottom
     setTimeout(() => {
       const messagesContainer = document.querySelector('.messages-container');
@@ -411,33 +411,33 @@ const ChatBox = React.memo(() => {
       const userInput = inputValue.trim();
       addMessage(userInput, 'user');
       setInputValue('');
-      
+
       // Check for service status command
-      if (userInput.toLowerCase().includes('check service') || 
-          userInput.toLowerCase().includes('service status') ||
-          userInput.toLowerCase().includes('llama status') ||
-          userInput.toLowerCase().includes('ollama status')) {
-        
+      if (userInput.toLowerCase().includes('check service') ||
+        userInput.toLowerCase().includes('service status') ||
+        userInput.toLowerCase().includes('llama status') ||
+        userInput.toLowerCase().includes('ollama status')) {
+
         addMessage('Checking Llama/Ollama service status...', 'assistant');
         await checkServiceStatus();
-        
-        const statusMessage = serviceStatus.isRunning 
+
+        const statusMessage = serviceStatus.isRunning
           ? `✅ Llama service is ONLINE! Available models: ${availableModels.join(', ') || 'None detected'}`
           : `❌ Llama service is OFFLINE. Please ensure Ollama is running on localhost:11434`;
-        
+
         addMessage(statusMessage, 'assistant');
         return;
       }
-      
+
       // Process with AnimatorAgent
       setIsTyping(true);
       const typingId = addTypingIndicator();
-      
+
       try {
         const response = await animatorAgent.processUserInput(userInput);
         removeTypingIndicator(typingId);
         addMessage(response.message, 'assistant');
-        
+
         if (response.type === 'action') {
           setTimeout(() => {
             addMessage('Animation completed successfully! 🎉', 'system');
@@ -530,7 +530,7 @@ const ChatBox = React.memo(() => {
         }}>
           🤖 Sabby - Animator Agent
         </span>
-        
+
         {/* Service Status Indicator */}
         <div style={{
           display: 'flex',
@@ -541,19 +541,19 @@ const ChatBox = React.memo(() => {
           <div style={{
             width: '6px',
             height: '6px',
-            background: serviceStatus.status === 'online' ? '#4CAF50' : 
-                       serviceStatus.status === 'checking' ? '#FF9800' : '#F44336',
+            background: serviceStatus.status === 'online' ? '#4CAF50' :
+              serviceStatus.status === 'checking' ? '#FF9800' : '#F44336',
             borderRadius: '50%',
             animation: serviceStatus.status === 'checking' ? 'pulse 1s infinite' : 'none'
           }} />
           <span style={{
             fontSize: '10px',
-            color: serviceStatus.status === 'online' ? '#4CAF50' : 
-                   serviceStatus.status === 'checking' ? '#FF9800' : '#F44336',
+            color: serviceStatus.status === 'online' ? '#4CAF50' :
+              serviceStatus.status === 'checking' ? '#FF9800' : '#F44336',
             fontWeight: 'bold'
           }}>
-            {serviceStatus.status === 'online' ? 'Llama Online' : 
-             serviceStatus.status === 'checking' ? 'Checking...' : 'Llama Offline'}
+            {serviceStatus.status === 'online' ? 'Llama Online' :
+              serviceStatus.status === 'checking' ? 'Checking...' : 'Llama Offline'}
           </span>
           <button
             onClick={checkServiceStatus}
@@ -573,7 +573,7 @@ const ChatBox = React.memo(() => {
             🔄
           </button>
         </div>
-        
+
         <span style={{
           fontSize: '10px',
           color: '#aaa',
@@ -703,7 +703,7 @@ const ChatBox = React.memo(() => {
             {isTyping ? '...' : 'Send'}
           </button>
         </div>
-        
+
         {/* Help text */}
         <div style={{
           fontSize: '9px',
@@ -1061,12 +1061,12 @@ const NodeHierarchy = React.memo<NodeHierarchyProps>(({ scene, onNodeSelect, sel
   }, [updateNodeState, isInScene, isAnimating, animateLocalPosition, setAnimating]);
 
   // Generate root nodes
-  const rootNodes = useMemo(() => 
+  const rootNodes = useMemo(() =>
     rootNodesRef.current.map((child: THREE.Object3D, index: number) => (
-      <TreeNode 
-        key={`root-${child.id}-${index}`} 
-        node={child} 
-        depth={0} 
+      <TreeNode
+        key={`root-${child.id}-${index}`}
+        node={child}
+        depth={0}
         onNodeSelect={handleNodeSelect}
         getChildren={getChildren}
         getFastenersForNode={getFastenersForNode}

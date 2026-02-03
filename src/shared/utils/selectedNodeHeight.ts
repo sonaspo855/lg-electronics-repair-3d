@@ -5,7 +5,7 @@ import { getNodeNameManager } from './NodeNameManager';
 
 import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
 
-const HighlightNode = 'AKC73369920_Bucket_Assembly,Ice';
+
 
 /**
  * 노드에 하이라이트를 적용하는 공통 함수
@@ -93,6 +93,8 @@ export const highlightNode = (
  */
 export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
     console.log('selectedNodeHeight!!');
+    const HighlightNode = '4J01424B_Screw,Customized_4168029';
+
     event.stopPropagation();
     if (!event.intersections || event.intersections.length === 0) return;
 
@@ -100,19 +102,8 @@ export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
 
     // NodeNameManager를 사용하여 도어 노드 이름 가져오기
     const nodeNameManager = getNodeNameManager();
-    const doorNodeNames = [
-        nodeNameManager.getNodeName('fridge.Door.DOOR_NODE_NAME'),
-        nodeNameManager.getNodeName('fridge.Door.RIGHT_DOOR_NODE_NAME'),
-        nodeNameManager.getNodeName('fridge.Door.LOWER_LEFT_DOOR_NODE_NAME'),
-        nodeNameManager.getNodeName('fridge.Door.LOWER_RIGHT_DOOR_NODE_NAME')
-    ].filter((name): name is string => name !== null);
 
-    const doorConfig: { [key: string]: THREE.Vector3 } = {};
-    doorNodeNames.forEach(name => {
-        doorConfig[name] = new THREE.Vector3(0, 0, 0);
-    });
 
-    const targetNodeNames = Object.keys(doorConfig);
     let currentNode: THREE.Object3D | null = clickedObject;
     let targetAncestor: THREE.Object3D | null = null;
 

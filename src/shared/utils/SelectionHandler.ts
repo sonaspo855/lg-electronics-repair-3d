@@ -29,24 +29,26 @@ export class SelectionHandler {
 
         const hit = event.intersections[0];
         const clickedObject = hit.object;
-        console.log('클릭된 원본 노드: ', clickedObject);
+        console.log('클릭된 원본 노드: ', clickedObject.name);
 
         // shift + click: 기존 기능 (구 마커 생성)
         if (event.shiftKey) {
             this.handleShiftClick(hit, sceneRoot);
         }
+
+
         // ctrl + click: 클릭한 노드 하이라이트
         else if (event.ctrlKey) {
             this.handleCtrlClick(hit, sceneRoot, camera);
         }
 
-        this.options.onNodeSelect?.(clickedObject);
+        // this.options.onNodeSelect?.(clickedObject);
     }
 
     private handleShiftClick(hit: THREE.Intersection, sceneRoot?: THREE.Object3D) {
         const targetNode: THREE.Object3D = hit.object;
-        console.log('클릭된 원본 노드: ', targetNode);
-        this.options.onNodeSelect?.(targetNode);
+        console.log('handleShiftClick!!>>> ', targetNode);
+        // this.options.onNodeSelect?.(targetNode);
 
         // 클릭한 지점에 파란색 구 마커 생성
         const clickPoint = hit.point;
@@ -57,7 +59,7 @@ export class SelectionHandler {
 
     private handleCtrlClick(hit: THREE.Intersection, sceneRoot?: THREE.Object3D, camera?: THREE.PerspectiveCamera) {
         const clickedObject = hit.object;
-        console.log('클릭된 원본 노드: ', clickedObject);
+        console.log('handleCtrlClick>>> ', clickedObject);
 
         // 1. 씬 루트 찾기
         let root = sceneRoot || clickedObject;
@@ -68,6 +70,6 @@ export class SelectionHandler {
         // 2. highlightNode 함수를 사용하여 하이라이트 적용
         highlightNode(clickedObject, root, camera || this.options.camera);
 
-        this.options.onNodeSelect?.(clickedObject);
+        // this.options.onNodeSelect?.(clickedObject);
     }
 }
