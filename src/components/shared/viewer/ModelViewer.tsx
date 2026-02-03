@@ -7,6 +7,8 @@ import { animatorAgent } from "../../../services/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
 import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
 import { getClickPointMarker, resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
+import { selectedNodeHeight } from "../../../shared/utils/selectedNodeHeight";
+import { createHighlightMaterial } from "../../../shared/utils/commonUtils";
 import "./ModelViewer.css";
 import { getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
 // import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
@@ -255,7 +257,7 @@ function SelectionManager({
     const pointer = new THREE.Vector2();
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!event.shiftKey || event.button !== 0) {
+      if (event.button !== 0) {
         return;
       }
       const rect = gl.domElement.getBoundingClientRect();
@@ -264,24 +266,106 @@ function SelectionManager({
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(scene.children, true);
       if (hits.length > 0) {
-        // 클릭된 Mesh의 최상위 부모 노드를 찾음 (Mesh가 포함된 그룹/장면)
-        let targetNode: THREE.Object3D = hits[0].object;
-        console.log('클릭된 원본 노드: ', targetNode);
-        let parent = targetNode.parent;
-        while (parent && parent !== scene) {
-          // 부모가 Mesh가 아닌 경우(Group 등)면 그 부모를 선택 대상으로 삼음
-          // 단, Mesh가 직접 클릭된 경우는 그 Mesh의 최상위 부모까지 탐색
-          // targetNode = parent;
-          parent = parent.parent;
-        }
-        console.log('최종 선택된 노드: ', targetNode);
-        onNodeSelect(targetNode);
+        // shift + click: 기존 기능 (구 마커 생성)
+        if (event.shiftKey) {
+          let targetNode: THREE.Object3D = hits[0].object;
+          console.log('클릭된 원본 노드: ', targetNode);
+          let parent = targetNode.parent;
+          while (parent && parent !== scene) {
+            parent = parent.parent;
+          }
+          console.log('최종 선택된 노드: ', targetNode);
+          onNodeSelect(targetNode);
 
-        // 클릭한 지점에 파란색 구 마커 생성
-        const clickPoint = hits[0].point;
-        const normal = hits[0].face?.normal || new THREE.Vector3(0, 1, 0);
-        const clickPointMarker = getClickPointMarker(scene as THREE.Scene);
-        clickPointMarker.createMarker(clickPoint, normal, targetNode.name);
+          // 클릭한 지점에 파란색 구 마커 생성
+          const clickPoint = hits[0].point;
+          const normal = hits[0].face?.normal || new THREE.Vector3(0, 1, 0);
+          const clickPointMarker = getClickPointMarker(scene as THREE.Scene);
+          clickPointMarker.createMarker(clickPoint, normal, targetNode.name);
+        }
+        // ctrl + click: 클릭한 노드 하이라이트
+        else if (event.ctrlKey) {
+          const clickedObject = hits[0].object;
+          console.log('클릭된 원본 노드: ', clickedObject);
+
+          // 1. 씬 루트 찾기
+          let sceneRoot = clickedObject;
+          while (sceneRoot.parent) {
+            sceneRoot = sceneRoot.parent;
+          }
+
+          // 2. 월드 좌표 정보 추출
+          clickedObject.updateMatrixWorld(true);
+          const worldPos = new THREE.Vector3();
+          const worldQuat = new THREE.Quaternion();
+          const worldScale = new THREE.Vector3();
+          clickedObject.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+
+          // 3. 오리지널 노드에 직접 붉은색 적용
+          clickedObject.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              // 원본 머티리얼 저장 (나중에 복원용)
+              if (!child.userData.originalMaterial) {
+                child.userData.originalMaterial = child.material;
+              }
+              // 빛의 영향을 받지 않는 BasicMaterial 사용 -> 무조건 빨갛게 보임
+              child.material = createHighlightMaterial(0xff0000, 0.8);
+              child.renderOrder = 99999; // 맨 위에 그리기
+            }
+          });
+
+          // 기존 하이라이트 제거 (Box3Helper만 제거)
+          const toRemove: THREE.Object3D[] = [];
+          sceneRoot.traverse((child) => {
+            if (child.type === "Box3Helper") {
+              toRemove.push(child);
+            }
+          });
+          toRemove.forEach(c => c.parent?.remove(c));
+
+          console.log("빨간색 하이라이트가 오리지널 노드에 적용되었습니다.");
+
+          // 4. [노란색 박스 하이라이트 - 노드를 따라 움직임]
+          const preciseBox = new THREE.Box3().setFromObject(clickedObject);
+
+          // Box3Helper는 월드 좌표 기준으로 생성되므로 sceneRoot에 추가
+          const boxHelper = new THREE.Box3Helper(preciseBox, 0xffff00); // 노란색
+          sceneRoot.add(boxHelper);
+
+          // 박스 헬퍼를 타겟 노드와 연결하여 업데이트 함수 생성
+          const updateBoxHelper = () => {
+            const currentBox = new THREE.Box3().setFromObject(clickedObject);
+            boxHelper.box.copy(currentBox);
+          };
+
+          // 타이머로 주기적으로 업데이트 (노드 움직임 추적)
+          const updateInterval = setInterval(updateBoxHelper, 16); // 60fps
+
+          // 메모리 누수 방지를 위해 interval 저장
+          if (!clickedObject.userData.boxUpdateInterval) {
+            clickedObject.userData.boxUpdateInterval = [];
+          }
+          clickedObject.userData.boxUpdateInterval.push(updateInterval);
+
+          console.log("빨간색 하이라이트와 노란색 박스가 제자리에 적용되었습니다.");
+
+          // 5. 카메라 이동 (오리지널 노드 기준)
+          const box = new THREE.Box3().setFromObject(clickedObject);
+          const center = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+          const maxSize = Math.max(size.x, size.y, size.z, 1);
+
+          const fov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
+          const distance = maxSize / (2 * Math.tan(fov / 2));
+          const direction = new THREE.Vector3(1, 1, 1).normalize();
+
+          camera.position.copy(center.clone().add(direction.multiplyScalar(distance * 1.0)));
+          camera.near = distance / 100;
+          camera.far = distance * 100;
+          camera.updateProjectionMatrix();
+
+          onNodeSelect(clickedObject);
+        }
       }
     };
 
