@@ -255,6 +255,7 @@ function SelectionManager({
       return;
     }
 
+    // 마우스 클릭 이벤트
     const handler = new SelectionHandler({
       scene,
       camera: camera as THREE.PerspectiveCamera,
