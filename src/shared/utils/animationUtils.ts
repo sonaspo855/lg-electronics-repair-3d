@@ -25,96 +25,10 @@ export interface CameraTargetOptions {
     direction?: THREE.Vector3;
 }
 
-/**
- * GSAP 기반 애니메이션 함수 (Promise 반환)
- * - 기존 animate()와 동일한 인터페이스 유지
- * - 내부적으로 GSAP.to() 사용
- */
-export const animate = (
-    target: any,
-    params: any,
-    options: AnimationOptions = {}
-): Promise<void> => {
-    const duration = options.duration || 1000;
-    const easing = options.easing || 'power2.out';
-
-    return new Promise((resolve) => {
-        // 숫자 속성 애니메이션
-        const numericParams: any = {};
-        for (const prop in params) {
-            if (params.hasOwnProperty(prop) && typeof params[prop] === 'number') {
-                numericParams[prop] = params[prop];
-            }
-        }
-
-        gsap.to(target, {
-            ...numericParams,
-            duration: duration / 1000, // ms → seconds 변환
-            ease: easing,
-            onUpdate: function () {
-                options.onUpdate?.();
-                if (options.onProgress) {
-                    // 진행률 계산 (GSAP의 progress 사용)
-                    const progress = this.progress();
-                    options.onProgress(progress);
-                }
-            },
-            onComplete: () => {
-                options.onComplete?.();
-                resolve();
-            }
-        });
-    });
-};
 
 
 
-// ============================================================================
-// 노드 캐싱 유틸리티
-// ============================================================================
 
-/**
- * 3D 씬에서 노드를 이름으로 찾고 캐싱하는 유틸리티 클래스
- */
-export class NodeCache {
-    private cache: Map<string, THREE.Object3D> = new Map();
-
-    /**
-     * 이름으로 노드 찾기 (캐싱 지원)
-     */
-    findNodeByName(sceneRoot: THREE.Object3D, nodeName: string): THREE.Object3D | null {
-        if (this.cache.has(nodeName)) {
-            return this.cache.get(nodeName)!;
-        }
-
-        let found: THREE.Object3D | null = null;
-        sceneRoot.traverse((child) => {
-            if (child.name === nodeName) {
-                found = child;
-            }
-        });
-
-        if (found) {
-            this.cache.set(nodeName, found);
-        }
-
-        return found;
-    }
-
-    /**
-     * 모든 캐시된 노드 클리어
-     */
-    clear(): void {
-        this.cache.clear();
-    }
-
-    /**
-     * 캐시된 노드 수 반환
-     */
-    size(): number {
-        return this.cache.size;
-    }
-}
 
 // ============================================================================
 // 시네마틱 시퀀스 빌더 (GSAP Timeline 활용)
@@ -122,7 +36,9 @@ export class NodeCache {
 
 /**
  * 시네마틱 카메라 시퀀스 빌더
- * - 분해 과정과 같은 복잡한 애니메이션 시퀀스 생성
+ * 용도: 복잡한 시네마틱 카메라 애니메이션 시퀀스 생성 (GSAP Timeline 기반)
+   장점: 카메라 이동, 줌, 하이라이트 등을 타임라인으로 관리 가능
+   재사용 시나리오: 제품 소개 영상, 조립/분해 과정의 시네마틱 카메라 워크
  * - GSAP Timeline 기반
  */
 export class CinematicSequence {
@@ -354,6 +270,9 @@ export class CinematicSequence {
 
 /**
  * 바운딩 박스를 기반으로 카메라 타겟 위치 계산
+ * 용도: 바운딩 박스 기반 카메라 타겟 위치 계산 (장축 인지 자동 뷰포트 정렬)
+ * 장점: 대상 객체의 크기와 형상에 따라 최적의 카메라 위치를 자동 계산
+ * 재사용 시나리오: 부품 선택시 카메라 포커싱, 자동 뷰포트 정렬
  */
 export const calculateCameraTargetPosition = (
     camera: THREE.PerspectiveCamera,
@@ -405,28 +324,11 @@ export const calculateCameraTargetPosition = (
 };
 
 // ============================================================================
-// 하이라이트 재질 생성 유틸리티
-// ============================================================================
-
 /**
- * 하이라이트용 MeshStandardMaterial 생성
- */
-export const createHighlightMaterial = (
-    color: number,
-    opacity: number = 0.8
-): THREE.MeshStandardMaterial => {
-    return new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity: 0.5,
-        transparent: true,
-        opacity,
-        side: THREE.DoubleSide
-    });
-};
-
-// ============================================================================
-/**
+ * 용도: 회전+이동 동시 애니메이션 생성 (GSAP Timeline 기반)
+ * 장점: 복잡한 부품 분해/조립 애니메이션을 간편하게 구현
+ * 재사용 시나리오: 스크류 분리, 커버 회전 등의 복합 동작 애니메이션
+ * 
  * GSAP Timeline을 사용하여 회전+이동 동시 애니메이션을 생성합니다.
  * @param targetObj 대상 THREE.js 객체
  * @param config 애니메이션 설정
