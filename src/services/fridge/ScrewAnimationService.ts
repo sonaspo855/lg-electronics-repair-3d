@@ -3,6 +3,8 @@ import gsap from 'gsap';
 import { isFastenerNodeName } from '@/shared/utils/isFastener';
 import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
 import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
+import { calculateTranslationDistance } from '../../shared/utils/screwAnimationUtils';
+import { createAnimationTimeline } from '../../shared/utils/animationUtils';
 
 /**
  * Screw 회전 애니메이션 옵션 인터페이스
@@ -135,64 +137,49 @@ export class ScrewAnimationService {
         }
 
         // pullDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
-        let translationDistance: number;
-        if (options.pullDistance !== undefined) {
-            translationDistance = options.pullDistance;
-        } else if (metadata?.extractDistance !== undefined) {
-            translationDistance = metadata.extractDistance;
-        } else {
-            translationDistance = (config.rotationAngle! / 360) * config.screwPitch!;
-        }
+        const translationDistance = calculateTranslationDistance(
+            options,
+            metadata,
+            config.screwPitch!,
+            config.rotationAngle!
+        );
 
-        // 회전축에 따른 rotation 속성명 결정
-        const axis = config.rotationAxis;
-
-        this.timeline = gsap.timeline({
-            onStart: () => {
-                this.isAnimating = true;
-                console.log(`[ScrewAnimation] ${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
-                if (hasMetadata) {
-                    console.log(`[ScrewAnimation] 사용된 설정:`, {
-                        rotationAxis: config.rotationAxis,
-                        rotationAngle: config.rotationAngle,
-                        extractDirection: config.extractDirection,
-                        extractDistance: translationDistance,
-                        duration: config.duration,
-                        easing: config.easing
-                    });
+        // 회전+이동 동시 애니메이션 생성
+        this.timeline = createAnimationTimeline(
+            screwNodeObj,
+            {
+                rotationAxis: config.rotationAxis!,
+                rotationAngle: config.rotationAngle!,
+                extractDirection: new THREE.Vector3(...config.extractDirection!),
+                translationDistance,
+                duration: config.duration!,
+                easing: config.easing!
+            },
+            {
+                onStart: () => {
+                    this.isAnimating = true;
+                    console.log(`[ScrewAnimation] ${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                    if (hasMetadata) {
+                        console.log(`[ScrewAnimation] 사용된 설정:`, {
+                            rotationAxis: config.rotationAxis,
+                            rotationAngle: config.rotationAngle,
+                            extractDirection: config.extractDirection,
+                            extractDistance: translationDistance,
+                            duration: config.duration,
+                            easing: config.easing
+                        });
+                    }
+                },
+                onComplete: () => {
+                    this.isAnimating = false;
+                    console.log(`[ScrewAnimation] ${screwNodeName} 회전 완료`);
+                    config.onComplete?.();
+                },
+                onProgress: (progress) => {
+                    config.onProgress?.(progress);
                 }
-            },
-            onComplete: () => {
-                this.isAnimating = false;
-                console.log(`[ScrewAnimation] ${screwNodeName} 회전 완료`);
-                config.onComplete?.();
-            },
-            onUpdate: () => {
-                const progress = this.timeline?.progress() || 0;
-                config.onProgress?.(progress);
             }
-        });
-
-        // 회전 애니메이션
-        this.timeline.to(screwNodeObj.rotation, {
-            [axis]: -config.rotationAngle! * (Math.PI / 180),
-            duration: config.duration! / 1000,
-            ease: config.easing
-        }, 0);
-
-        // 빼내는 방향을 로컬 좌표계로 유지한 채 이동 (z축 방향으로 빼내기)
-        const localExtractDir = new THREE.Vector3(...config.extractDirection!);
-        localExtractDir.normalize().multiplyScalar(translationDistance);
-        console.log('localExtractDir>> ', localExtractDir);
-        console.log('screwNodeObj.position>> ', screwNodeObj.position);
-        // 이동 애니메이션 (로컬 좌표계 기준)
-        this.timeline.to(screwNodeObj.position, {
-            x: screwNodeObj.position.x + localExtractDir.x,
-            y: screwNodeObj.position.y + localExtractDir.y,
-            z: screwNodeObj.position.z + localExtractDir.z,
-            duration: config.duration! / 1000,
-            ease: config.easing
-        }, 0);
+        );
 
         return new Promise((resolve) => {
             this.timeline?.eventCallback('onComplete', () => {

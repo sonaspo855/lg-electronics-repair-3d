@@ -1,5 +1,6 @@
 import gsap from 'gsap';
 import * as THREE from 'three';
+import { degreesToRadians } from './commonUtils';
 
 // ============================================================================
 // GSAP 기반 애니메이션 유틸리티
@@ -488,6 +489,59 @@ export const createHighlightMaterial = (
         side: THREE.DoubleSide
     });
 };
+
+// ============================================================================
+/**
+ * GSAP Timeline을 사용하여 회전+이동 동시 애니메이션을 생성합니다.
+ * @param targetObj 대상 THREE.js 객체
+ * @param config 애니메이션 설정
+ * @param callbacks 콜백 함수들
+ * @returns GSAP Timeline 객체
+ */
+export function createAnimationTimeline(
+    targetObj: THREE.Object3D,
+    config: {
+        rotationAxis: string;
+        rotationAngle: number;
+        extractDirection: THREE.Vector3;
+        translationDistance: number;
+        duration: number;
+        easing: string;
+    },
+    callbacks?: {
+        onStart?: () => void;
+        onComplete?: () => void;
+        onProgress?: (progress: number) => void;
+    }
+): gsap.core.Timeline {
+    const axis = config.rotationAxis as 'x' | 'y' | 'z';
+    const timeline = gsap.timeline({
+        onStart: callbacks?.onStart,
+        onComplete: callbacks?.onComplete,
+        onUpdate: () => {
+            callbacks?.onProgress?.(timeline.progress() || 0);
+        }
+    });
+
+    // 회전 애니메이션
+    timeline.to(targetObj.rotation, {
+        [axis]: -degreesToRadians(config.rotationAngle),
+        duration: config.duration / 1000,
+        ease: config.easing
+    }, 0);
+
+    // 이동 애니메이션 (로컬 좌표계)
+    const localExtractDir = config.extractDirection.clone().normalize().multiplyScalar(config.translationDistance);
+    timeline.to(targetObj.position, {
+        x: targetObj.position.x + localExtractDir.x,
+        y: targetObj.position.y + localExtractDir.y,
+        z: targetObj.position.z + localExtractDir.z,
+        duration: config.duration / 1000,
+        ease: config.easing
+    }, 0);
+
+    return timeline;
+}
 
 // ============================================================================
 // GSAP 플러그인 등록 (필요시)

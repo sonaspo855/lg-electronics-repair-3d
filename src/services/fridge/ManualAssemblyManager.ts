@@ -8,6 +8,7 @@ import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionSer
 import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager';
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
 import { getScrewAnimationService } from './ScrewAnimationService';
+import { resolveNodeName, extractMetadataKey } from '../../shared/utils/commonUtils';
 
 /**
  * 수동 조립 관리자
@@ -158,7 +159,7 @@ export class ManualAssemblyManager {
         }
     ): Promise<void> {
         // 경로이면 실제 노드 이름으로 변환
-        const actualNodeName = this.nodeNameLoader.getNodeName(screwNodePath) || screwNodePath;
+        const actualNodeName = resolveNodeName(screwNodePath);
         console.log('actualNodeName>> ', actualNodeName);
 
         if (!this.screwAnimationService.isScrewNode(actualNodeName)) {
@@ -167,9 +168,7 @@ export class ManualAssemblyManager {
         }
 
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
-        const metadataKey = screwNodePath.includes('.')
-            ? screwNodePath.split('.').pop() || screwNodePath
-            : screwNodePath;
+        const metadataKey = extractMetadataKey(screwNodePath);
         await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
     }
 
