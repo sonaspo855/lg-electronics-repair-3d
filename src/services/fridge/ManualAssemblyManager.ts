@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PartAssemblyService } from './PartAssemblyService';
 import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
+import { getNodeNameLoader } from '../../shared/utils/NodeNameLoader';
 import { getDamperAssemblyService } from './DamperAssemblyService';
 import { getDamperCoverAssemblyService } from './DamperCoverAssemblyService';
 import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
@@ -14,6 +15,7 @@ import { getScrewAnimationService } from './ScrewAnimationService';
  */
 export class ManualAssemblyManager {
     private partAssemblyService: PartAssemblyService | null = null;
+    private nodeNameLoader = getNodeNameLoader();
 
     // 서비스 인스턴스
     private damperAssemblyService = getDamperAssemblyService();
@@ -23,7 +25,7 @@ export class ManualAssemblyManager {
     private holeCenterManager = getHoleCenterManager();
     private screwAnimationService = getScrewAnimationService();
 
-    public initialize(sceneRoot: THREE.Object3D, cameraControls?: any): void {
+    public async initialize(sceneRoot: THREE.Object3D, cameraControls?: any): Promise<void> {
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
 
         // 서비스 초기화
@@ -31,6 +33,11 @@ export class ManualAssemblyManager {
         this.damperCoverAssemblyService.initialize(sceneRoot);
         this.grooveDetectionService.initialize(sceneRoot, cameraControls);
         this.screwAnimationService.initialize(sceneRoot);
+
+        // 노드 이름 로드
+        if (!this.nodeNameLoader.isLoadedData()) {
+            await this.nodeNameLoader.loadNodeNames();
+        }
     }
 
     public async disassembleDamperCover(options?: {
@@ -135,24 +142,30 @@ export class ManualAssemblyManager {
 
     /**
      * Screw를 돌려서 빼는 애니메이션을 실행합니다.
-     * @param nodeName 대상 노드 이름
+     * @param nodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
      * @param options 애니메이션 옵션
      */
     public async loosenScrew(
-        nodeName: string,
+        nodeNameOrPath: string,
         options?: {
             duration?: number;
             rotationAngle?: number;
+            rotationAxis?: 'x' | 'y' | 'z';
+            extractDirection?: [number, number, number];
+            pullDistance?: number
             screwPitch?: number;
             onComplete?: () => void;
         }
     ): Promise<void> {
-        if (!this.screwAnimationService.isScrewNode(nodeName)) {
-            console.warn(`${nodeName}은 Screw 노드가 아님`);
+        // 경로이면 실제 노드 이름으로 변환
+        const actualNodeName = this.nodeNameLoader.getNodeName(nodeNameOrPath) || nodeNameOrPath;
+
+        if (!this.screwAnimationService.isScrewNode(actualNodeName)) {
+            console.warn(`${actualNodeName}은 Screw 노드가 아님`);
             return;
         }
-
-        await this.screwAnimationService.animateScrewRotation(nodeName, options);
+        console.log('options>> ', options);
+        await this.screwAnimationService.animateScrewRotation(actualNodeName, nodeNameOrPath);
     }
 
     public dispose(): void {

@@ -10,6 +10,21 @@ export interface AssemblyOffsetMetadata {
     assemblies: {
         [key: string]: AssemblyConfig;
     };
+    screwAnimations?: {
+        [nodeName: string]: ScrewAnimationConfig;
+    };
+}
+
+/**
+ * 스크류 애니메이션 설정 인터페이스
+ */
+export interface ScrewAnimationConfig {
+    rotationAxis: 'x' | 'y' | 'z';
+    rotationAngle: number;
+    extractDirection: [number, number, number];
+    extractDistance: number;
+    duration: number;
+    easing: string;
 }
 
 /**
@@ -232,6 +247,50 @@ export class MetadataLoader {
     public clearCache(): void {
         this.cache.clear();
         this.metadata = null;
+    }
+
+    /**
+     * 스크류 애니메이션 설정들을 반환합니다.
+     * @returns 스크류 애니메이션 설정 객체 또는 null
+     */
+    public getScrewAnimations(): Record<string, ScrewAnimationConfig> | null {
+        if (!this.metadata) {
+            console.warn('메타데이터가 로딩되지 않았습니다.');
+            return null;
+        }
+        return this.metadata.screwAnimations || null;
+    }
+
+    /**
+     * 특정 스크류 애니메이션 설정을 반환합니다.
+     * @param nodeName 스크류 노드 이름
+     * @returns 스크류 애니메이션 설정 또는 null
+     */
+    public getScrewAnimationConfig(nodeName: string): ScrewAnimationConfig | null {
+        if (!this.metadata?.screwAnimations) {
+            return null;
+        }
+
+        // 직접 일치하는 이름 검색
+        if (this.metadata.screwAnimations[nodeName]) {
+            return this.metadata.screwAnimations[nodeName];
+        }
+
+        // 노드 이름의 일부로 검색 (예: screw1Customized -> screw_1)
+        // const shortName = nodeName.replace('Customized', '').toLowerCase();
+        const shortName = nodeName;
+        console.log('shortName>> ', shortName);
+        for (const [key, config] of Object.entries(this.metadata.screwAnimations)) {
+            const keyLower = key.toLowerCase();
+            console.log('keyLower>> ', keyLower);
+            if (keyLower === shortName ||
+                shortName.includes(keyLower) ||
+                keyLower.includes(shortName)) {
+                return config;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { isFastenerNodeName } from '@/shared/utils/isFastener';
+import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
 
 /**
  * Screw 회전 애니메이션 옵션 인터페이스
@@ -11,8 +12,21 @@ export interface ScrewAnimationOptions {
     pullDistance?: number;       // 빼내는 거리 (m, 기본값: 없으면 screwPitch로 계산)
     screwPitch?: number;         // 나사산 간격 (m, 기본값: 0.005m = 0.5cm)
     rotationAxis?: 'x' | 'y' | 'z'; // 회전축 (기본값: 'z')
+    extractDirection?: [number, number, number]; // 빼내는 방향 (로컬 좌표계, 기본값: [0, 0, 1])
     onComplete?: () => void;    // 완료 콜백
     onProgress?: (progress: number) => void; // 진행률 콜백
+}
+
+/**
+ * Screw 애니메이션 메타데이터 인터페이스
+ */
+export interface ScrewAnimationMetadata {
+    rotationAxis: 'x' | 'y' | 'z';
+    rotationAngle: number;
+    extractDirection: [number, number, number];
+    extractDistance: number;
+    duration: number;
+    easing: string;
 }
 
 /**
@@ -23,6 +37,7 @@ export class ScrewAnimationService {
     private sceneRoot: THREE.Object3D | null = null;
     private timeline: gsap.core.Timeline | null = null;
     private isAnimating: boolean = false;
+    private metadataLoader = getMetadataLoader();
 
     /**
      * 서비스를 초기화합니다.
@@ -30,6 +45,23 @@ export class ScrewAnimationService {
      */
     public initialize(sceneRoot: THREE.Object3D): void {
         this.sceneRoot = sceneRoot;
+
+        // 메타데이터 미리 로드
+        this.loadMetadata();
+    }
+
+    /**
+     * 메타데이터를 로드합니다.
+     */
+    private async loadMetadata(): Promise<void> {
+        if (!this.metadataLoader.isLoaded()) {
+            try {
+                await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+                console.log('[ScrewAnimation] 메타데이터 로드 완료');
+            } catch (error) {
+                console.error('[ScrewAnimation] 메타데이터 로드 실패:', error);
+            }
+        }
     }
 
     /**
@@ -43,12 +75,15 @@ export class ScrewAnimationService {
 
     /**
      * Screw 회전+이동 동시 애니메이션을 실행합니다.
+     * 메타데이터가 있으면 메타데이터를 우선 사용합니다.
      * @param nodeName 대상 노드 이름
-     * @param options 애니메이션 옵션
+     * @param metadataKeyOrPath 메타데이터 키 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
+     * @param options 애니메이션 옵션 (메타데이터가 있을 경우 옵션은 덮어씌워짐)
      * @returns Promise (애니메이션 완료 시 resolve)
      */
     public async animateScrewRotation(
         nodeName: string,
+        metadataKeyOrPath: string,
         options: ScrewAnimationOptions = {}
     ): Promise<void> {
         if (!this.sceneRoot) {
@@ -62,11 +97,29 @@ export class ScrewAnimationService {
             this.timeline = null;
         }
 
+        // 메타데이터가 로드될 때까지 대기
+        await this.loadMetadata();
+
+        // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
+        const metadataKey = metadataKeyOrPath.includes('.')
+            ? metadataKeyOrPath.split('.').pop() || metadataKeyOrPath
+            : metadataKeyOrPath;
+
+        console.log('nodeName>> ', nodeName);
+        console.log('metadataKey>> ', metadataKey);
+        // 메타데이터에서 설정 가져오기
+        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+        console.log('metadata>> ', metadata);
+        const hasMetadata = metadata !== null;
+
+        // 옵션과 메타데이터 병합 (메타데이터 우선)
         const config = {
-            duration: options.duration || 1500,
-            rotationAngle: options.rotationAngle || 720,
-            screwPitch: options.screwPitch || 0.005,
-            rotationAxis: options.rotationAxis || 'z',
+            duration: options.duration ?? metadata?.duration ?? 1500,
+            rotationAngle: options.rotationAngle ?? metadata?.rotationAngle ?? 720,
+            screwPitch: options.screwPitch ?? 0.005,
+            rotationAxis: options.rotationAxis ?? metadata?.rotationAxis ?? 'z',
+            easing: metadata?.easing ?? 'power2.inOut',
+            extractDirection: options.extractDirection ?? metadata?.extractDirection ?? [0, 0, 1],
             ...options
         };
 
@@ -76,12 +129,14 @@ export class ScrewAnimationService {
             return;
         }
 
-        // pullDistance가 있으면 우선 사용, 없으면 screwPitch 기반으로 계산
+        // pullDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
         let translationDistance: number;
-        if (config.pullDistance !== undefined) {
-            translationDistance = config.pullDistance;
+        if (options.pullDistance !== undefined) {
+            translationDistance = options.pullDistance;
+        } else if (metadata?.extractDistance !== undefined) {
+            translationDistance = metadata.extractDistance;
         } else {
-            translationDistance = (config.rotationAngle / 360) * config.screwPitch;
+            translationDistance = (config.rotationAngle! / 360) * config.screwPitch!;
         }
 
         // 회전축에 따른 rotation 속성명 결정
@@ -90,7 +145,17 @@ export class ScrewAnimationService {
         this.timeline = gsap.timeline({
             onStart: () => {
                 this.isAnimating = true;
-                console.log(`[ScrewAnimation] ${nodeName} 회전 시작`);
+                console.log(`[ScrewAnimation] ${nodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                if (hasMetadata) {
+                    console.log(`[ScrewAnimation] 사용된 설정:`, {
+                        rotationAxis: config.rotationAxis,
+                        rotationAngle: config.rotationAngle,
+                        extractDirection: config.extractDirection,
+                        extractDistance: translationDistance,
+                        duration: config.duration,
+                        easing: config.easing
+                    });
+                }
             },
             onComplete: () => {
                 this.isAnimating = false;
@@ -103,16 +168,25 @@ export class ScrewAnimationService {
             }
         });
 
+        // 회전 애니메이션
         this.timeline.to(node.rotation, {
-            [axis]: -config.rotationAngle * (Math.PI / 180),
-            duration: config.duration / 1000,
-            ease: 'power2.inOut'
+            [axis]: -config.rotationAngle! * (Math.PI / 180),
+            duration: config.duration! / 1000,
+            ease: config.easing
         }, 0);
 
+        // 빼내는 방향을 로컬 좌표계에서 월드 좌표계로 변환
+        const localExtractDir = new THREE.Vector3(...config.extractDirection!);
+        localExtractDir.applyQuaternion(node.getWorldQuaternion(new THREE.Quaternion()));
+        localExtractDir.normalize().multiplyScalar(translationDistance);
+
+        // 이동 애니메이션 (로컬 방향 기준)
         this.timeline.to(node.position, {
-            z: node.position.z + translationDistance,
-            duration: config.duration / 1000,
-            ease: 'power2.inOut'
+            x: node.position.x + localExtractDir.x,
+            y: node.position.y + localExtractDir.y,
+            z: node.position.z + localExtractDir.z,
+            duration: config.duration! / 1000,
+            ease: config.easing
         }, 0);
 
         return new Promise((resolve) => {

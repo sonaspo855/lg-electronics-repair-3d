@@ -1,4 +1,6 @@
 {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-23T12:00:00Z",
     "assemblies": {
         "damper_cover_assembly": {
             "targetNode": "ref:fridge.leftDoor.damperAssembly",
@@ -51,6 +53,32 @@
                     }
                 ]
             }
+        }
+    },
+    "screwAnimations": {
+        "screw1Customized": {
+            "rotationAxis": "z",
+            "rotationAngle": 720,
+            "extractDirection": [
+                0,
+                0,
+                1
+            ],
+            "extractDistance": 0.02,
+            "duration": 1500,
+            "easing": "power2.inOut"
+        },
+        "screw2Customized": {
+            "rotationAxis": "z",
+            "rotationAngle": 720,
+            "extractDirection": [
+                0,
+                0,
+                1
+            ],
+            "extractDistance": 0.02,
+            "duration": 1500,
+            "easing": "power2.inOut"
         }
     }
 }
