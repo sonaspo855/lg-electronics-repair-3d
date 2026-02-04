@@ -15,6 +15,10 @@ type NodeHighlightState = {
 
 /**
  * 노드의 하이라이트 상태를 정리하는 공통 함수
+ * - 하이라이트된 메쉬의 원본 머티리얼 복원
+ * - Box3Helper 제거
+ * - 업데이트 인터벌 정리
+ *
  * @param target - 정리할 타겟 오브젝트 (루트 또는 타겟 노드)
  * @param stateKey - userData에 저장된 상태 키 (기본값: '__findNodeHeight')
  */
@@ -46,6 +50,8 @@ const clearHighlightState = (
 
 /**
  * 씬 루트에서 모든 Box3Helper를 제거하는 함수
+ * - 씬 트리를 순회하며 모든 Box3Helper 타입의 객체를 찾아 제거
+ *
  * @param sceneRoot - 씬 루트 노드
  */
 const clearAllBoxHelpers = (sceneRoot: THREE.Object3D): void => {
@@ -60,9 +66,20 @@ const clearAllBoxHelpers = (sceneRoot: THREE.Object3D): void => {
 
 /**
  * 노드에 하이라이트를 적용하는 공통 함수
+ * - 타겟 노드의 모든 자식 메쉬에 하이라이트 머티리얼 적용
+ * - 바운딩 박스 시각화 (Box3Helper)
+ * - 노드 움직임 추적을 위한 주기적 업데이트 (60fps)
+ * - 선택적으로 카메라 포커스 이동
+ *
  * @param targetNode - 하이라이트할 타겟 노드
- * @param sceneRoot - 씬 루트 노드
+ * @param sceneRoot - 씬 루트 노드 (Box3Helper 추가용)
  * @param options - 하이라이트 옵션
+ * @param options.highlightColor - 하이라이트 색상 (기본값: 0xff0000)
+ * @param options.highlightOpacity - 하이라이트 투명도 (기본값: 0.2)
+ * @param options.boxColor - 바운딩 박스 색상 (기본값: 0xffff00)
+ * @param options.camera - 카메라 오브젝트 (포커스 이동 시 필요)
+ * @param options.controls - 카메라 컨트롤러 (포커스 이동 시 필요)
+ * @param options.duration - 카메라 이동 시간 (초, 기본값: 1.0)
  * @returns 하이라이트된 노드의 바운딩 박스
  */
 export const highlightNode = (
@@ -146,11 +163,20 @@ export const highlightNode = (
 
 /**
  * 노드의 높이를 찾고 하이라이트하는 함수 (이름 기반 검색)
- * @param root - 루트 오브젝트
- * @param camera - 카메라 오브젝트
- * @param controls - 카메라 컨트롤 옵션
+ * - 루트 노드에서 이름으로 노드를 검색
+ * - 매칭된 노드 중 첫 번째 노드에 하이라이트 적용
+ * - NodeNameManager를 통해 노드 이름 관리
+ *
+ * @param root - 루트 오브젝트 (검색 시작점)
+ * @param camera - 카메라 오브젝트 (포커스 이동 시 필요)
+ * @param controls - 카메라 컨트롤러 (포커스 이동 시 필요)
  * @param options - 하이라이트 옵션 설정
- * @returns 하이라이트된 노드들과 정리 함수
+ * @param options.highlightNodeName - 검색할 노드 이름 (기본값: NodeNameManager에서 가져온 댐퍼 커버 이름)
+ * @param options.matchMode - 이름 매칭 모드 (기본값: 'includes')
+ * @param options.duration - 카메라 이동 시간 (초, 기본값: 1.0)
+ * @param options.boxColor - 바운딩 박스 색상 (기본값: 0xffff00)
+ * @param options.append - 기존 하이라이트 유지 여부 (기본값: false)
+ * @returns 하이라이트된 노드들과 정리 함수를 포함한 객체
  */
 export const findNodeHeight = (
     root: THREE.Object3D,
@@ -205,7 +231,13 @@ export const findNodeHeight = (
 
 /**
  * 선택된 노드의 높이를 찾아 하이라이트하는 함수 (클릭 이벤트 기반)
- * @param event - 마우스 이벤트
+ * - 클릭된 객체의 조상 노드를 순회하며 댐퍼 커버 노드 검색
+ * - NodeNameManager를 사용하여 댐퍼 커버 이름 가져오기
+ * - 찾은 노드에 하이라이트 적용
+ *
+ * @param event - Three.js 마우스 이벤트 객체
+ * @param event.intersections - 교차된 객체 정보 배열
+ * @param event.camera - 이벤트 발생 시점의 카메라
  */
 export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();

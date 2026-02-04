@@ -123,6 +123,11 @@ export const createHighlightMaterial = (color: number, opacity: number = 0.8): T
     });
 };
 
+/**
+ * Three.js 객체의 계층 구조를 재귀적으로 추출하는 함수
+ * @param node 대상 노드
+ * @returns 계층 구조 정보가 담긴 객체
+ */
 export const getNodeHierarchy = (node: THREE.Object3D): any => {
     const result: any = {
         name: node.name,
@@ -139,8 +144,11 @@ export const getNodeHierarchy = (node: THREE.Object3D): any => {
     return result;
 };
 
-
-
+/**
+ * 노드 계층 구조를 JSON 파일로 내보내는 함수
+ * @param hierarchy 계층 구조 정보
+ * @param filename 저장할 파일 이름 (기본값: scene_hierarchy.json)
+ */
 export const exportHierarchyToJson = (hierarchy: any, filename: string = "scene_hierarchy.json") => {
     const json = JSON.stringify(hierarchy, null, 2);
     const blob = new Blob([json], { type: "application/json" });
