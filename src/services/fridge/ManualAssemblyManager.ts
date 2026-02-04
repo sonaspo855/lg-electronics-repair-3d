@@ -170,7 +170,6 @@ export class ManualAssemblyManager {
         const metadataKey = screwNodePath.includes('.')
             ? screwNodePath.split('.').pop() || screwNodePath
             : screwNodePath;
-        // console.log('metadataKey>> ', metadataKey);
         await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
     }
 

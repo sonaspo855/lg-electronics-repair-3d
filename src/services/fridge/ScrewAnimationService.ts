@@ -102,12 +102,11 @@ export class ScrewAnimationService {
         // 메타데이터가 로드될 때까지 대기
         await this.loadMetadata();
 
-        console.log('nodePath>> ', nodePath);
-        console.log('metadataKey>> ', metadataKey);
+        // console.log('nodePath>> ', nodePath);
+        // console.log('metadataKey>> ', metadataKey);
 
         // 메타데이터에서 설정 가져오기
         const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-        console.log('metadata>> ', metadata);
         const hasMetadata = metadata !== null;
 
         // 옵션과 메타데이터 병합 (메타데이터 우선)
@@ -120,14 +119,13 @@ export class ScrewAnimationService {
             extractDirection: options.extractDirection ?? metadata?.extractDirection ?? [0, 0, 1],
             ...options
         };
-        console.log('config>>> ', config);
 
-        const screwNodeName = this.nodeNameManager.getNodeName(nodePath);
+        const screwNodeName = this.nodeNameManager.getNodeName(nodePath);  // `fridge.leftDoorDamper.screw2Customized` 로 노드 이름 추출
         if (!screwNodeName) {
             console.error(`[ScrewAnimation] 노드 이름을 찾을 수 없습니다: ${nodePath}`);
             return;
         }
-        console.log('screwNodeName>> ', screwNodeName);  // 4J01424B_Screw,Customized_4168029
+        // console.log('screwNodeName>> ', screwNodeName);  // 4J01424B_Screw,Customized_4168029
 
         const screwNodeObj = this.sceneRoot.getObjectByName(screwNodeName);
         console.log('screwNodeObj>> ', screwNodeObj);
