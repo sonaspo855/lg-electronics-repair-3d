@@ -150,7 +150,7 @@ export class NormalBasedHighlight {
                         grooveWallIndices.push(idx1, idx2, idx3);
                     }
                 }
-
+                /* 
                 // 수집된 면이 있으면 하이라이트 적용
                 if (filteredIndices.length > 0) {
                     this.createFilteredMeshHighlight(
@@ -171,7 +171,7 @@ export class NormalBasedHighlight {
                         thresholdAngle,
                         0.6 // 노란색 영역은 더 명확하게 보이도록 불투명도 상향
                     );
-                }
+                } */
             }
         });
 

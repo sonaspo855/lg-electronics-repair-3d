@@ -103,13 +103,13 @@ export class DamperCoverAssemblyService {
             plugAnalyses,
             (grooveParams.plugClusteringDistance ?? 0.005) * 1.5
         );
-        console.log('this.detectedPlugs>> ', this.detectedPlugs);
+        // console.log('this.detectedPlugs>> ', this.detectedPlugs);
 
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
         this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
             nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
-        console.log('this.detectedHoles>>> ', this.detectedHoles);
+        // console.log('this.detectedHoles>>> ', this.detectedHoles);
 
 
         // 탐지된 좌표 시각화 (AssemblyPathVisualizer 사용)
@@ -133,7 +133,7 @@ export class DamperCoverAssemblyService {
                 }
             }
 
-            console.log(`[조립] 최단 거리 쌍 발견: 거리 ${minDistance.toFixed(5)}`, { bestPlug, bestHole });
+            // console.log(`[조립] 최단 거리 쌍 발견: 거리 ${minDistance.toFixed(5)}`, { bestPlug, bestHole });
 
             // 월드 이동 벡터 계산 (플러그가 홈 위치로 가야 함)
             const worldMoveVector = new THREE.Vector3().subVectors(bestHole.position, bestPlug.position);

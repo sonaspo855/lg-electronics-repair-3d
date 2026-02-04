@@ -68,6 +68,7 @@ export class GrooveDetectionService {
             0.02
         );
 
+        /* 
         // 5. 탐지된 각 홈을 서로 다른 색상으로 하이라이트
         const highlightColors = [0x00ff00, 0x0088ff, 0xff00ff, 0xffff00, 0xff8800];
         this.normalBasedHighlight.highlightClusters(holeAnalyses, highlightColors);
@@ -82,7 +83,7 @@ export class GrooveDetectionService {
         }
 
         // 7. 탐지된 중심점에 마커 표시 (하이라이트 색상과 동기화)
-        /* if (holeAnalyses.length > 0) {
+        if (holeAnalyses.length > 0) {
             this.holeCenterManager.visualizeHoleCenters(holeAnalyses, highlightColors);
         } */
 
