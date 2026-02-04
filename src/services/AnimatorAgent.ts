@@ -41,7 +41,8 @@ import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDampe
 import { CameraMovementService } from './fridge/CameraMovementService';
 import { AnimationHistoryService } from './AnimationHistoryService';
 import { getManualAssemblyManager } from './fridge/ManualAssemblyManager';
-import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
+// import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
+import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -207,6 +208,7 @@ export class AnimatorAgent {
     };
   private availableModels: string[] = [];
   private animationHistoryService: AnimationHistoryService | null = null;
+  private nodeNameManager = getNodeNameManager();
 
   constructor() {
     this.ollama = new OllamaClient('http://localhost:11434');
@@ -853,6 +855,10 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Execute animation command
   private async executeAnimationCommand(commands: AnimationCommand | AnimationCommand[]): Promise<LLMResponse> {
+    const screw1NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw1Customized');
+    const screw2NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw2Customized');
+
+
     if (!this.doorControls) {
       return {
         type: 'error',
@@ -974,27 +980,30 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           // 스크류 분리 애니매이션 실행
           try {
             const manualAssemblyManager = getManualAssemblyManager();
+            console.log('manualAssemblyManager>>> ', manualAssemblyManager);
+            // 왼쪽 스크류 1 분리
+            if (screw1NodeName) {
+              console.log('Screw1를 돌려서 빼는 애니메이션을 실행!');
+              await manualAssemblyManager.loosenScrew(screw1NodeName, {
+                duration: 1500,
+                rotationAngle: 720,
+                screwPitch: 0.005
+              });
+              console.log('Left screw 1 loosened');
+            }
 
-            // 왼쪽 스크류 분리
-            await manualAssemblyManager.loosenScrew(LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, {
-              duration: 1500,
-              rotationAngle: 720,
-              screwPitch: 0.005
-            });
-            console.log('Left screw 1 loosened');
-
-            await manualAssemblyManager.loosenScrew(LEFT_DOOR_SCREW2_CUSTOMIZED_NODE, {
-              duration: 1500,
-              rotationAngle: 720,
-              screwPitch: 0.005
-            });
-            console.log('Left screw 2 loosened');
+            // 왼쪽 스크류 2 분리
+            if (screw2NodeName) {
+              await manualAssemblyManager.loosenScrew(screw2NodeName, {
+                duration: 1500,
+                rotationAngle: 720,
+                screwPitch: 0.005
+              });
+              console.log('Left screw 2 loosened');
+            }
           } catch (error) {
             console.error('Error during screw loosening:', error);
           }
-
-
-
         } else {
           console.log('CameraMovementService is not initialized');
         }
@@ -1004,82 +1013,82 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           message,
           command: commandsArray[0] // Return first command as representative
         };
-      }
+      } else {
+        // Handle single command case
+        const command = commandsArray[0];
+        const degrees = command.degrees || 90;
+        const speed = command.speed || 1;
+        const singleLocale = this.lastInputLocale;
+        const doorLabel = this.getDoorDisplayNameForLocale(command.door, singleLocale);
+        const singleResponseVerbPromise = this.resolveActionVerb(this.lastUserInput, command.action, singleLocale);
+        let singleCommandCompleted = false;
+        const singleCommandCompletion = () => {
+          console.log('handleCompletion111');
+          if (singleCommandCompleted) return;
+          singleCommandCompleted = true;
+          void singleResponseVerbPromise.then((responseVerb) => {
+            const completionMessage = this.buildCompletionMessage(
+              doorLabel,
+              degrees,
+              command.action,
+              responseVerb,
+              singleLocale
+            );
+            console.log('Single command completed:', command.action, doorLabel);
+            this.onActionCompleted?.(completionMessage);
+            // Add to animation history
+            if (this.animationHistoryService) {
+              console.log('Adding to animation history:', command);
+              this.animationHistoryService.addAnimationHistory(command, completionMessage);
+            } else {
+              console.warn('Animation history service not available for single command');
+            }
+          });
+        };
 
-      // Handle single command case
-      const command = commandsArray[0];
-      const degrees = command.degrees || 90;
-      const speed = command.speed || 1;
-      const locale = this.lastInputLocale;
-      const doorLabel = this.getDoorDisplayNameForLocale(command.door, locale);
-      const responseVerbPromise = this.resolveActionVerb(this.lastUserInput, command.action, locale);
-      let isCompleted = false;
-      const handleCompletion = () => {
-        console.log('handleCompletion111');
-        if (isCompleted) return;
-        isCompleted = true;
-        void responseVerbPromise.then((responseVerb) => {
-          const completionMessage = this.buildCompletionMessage(
-            doorLabel,
-            degrees,
-            command.action,
-            responseVerb,
-            locale
-          );
-          console.log('Single command completed:', command.action, doorLabel);
-          this.onActionCompleted?.(completionMessage);
-          // Add to animation history
-          if (this.animationHistoryService) {
-            console.log('Adding to animation history:', command);
-            this.animationHistoryService.addAnimationHistory(command, completionMessage);
-          } else {
-            console.warn('Animation history service not available for single command');
+        if (command.action === AnimationAction.OPEN) {
+          if (command.door === DoorType.TOP_LEFT) {
+            this.doorControls.openByDegrees(degrees, speed, singleCommandCompletion);
+          } else if (command.door === DoorType.TOP_RIGHT) {
+            this.doorControls.openRightByDegrees(degrees, speed, singleCommandCompletion);
+          } else if (command.door === DoorType.BOTTOM_LEFT) {
+            this.doorControls.openLowerLeftByDegrees(degrees, speed, singleCommandCompletion);
+          } else if (command.door === DoorType.BOTTOM_RIGHT) {
+            this.doorControls.openLowerRightByDegrees(degrees, speed, singleCommandCompletion);
           }
+        } else if (command.action === AnimationAction.CLOSE) {
+          if (command.door === DoorType.TOP_LEFT) {
+            this.doorControls.close(speed, singleCommandCompletion);
+          } else if (command.door === DoorType.TOP_RIGHT) {
+            this.doorControls.closeRight(speed, singleCommandCompletion);
+          } else if (command.door === DoorType.BOTTOM_LEFT) {
+            this.doorControls.closeLowerLeft(speed, singleCommandCompletion);
+          } else if (command.door === DoorType.BOTTOM_RIGHT) {
+            this.doorControls.closeLowerRight(speed, singleCommandCompletion);
+          }
+        }
+
+        const responseVerb = await singleResponseVerbPromise;
+        const actionMessage = this.buildActionMessage(
+          doorLabel,
+          degrees,
+          command.action,
+          responseVerb,
+          singleLocale
+        );
+
+        console.log('Returning action response:', {
+          type: 'action',
+          message: actionMessage,
+          command
         });
-      };
 
-      if (command.action === AnimationAction.OPEN) {
-        if (command.door === DoorType.TOP_LEFT) {
-          this.doorControls.openByDegrees(degrees, speed, handleCompletion);
-        } else if (command.door === DoorType.TOP_RIGHT) {
-          this.doorControls.openRightByDegrees(degrees, speed, handleCompletion);
-        } else if (command.door === DoorType.BOTTOM_LEFT) {
-          this.doorControls.openLowerLeftByDegrees(degrees, speed, handleCompletion);
-        } else if (command.door === DoorType.BOTTOM_RIGHT) {
-          this.doorControls.openLowerRightByDegrees(degrees, speed, handleCompletion);
-        }
-      } else if (command.action === AnimationAction.CLOSE) {
-        if (command.door === DoorType.TOP_LEFT) {
-          this.doorControls.close(speed, handleCompletion);
-        } else if (command.door === DoorType.TOP_RIGHT) {
-          this.doorControls.closeRight(speed, handleCompletion);
-        } else if (command.door === DoorType.BOTTOM_LEFT) {
-          this.doorControls.closeLowerLeft(speed, handleCompletion);
-        } else if (command.door === DoorType.BOTTOM_RIGHT) {
-          this.doorControls.closeLowerRight(speed, handleCompletion);
-        }
+        return {
+          type: 'action',
+          message: actionMessage,
+          command: command
+        };
       }
-
-      const responseVerb = await responseVerbPromise;
-      const message = this.buildActionMessage(
-        doorLabel,
-        degrees,
-        command.action,
-        responseVerb,
-        locale
-      );
-
-      console.log('Returning action response:', {
-        type: 'action',
-        message,
-        command
-      });
-
-      return {
-        type: 'action',
-        message,
-        command: command
-      };
     } catch (error) {
       console.error('Error executing animation command:', error);
       return {

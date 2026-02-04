@@ -1,164 +1,294 @@
 ---
 tags:
-상태:
+상태: Updated
 중요:
 생성일: 26-02-03T16:34:09
-수정일: 26-02-03T17:35:40
+수정일: 26-02-03T23:50:00
 종료일:
 라벨:
 summary:
 ---
+
 ## 0. 참고 레퍼런스
-- 
-##  ■■ Description ■■
-- 
-## 1. 애니메이션 구현 방식: **복합 트랜스포메이션 (Combined Transformation)**
-- 나사를 푸는 동작은 단순히 위치를 옮기는 것이 아니라, **회전(Rotation)** 과 **이동(Translation)** 이 동시에 정비례하게 일어나도록 구현해야 한다.
-- **사용 라이브러리 추천:** 
-    - `GSAP` (GreenSock Animation Platform) 또는 React Three Fiber의 `useFrame`.
-    - **GSAP 추천 이유:** 
-        - "나사를 3바퀴 돌리면서 2cm 뒤로 뺀다"와 같은 타임라인 기반의 정밀한 제어가 쉽습니다.
-- **핵심 원리:** 나사의 나사산(Pitch)에 맞춰 회전량에 따른 이동 거리를 계산 한다.
-    $$이동 거리 = \frac{회전 각도}{360^\circ} \times 나사산 간격(Pitch)$$
-## 2. 기능 구현 순서
-- 
-### 2-1. 제안 방식
-1. **회전 애니메이션**: 나사를 회전축(일반적으로 Z축)을 기준으로 회전
-2. **이동 애니메이션**: 회전하면서 Z축 방향으로 빼냄
-3. **동시 실행**: 회전과 이동을 동시에 수행하여 자연스러운 "돌려서 빼는" 효과
-### 2-2. 기술적 구현
-- Three.js의 `rotation.z`, `position.z`를 동시에 업데이트
-- `requestAnimationFrame`을 사용하여 부드러운 애니메이션
-- Easing 함수 적용 (현재 `1 - Math.pow(1 - t, 3)` 사용)
-## 3. 구현 순서
-### 1단계: 회전 애니메이션 함수 추가
-- `animateRotation()` 함수 구현
-- 회전 시작각도, 종료각도, 지속시간 파라미터
-- 기존 `animateLocalPosition()`과 유사한 구조
-### 2단계: 회전+이동 동시 애니메이션 함수 추가
-- `animateRotationAndTranslation()` 함수 구현
-- 회전과 이동을 동시에 수행
-- easing 함수 적용
-### 3단계: Screw 노드 감지 로직 추가
-- `isFastener()` 함수가 이미 존재 (`/screw|bolt/i.test()`)
-- Screw 노드에 대해 회전 애니메이션 적용 조건 추가
-### 4단계: handleLoosen 함수 수정
-- Screw 노드인지 확인
-- Screw일 경우: 회전+이동 애니메이션 사용
-- 일반 노드일 경우: 기존 이동 애니메이션 사용
-### 5단계: 테스트 및 검증
-- Screw 노드 선택 후 "Pull Out" 버튼 클릭
-- 회전하면서 빠지는지 확인
-- 일반 노드는 기존대로 동작하는지 확인
-## 4. 활용 가능한 기존 요소
-- **PartAssemblyService.ts**: 
-	- GSAP Timeline 사용, 선형 이동 애니메이션 구현 패턴
-- **DamperCoverAssemblyService.ts**: 
-	- 싱글톤 패턴, 메타데이터 기반 구조
-- **NodeHierarchy.tsx**: 
-	- `isFastener()` 함수 (`/screw|bolt/i.test()`) 이미 구현됨
-- **fridgeConstants.ts**: 
-	- Screw 노드 이름 상수 정의됨
+- `src/services/fridge/ScrewAnimationService.ts` (구현된 파일)
+- `src/services/fridge/ManualAssemblyManager.ts` (구현된 파일)
+- `src/components/shared/viewer/NodeHierarchy.tsx` (isFastener() 함수 참고)
 
-### 4-1. 구현 패턴
-- 싱글톤 패턴 사용 (DamperAssemblyService.ts 참고)
-- GSAP를 활용한 애니메이션 (PartAssemblyService.ts 참고)
-- 초기화/정리 메서드 구조
+## 1. 구현 현황 요약
 
-## 5. 새로운 서비스 파일 생성
-### 파일: `src/services/fridge/ScrewAnimationService.ts`
-**주요 기능:**
-1. `initialize(sceneRoot)`: 씬 루트 초기화
-2. `animateScrewRotation(nodeName, options)`: Screw 회전+이동 애니메이션
-3. `isScrewNode(nodeName)`: Screw 노드 식별
-4. `dispose()`: 리소스 정리
+### ✅ 계획서대로 잘 구현된 부분
 
-**애니메이션 구현:**
-- 회전 애니메이션: Z축 기준 회전 (720도 = 2바퀴)
-- 이동 애니메이션: 회전과 동시에 Z축 방향으로 빼냄
-- 나사산 간격(Pitch) 계산: `이동 거리 = (회전 각도 / 360°) × 나사산 간격`
-- GSAP Timeline 사용하여 회전과 이동 동시 실행
+| 항목 | 상태 | 설명 |
+|------|------|------|
+| 싱글톤 패턴 | ✅ | `getScrewAnimationService()` 함수 구현 |
+| GSAP Timeline | ✅ | `gsap.timeline()` 사용 |
+| 나사산 간격 계산 | ✅ | `(rotationAngle / 360) * screwPitch` 공식 적용 |
+| isScrewNode() | ✅ | `/screw|bolt/i.test()` 패턴 활용 |
+| 애니메이션 제어 | ✅ | pause, resume, reverse 구현 |
+| ManualAssemblyManager 연동 | ✅ | loosenScrew() 메서드 추가 |
+| 초기화/정리 | ✅ | initialize(), dispose() 구현 |
 
-**옵션 파라미터:**
-- `duration`: 애니메이션 시간 (ms)
-- `rotationAngle`: 회전 각도 (기본값: 720도)
-- `pullDistance`: 빼내는 거리 (기본값: 2cm)
-- `screwPitch`: 나사산 간격 (기본값: 0.5cm)
-- `onComplete`: 완료 콜백
+## 2. 개선이 필요한 부분
 
-## 6. 구현 순서
-1. **ScrewAnimationService.ts 생성**
-    - 클래스 구조 정의
-    - 싱글톤 패턴 구현
-    - 초기화 메서드 구현
-2. **회전 애니메이션 함수 구현**
-    - `animateRotation()` 메서드
-    - GSAP를 사용한 회전 애니메이션
-3. **회전+이동 동시 애니메이션 구현**
-    - `animateScrewRotation()` 메서드
-    - 나사산 간격 계산 로직
-    - GSAP Timeline 사용
-4. **Screw 노드 감지 로직 구현**
-    - `isScrewNode()` 메서드
-    - NodeHierarchy.tsx의 isFastener() 패턴 활용
-5. **ManualAssemblyManager 연동**
-    - `loosenScrew()` 메서드 추가
-    - ScrewAnimationService 인스턴스 관리
-6. **테스트**
-    - Screw 노드 선택 후 "Pull Out" 동작 확인
-    - 회전하면서 빠지는지 확인
-    - 일반 노드는 기존대로 동작하는지 확인
+### ⚠️ 문제점 1: pullDistance 옵션 미사용
 
-## 7. 기술적 고려사항
-### 회전 방향
-- 시계 방향 (오른나사 기준)
-- 음수 각도로 표현
+**현재 코드 (line 70):**
+```typescript
+const translationDistance = (config.rotationAngle / 360) * config.screwPitch;
+```
 
-### 나사산 간격 (Pitch)
-- 기본값: 0.5cm (일반적인 나사)
-- 옵션으로 조절 가능
+**문제점:**
+- 계획서에는 `pullDistance` 옵션이 정의되어 있으나 실제 코드에서 사용되지 않음
+- `pullDistance`와 `screwPitch` 기반 계산 중 하나만 사용해야 함
 
-### 복수 Screw 처리
-- 순차적 처리 필요 시 별도 메서드 추가
-- 현재는 단일 Screw 처리에 초점
+**해결 방안:**
+- `pullDistance`를 우선 사용하고, `pullDistance`가 없으면 `screwPitch` 기반으로 계산
+- 또는 `pullDistance` 옵션을 제거하고 `screwPitch` 기반으로 통일
 
-### 좌표계
-- 로컬 좌표계 사용 (PartAssemblyService 패턴)
-- 부모 노드의 좌표계 기준
+### ⚠️ 문제점 2: 애니메이션 재호출 시 기존 timeline 처리 부재
 
-## 8. 사용 예시
-### ManualAssemblyManager에서의 사용 예시
+**현재 코드 (line 72):**
+```typescript
+this.timeline = gsap.timeline({...});
+```
+
+**문제점:**
+- 새 애니메이션 시작 시 기존 timeline을 `kill()`하지 않음
+- 메모리 누수 발생 가능
+- 기존 애니메이션이 강제로 중단되지 않아 예상치 못한 동작 발생 가능
+
+**해결 방안:**
+```typescript
+// 새 애니메이션 시작 전 기존 timeline 정리
+if (this.timeline) {
+    this.timeline.kill();
+    this.timeline = null;
+}
+this.timeline = gsap.timeline({...});
+```
+
+### ⚠️ 문제점 3: isFastener() 함수 중복 구현
+
+**현재 코드:**
+- `NodeHierarchy.tsx:845`에 `isFastener(node: THREE.Object3D): boolean` 존재
+- `ScrewAnimationService.ts:38`에 `isScrewNode(nodeName: string): boolean` 별도 구현
+
+**문제점:**
+- 동일한 정규식 로직이 두 곳에 중복
+- 유지보수성 저하
+
+**해결 방안:**
+- `NodeHierarchy.tsx`의 `isFastener` 함수를 `shared/utils`로 이동하여 재사용
+- 또는 `ScrewAnimationService`에서 `node.name`만 전달받아 동일한 로직 사용
+
+### ⚠️ 문제점 4: 회전축(Z) 하드코딩
+
+**현재 코드 (line 88-92):**
+```typescript
+this.timeline.to(node.rotation, {
+    z: -config.rotationAngle * (Math.PI / 180),
+    ...
+}, 0);
+```
+
+**문제점:**
+- 모든 나사가 Z축 회전이라는 보장이 없음
+- 모델마다 회전축이 다를 수 있음
+
+**해결 방안:**
+```typescript
+export interface ScrewAnimationOptions {
+    // ... 기존 옵션
+    rotationAxis?: 'x' | 'y' | 'z'; // 기본값: 'z'
+}
+
+// 사용 시
+const axis = config.rotationAxis || 'z';
+this.timeline.to(node.rotation, {
+    [axis]: -config.rotationAngle * (Math.PI / 180),
+    ...
+}, 0);
+```
+
+## 3. 수정된 구현 계획
+
+### 3-1. ScrewAnimationService.ts 수정사항
+
+```typescript
+export interface ScrewAnimationOptions {
+    duration?: number;           // 전체 애니메이션 시간 (ms)
+    rotationAngle?: number;      // 회전 각도 (도, 기본값: 720도 = 2바퀴)
+    pullDistance?: number;       // 빼내는 거리 (m, 기본값: 0.02m = 2cm)
+    screwPitch?: number;         // 나사산 간격 (m, 기본값: 0.005m = 0.5cm)
+    rotationAxis?: 'x' | 'y' | 'z'; // 회전축 (기본값: 'z')
+    onComplete?: () => void;    // 완료 콜백
+    onProgress?: (progress: number) => void; // 진행률 콜백
+}
+
+public async animateScrewRotation(
+    nodeName: string,
+    options: ScrewAnimationOptions = {}
+): Promise<void> {
+    // 기존 timeline 정리 (추가)
+    if (this.timeline) {
+        this.timeline.kill();
+        this.timeline = null;
+    }
+
+    const config = {
+        duration: options.duration || 1500,
+        rotationAngle: options.rotationAngle || 720,
+        screwPitch: options.screwPitch || 0.005,
+        rotationAxis: options.rotationAxis || 'z',
+        ...options
+    };
+
+    // pullDistance 우선 사용, 없으면 screwPitch 기반으로 계산
+    let translationDistance: number;
+    if (config.pullDistance !== undefined) {
+        translationDistance = config.pullDistance;
+    } else {
+        translationDistance = (config.rotationAngle / 360) * config.screwPitch;
+    }
+
+    // ... 기존 코드
+
+    const axis = config.rotationAxis;
+    this.timeline.to(node.rotation, {
+        [axis]: -config.rotationAngle * (Math.PI / 180),
+        duration: config.duration / 1000,
+        ease: 'power2.inOut'
+    }, 0);
+
+    this.timeline.to(node.position, {
+        z: node.position.z + translationDistance, // Z축 방향으로 이동
+        duration: config.duration / 1000,
+        ease: 'power2.inOut'
+    }, 0);
+}
+```
+
+### 3-2. isFastener() 함수 재사용 권장方案
+
+** Option A: shared/utils/isFastener.ts로 분리**
+```typescript
+// src/shared/utils/isFastener.ts
+export function isFastenerNodeName(nodeName: string): boolean {
+    return /screw|bolt/i.test(nodeName);
+}
+
+export function isFastenerNode(node: THREE.Object3D): boolean {
+    return isFastenerNodeName(node.name || '');
+}
+
+// 사용
+import { isFastenerNodeName } from '../../shared/utils/isFastener';
+```
+
+**Option B: NodeHierarchy.tsx에서 직접 import**
+```typescript
+import { isFastenerNodeName } from '@/shared/utils/isFastener';
+
+// ScrewAnimationService.ts에서
+public isScrewNode(nodeName: string): boolean {
+    return isFastenerNodeName(nodeName);
+}
+```
+
+## 4. 좌표계 및 회전 방향 고려사항
+
+### 4-1. 회전축 결정 기준
+
+| 상황 | 권장 회전축 | 설명 |
+|------|------------|------|
+| 일반적인 측면 나사 | Z축 | 모델의 수평면에서 돌리는 나사 |
+| 수직 방향 나사 | X축 또는 Y축 | 위아래로 체결된 나사 |
+| 커스텀 모델 | 메타데이터 기반 | 모델별 axis 정보 로드 |
+
+### 4-2. 회전 방향 (나사 종류에 따라 다름)
+
+- **오른나사 (Standard)**: 시계 방향 → 음수 각도
+- **왜나사 (Reverse)**: 반시계 방향 → 양수 각도
+
+```typescript
+// 나사 종류에 따른 방향 설정
+const screwType = options.screwType || 'standard'; // 'standard' | 'reverse'
+const direction = screwType === 'standard' ? -1 : 1;
+const finalAngle = direction * config.rotationAngle;
+```
+
+### 4-3. 이동 방향
+
+- 나사를 빼내는 방향은 **회전축의 양수/음수 방향**과 무관하게 **"밖으로"** 향해야 함
+- 일반적으로 Z축 양수 방향이 "앞으로 뺀다"는 직관적 해석에 맞음
+
+## 5. 테스트 검증 체크리스트
+
+### 5-1. 기능 테스트
+
+- [ ] Screw 노드 선택 후 "Pull Out" 버튼 클릭 시 회전+이동 동시 수행
+- [ ] 일반 노드는 기존 이동 애니메이션대로 동작
+- [ ] pause/resume/reverse 컨트롤 정상 동작
+- [ ] 애니메이션 재호출 시 기존 애니메이션 정상 종료
+
+### 5-2. 다양한 Screw 타입 테스트
+
+| Screw 타입 | 회전축 | 회전 방향 | 이동 거리 계산 |
+|------------|--------|----------|---------------|
+| 측면 나사 | Z | 음수 | screwPitch 기반 |
+| 수직 나사 | Y | 음수 | screwPitch 기반 |
+| 왜나사 | Z | 양수 | screwPitch 기반 |
+
+### 5-3. 성능 테스트
+
+- [ ] 연속 애니메이션 호출 시 메모리 누수 없음 확인
+- [ ] 10개 이상의 Screw 순차 애니메이션 성능 확인
+
+## 6. 사용 예시 (수정됨)
+
+### 6-1. 기본 사용
+
+```typescript
+const screwService = getScrewAnimationService();
+screwService.initialize(sceneRoot);
+
+// 기본값 사용 (Z축, 720도 회전, 0.5cm 이동)
+await screwService.animateScrewRotation('leftDoorScrew1');
+```
+
+### 6-2. 커스텀 옵션 사용
+
+```typescript
+await screwService.animateScrewRotation('leftDoorScrew1', {
+    duration: 2000,           // 2초
+    rotationAngle: 1440,       // 4바퀴
+    pullDistance: 0.03,        // 3cm 이동 (screwPitch보다 우선)
+    rotationAxis: 'z',          // Z축 회전
+    onComplete: () => {
+        console.log('Screw 제거 완료');
+    }
+});
+```
+
+### 6-3. ManualAssemblyManager 사용
+
 ```typescript
 const manager = getManualAssemblyManager();
 manager.initialize(sceneRoot);
 
-// Screw 노드 회전 애니메이션 실행
+// Screw 제거
 await manager.loosenScrew('leftDoorScrew1', {
     duration: 1500,
     rotationAngle: 720,
-    screwPitch: 0.005,
-    onComplete: () => {
-        console.log('Screw 분해 완료');
-    }
+    screwPitch: 0.005
 });
 ```
 
-### 단독 사용 예시
-```typescript
-const screwAnimationService = getScrewAnimationService();
-screwAnimationService.initialize(sceneRoot);
+## 7. 결론 및 권장사항
 
-// Screw 회전 애니메이션 실행
-await screwAnimationService.animateScrewRotation('leftDoorScrew1', {
-    duration: 1500,
-    rotationAngle: 720,
-    screwPitch: 0.005,
-    onProgress: (progress) => {
-        console.log(`진행률: ${progress * 100}%`);
-    },
-    onComplete: () => {
-        console.log('애니메이션 완료');
-    }
-});
-```
+1. **pullDistance 옵션 처리**: 명시적으로 처리하여 혼란 방지
+2. **애니메이션 lifecycle 관리**: 새 애니메이션 시작 전 기존 timeline 정리 필수
+3. **회전축 동적 설정**: 하드코딩된 Z축을 옵션으로 변경하여 유연성 확보
+4. **isFastener() 함수 공유**: 중복 제거를 위해 shared 모듈로 분리 권장
+5. **테스트 케이스 확장**: 다양한 나사 타입과 회전축에 대한 테스트 필수
 

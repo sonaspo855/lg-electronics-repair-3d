@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { isFastenerNodeName } from '@/shared/utils/isFastener';
 
 /**
  * Screw 회전 애니메이션 옵션 인터페이스
@@ -7,8 +8,9 @@ import gsap from 'gsap';
 export interface ScrewAnimationOptions {
     duration?: number;           // 전체 애니메이션 시간 (ms)
     rotationAngle?: number;      // 회전 각도 (도, 기본값: 720도 = 2바퀴)
-    pullDistance?: number;       // 빼내는 거리 (m, 기본값: 0.02m = 2cm)
+    pullDistance?: number;       // 빼내는 거리 (m, 기본값: 없으면 screwPitch로 계산)
     screwPitch?: number;         // 나사산 간격 (m, 기본값: 0.005m = 0.5cm)
+    rotationAxis?: 'x' | 'y' | 'z'; // 회전축 (기본값: 'z')
     onComplete?: () => void;    // 완료 콜백
     onProgress?: (progress: number) => void; // 진행률 콜백
 }
@@ -36,7 +38,7 @@ export class ScrewAnimationService {
      * @returns Screw 노드이면 true
      */
     public isScrewNode(nodeName: string): boolean {
-        return /screw|bolt/i.test(nodeName);
+        return isFastenerNodeName(nodeName);
     }
 
     /**
@@ -54,10 +56,17 @@ export class ScrewAnimationService {
             return;
         }
 
+        // 기존 애니메이션 정리 (메모리 누수 방지)
+        if (this.timeline) {
+            this.timeline.kill();
+            this.timeline = null;
+        }
+
         const config = {
             duration: options.duration || 1500,
             rotationAngle: options.rotationAngle || 720,
             screwPitch: options.screwPitch || 0.005,
+            rotationAxis: options.rotationAxis || 'z',
             ...options
         };
 
@@ -67,7 +76,16 @@ export class ScrewAnimationService {
             return;
         }
 
-        const translationDistance = (config.rotationAngle / 360) * config.screwPitch;
+        // pullDistance가 있으면 우선 사용, 없으면 screwPitch 기반으로 계산
+        let translationDistance: number;
+        if (config.pullDistance !== undefined) {
+            translationDistance = config.pullDistance;
+        } else {
+            translationDistance = (config.rotationAngle / 360) * config.screwPitch;
+        }
+
+        // 회전축에 따른 rotation 속성명 결정
+        const axis = config.rotationAxis;
 
         this.timeline = gsap.timeline({
             onStart: () => {
@@ -86,7 +104,7 @@ export class ScrewAnimationService {
         });
 
         this.timeline.to(node.rotation, {
-            z: -config.rotationAngle * (Math.PI / 180),
+            [axis]: -config.rotationAngle * (Math.PI / 180),
             duration: config.duration / 1000,
             ease: 'power2.inOut'
         }, 0);

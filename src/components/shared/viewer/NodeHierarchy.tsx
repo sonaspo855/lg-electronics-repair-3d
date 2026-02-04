@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { animatorAgent } from "@/services/AnimatorAgent";
+import { isFastenerNode } from '@/shared/utils/isFastener';
 
 // Types
 interface Message {
@@ -843,7 +844,7 @@ const NodeHierarchy = React.memo<NodeHierarchyProps>(({ scene, onNodeSelect, sel
   }, [nodeStates]);
 
   const isFastener = useCallback((node: THREE.Object3D): boolean => {
-    return /screw|bolt/i.test(node.name || '');
+    return isFastenerNode(node);
   }, []);
 
   const isSelected = useCallback((node: THREE.Object3D): boolean => {
