@@ -168,24 +168,44 @@ API 호출, AI 통신, 비즈니스 로직을 처리합니다.
   - Ollama API로 AI와 통신
   - 자연어 명령을 파싱하여 애니메이션 생성
   - 대화 상태 관리
+  - 문 열기/닫기 명령 처리
+  - 댐퍼 서비스 명령 감지
 - **AnimationHistoryService.ts**: 애니메이션 히스토리 서비스
   - 애니메이션 히스토리 저장/불러기
   - 실행 취소/다시 실행 기능
 - **fridge/**: 냉장고 특화 서비스
   - `CameraMovementService.ts`: 카메라 이동 서비스
-    - 시네마틱 카메라 워킹 구현
+    - `moveCameraToLeftDoorDamper`: 왼쪽 도어 댐퍼 노드로 카메라 이동
+    - `moveCameraCinematic`: 시네마틱 카메라 워킹 구현 (직선 → 하강 → 로우 앵글)
     - Bezier 곡선 기반 부드러운 카메라 이동
     - 대상 물체에 맞춰 동적 시점 계산
   - `DamperAnimationService.ts`: 댐퍼 애니메이션 서비스
+    - 댐퍼 서비스 명령 생성 및 처리
+  - `DamperCoverAssemblyService.ts`: 댐퍼 커버 조립 서비스
+    - `initialize`: 댐퍼 커버 조립 서비스 초기화
+    - `assembleDamperCover`: 댐퍼 커버 조립 (메타데이터 기반)
+    - `getDetectedPlugs`: 탐지된 돌출부(Plug) 정보 반환
+    - `filterDuplicatePlugs`: 탐지된 돌출부 중 너무 가까운 것들을 필터링
+    - `dispose`: 서비스 정리
   - `DamperAssemblyService.ts`: 댐퍼 조립 서비스
-    - 홈(Hole)/그루브 영역 파악
-    - 돌출부(Protrusion) 삽입 로직
-    - Bounding Box 기반 정렬
+    - `debugPrintDamperStructure`: Damper Assembly와 Cover의 노드 구조 출력
+    - 하이라이트 컴포넌트 초기화 및 관리
   - `ManualAssemblyManager.ts`: 수동 조립 관리자
-    - 사용자의 마우스 인터랙션 처리
-    - 부품 드래그 앤 드롭 지원
+    - `initialize`: 서비스 초기화
+    - `disassembleDamperCover`: 댐퍼 커버 분해
+    - `assembleDamperCover`: 댐퍼 커버 조립
+    - `loosenScrew`: 스크류 돌려 빼는 애니메이션
+    - `detectAndHighlightGrooves`: 노드의 면 하이라이트 및 홈 탐지
   - `PartAssemblyService.ts`: 부품 조립 서비스
     - 일반 부품 조작 및 애니메이션
+  - `ScrewAnimationService.ts`: 스크류 애니메이션 서비스
+    - `isScrewNode`: 스크류 노드인지 확인
+    - `animateScrewRotation`: 스크류 회전+이동 동시 애니메이션
+    - `isPlaying`: 애니메이션 실행 상태 확인
+    - `getProgress`: 애니메이션 진행률 반환
+    - `pause`: 애니메이션 일시정지
+    - `resume`: 애니메이션 재개
+    - `reverse`: 애니메이션 되돌리기
 
 ### 6. src/shared/
 UI 컴포넌트가 아닌 공용 코드
@@ -193,12 +213,25 @@ UI 컴포넌트가 아닌 공용 코드
   - `three-examples.d.ts`: Three.js 확장 타입 정의
 - **utils/**: 유틸리티 함수
   - `animationUtils.ts`: 애니메이션 관련 유틸리티
+    - `CinematicSequence`: GSAP Timeline 기반 시네마틱 카메라 시퀀스 빌더
+    - `calculateCameraTargetPosition`: 바운딩 박스 기반 카메라 타겟 위치 계산
+    - `createAnimationTimeline`: 회전+이동 동시 애니메이션 생성
   - `ClickPointMarker.ts`: 클릭 지점 마커 표시
   - `commonUtils.ts`: 일반적인 유틸리티 함수
     - `getPreciseBoundingBox()`: 정확한 바운딩 박스 계산
+    - `debugFocusCamera`: 카메라를 대상 박스로 포커스하는 애니메이션
+    - `createHighlightMaterial`: 하이라이트용 MeshBasicMaterial 생성
+    - `getNodeHierarchy`: Three.js 객체의 계층 구조 추출
+    - `exportHierarchyToJson`: 노드 계층 구조를 JSON 파일로 내보내기
+    - `resolveNodeName`: 노드 경로를 실제 노드 이름으로 변환
+    - `extractMetadataKey`: 노드 경로에서 메타데이터 키 추출
+    - `degreesToRadians`: 각도를 도에서 라디안으로 변환
   - `CoordinateTransformUtils.ts`: 좌표 변환 유틸리티
   - `fridgeConstants.ts`: 냉장고 모델 상수 정의
   - `findNodeHeight.ts`: 3D 모델 노드의 높이 계산
+    - `highlightNode`: 노드에 하이라이트 적용
+    - `findNodeHeight`: 노드의 높이를 찾고 하이라이트 (이름 기반)
+    - `selectedNodeHeight`: 선택된 노드의 높이를 찾아 하이라이트 (클릭 이벤트 기반)
   - `GrooveDetectionUtils.ts`: 그루브/홈 탐지 유틸리티
     - Normal 기반 그루브 탐지
     - 곡률 기반 돌출부 패턴 인식
@@ -206,7 +239,83 @@ UI 컴포넌트가 아닌 공용 코드
   - `MetadataLoader.ts`: 메타데이터 로더
   - `NormalBasedHighlight.ts`: 노멀 기반 하이라이트
   - `removeClickedNode.ts`: 클릭한 노드 제거 유틸리티
-  - `selectedNodeHeight.ts`: 선택된 노드 높이 계산
+  - `AssemblyPathVisualizer.ts`: 조립 경로 시각화 관리자
+    - `visualizeAssemblyPath`: 조립 경로 시각화
+    - `visualizeDetectedCoordinates`: 탐지된 돌출부와 홈 좌표 시각화
+    - `clearDebugObjects`: 모든 디버그 객체 제거
+  - `AssemblyStateManager.ts`: 조립 상태 관리자
+    - `updateProgress`: 조립 진행률 업데이트
+    - `getProgress`: 조립 진행률 반환
+    - `setPlaying`: 조립 재생 상태 설정
+    - `isPlaying`: 조립 재생 중인지 확인
+    - `startAssembly`: 조립 시작
+    - `completeAssembly`: 조립 완료
+    - `stopAssembly`: 조립 중지
+    - `reset`: 조립 초기화
+    - `getState`: 현재 상태 정보 반환
+  - `DebugObjectManager.ts`: 디버그 객체 관리자
+    - `createSphereMarker`: 구체 마커 생성
+    - `createLine`: 라인 생성
+    - `createDashedLine`: 점선 생성
+    - `createArrowHelper`: 화살표 헬퍼 생성
+    - `clearDebugObjects`: 모든 디버그 객체 제거
+    - `getDebugObjectsCount`: 디버그 객체 개수 반환
+  - `GrooveDetectionService.ts`: 홈 탐지 서비스
+    - `detectAndHighlightGrooves`: 노드의 면 하이라이트 및 홈 탐지
+    - `getHoleCenters`: 홈 중심점 정보 반환
+    - `getHoleCenterById`: ID로 홈 중심점 찾기
+    - `getHoleCenterByIndex`: 인덱스로 홈 중심점 찾기
+    - `getHoleCentersCount`: 홈 중심점 개수 반환
+    - `clearHighlights`: 모든 하이라이트 제거
+  - `NodeNameManager.ts`: 노드 이름 관리자
+    - `enableMetadataMode`: 메타데이터 사용 모드 활성화
+    - `disableMetadataMode`: 메타데이터 사용 모드 비활성화
+    - `getNodeName`: 노드 이름 가져오기 (점 표기법 지원)
+    - `setNodeName`: 노드 이름 설정 (런타임 동적 추가)
+    - `getAllNodeNames`: 모든 노드 이름 가져오기
+    - `hasNodeName`: 노드 이름 존재 여부 확인
+    - `removeNodeName`: 노드 이름 삭제
+    - `clear`: 모든 노드 이름 초기화
+  - `NodeNameLoader.ts`: 노드 이름 로더
+    - `loadNodeNames`: 노드 이름 메타데이터 로드
+    - `getNodeName`: 노드 이름 가져오기 (점 표기법 지원)
+    - `isLoadedData`: 로드 여부 확인
+    - `getAllMetadata`: 전체 메타데이터 가져오기
+  - `MetadataLoader.ts`: 메타데이터 로더
+    - `loadMetadata`: 메타데이터 파일 로딩
+    - `getAssemblyConfig`: 특정 어셈블리 설정 반환
+    - `loadAssemblyConfig`: 특정 어셈블리 설정 로딩 및 변환
+    - `getInsertionOffset`: 특정 어셈블리의 삽입 오프셋 반환
+    - `getAnimationDuration`: 특정 어셈블리의 애니메이션 Duration 반환
+    - `getAnimationEasing`: 특정 어셈블리의 이징 함수 반환
+    - `getScrewAnimations`: 스크류 애니메이션 설정들을 반환
+    - `getScrewAnimationConfig`: 특정 스크류 애니메이션 설정 반환
+    - `clearCache`: 캐시 정리
+    - `isLoaded`: 메타데이터 로딩 여부 확인
+  - `isFastener.ts`: 나사/볼트 노드 식별 유틸리티
+    - `isFastenerNodeName`: 노드 이름으로 나사/볼트인지 확인
+    - `isFastenerNode`: THREE.Object3D 노드가 나사/볼트인지 확인
+  - `NormalBasedHighlight.ts`: 법선 벡터 기반 하이라이트 컴포넌트
+    - `highlightFacesByNormalFilter`: 법선 벡터 기반 필터링으로 하이라이트
+    - `highlightFacesByCameraFilter`: 카메라를 기준으로 정면 면 하이라이트
+    - `highlightClusters`: 탐지된 클러스터(홈 영역)들을 개별 색상으로 하이라이트
+    - `highlightBoundaryLoops`: 탐지된 경계 루프(구멍 테두리) 시각화
+    - `clusterFaces`: 면(Face) 데이터를 기반으로 클러스터링
+    - `calculateMultipleVirtualPivotsByNormalAnalysis`: 정점 법선 벡터 분석을 통한 다중 가상 피벗 계산
+    - `calculateVirtualPivotByNormalAnalysis`: 정점 법선 벡터 분석을 통한 가상 피벗 계산
+    - `calculatePlugByEdgeAnalysis`: 엣지 기반 돌출부(Plug) 탐지
+    - `clearHighlights`: 활성화된 모든 하이라이트 제거
+    - `dispose`: 컴포넌트 정리
+  - `HoleCenterManager.ts`: 홈 중심점 관리자
+    - `visualizeHoleCenters`: 홈 중심점에 시각적 마커 표시
+    - `getHoleCenters`: 홈 중심점 정보 반환
+    - `getHoleCenterById`: ID로 홈 중심점 찾기
+    - `getHoleCenterByIndex`: 인덱스로 홈 중심점 찾기
+    - `getHoleCentersCount`: 홈 중심점 개수 반환
+    - `removeHoleCenterMarker`: 특정 홈 중심점 마커 제거
+    - `clearHoleCenters`: 모든 홈 중심점 정보 초기화
+  - `screwAnimationUtils.ts`: 스크류 애니메이션 유틸리티
+    - `calculateTranslationDistance`: 스크류 이동 거리 계산
   - `SnapDetectionUtils.ts`: 스냅 탐지 유틸리티
   - `StencilOutlineHighlight.ts`: 스텐실 아웃라인 하이라이트
 
