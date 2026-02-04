@@ -35,7 +35,7 @@ export const highlightNode = (
                 child.userData.originalMaterial = child.material;
             }
             // 빛의 영향을 받지 않는 BasicMaterial 사용 -> 무조건 빨갛게 보임
-            child.material = createHighlightMaterial(0xff0000, 0.5);
+            child.material = createHighlightMaterial(0xff0000, 0.2);
             child.renderOrder = 99999; // 맨 위에 그리기
         }
     });
@@ -93,7 +93,7 @@ export const highlightNode = (
  */
 export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
     console.log('selectedNodeHeight!!');
-    const HighlightNode = '4J01424B_Screw,Customized_4168029';
+    const HighlightNode = 'MBN66561101_Case,Body_18065';
 
     event.stopPropagation();
     if (!event.intersections || event.intersections.length === 0) return;

@@ -64,7 +64,7 @@
                 0,
                 1
             ],
-            "extractDistance": 50,
+            "extractDistance": 10,
             "duration": 1500,
             "easing": "power2.inOut"
         },

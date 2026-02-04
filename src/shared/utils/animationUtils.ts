@@ -67,72 +67,7 @@ export const animate = (
     });
 };
 
-/**
- * 콜백 기반 애니메이션 (기존 animate()와 동일한 시그니처)
- * @param callback (progress: number, eased: number) => void
- */
-export const animateCallback = (
-    callback: (progress: number, eased: number) => void,
-    options: AnimationOptions = {}
-): Promise<void> => {
-    const duration = options.duration || 1000;
-    const easing = options.easing || 'power2.out';
 
-    return new Promise((resolve) => {
-        const anim = gsap.to({ progress: 0 }, {
-            progress: 1,
-            duration: duration / 1000,
-            ease: easing,
-            onUpdate: function () {
-                const progress = this.progress();
-                // easing 함수 적용
-                const eased = applyEasing(progress, easing);
-                callback(progress, eased);
-                options.onProgress?.(progress);
-            },
-            onComplete: () => {
-                options.onComplete?.();
-                resolve();
-            }
-        });
-    });
-};
-
-/**
- * 이징 함수 적용 헬퍼
- */
-const applyEasing = (t: number, easing: string): number => {
-    switch (easing) {
-        case 'power1.in': return t * t;
-        case 'power1.out': return 1 - (1 - t) * (1 - t);
-        case 'power1.inOut': return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        case 'power2.in': return t * t * t;
-        case 'power2.out': return 1 - Math.pow(1 - t, 3);
-        case 'power2.inOut': return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        case 'power3.in': return t * t * t * t;
-        case 'power3.out': return 1 - Math.pow(1 - t, 4);
-        case 'power3.inOut': return t < 0.5 ? 4 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
-        case 'back.in': return t * t * t * (t * (1.70158 * t - 1.70158) + 1);
-        case 'back.out': return 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
-        case 'back.inOut': {
-            const s = 1.70158 * 1.525;
-            return t < 0.5 ? (2 * t) * t * ((s + 1) * 2 * t - s) / 2 : ((2 * t - 2) * t * ((s + 1) * (2 * t - 2) + s) + 2) / 2;
-        }
-        case 'elastic.out': {
-            const c4 = (2 * Math.PI) / 3;
-            return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
-        }
-        case 'bounce.out': {
-            const n1 = 7.5625;
-            const d1 = 2.75;
-            if (t < 1 / d1) return n1 * t * t;
-            if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
-            if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
-            return n1 * (t -= 2.625 / d1) * t + 0.984375;
-        }
-        default: return t; // linear
-    }
-};
 
 // ============================================================================
 // 노드 캐싱 유틸리티
