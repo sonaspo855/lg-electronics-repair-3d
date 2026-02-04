@@ -7,7 +7,7 @@ import { animatorAgent } from "../../../services/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
 import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
 import { resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
-import { selectedNodeHeight } from "../../../shared/utils/selectedNodeHeight";
+import { selectedNodeHeight } from "../../../shared/utils/findNodeHeight";
 
 import { SelectionHandler } from "../../../shared/utils/SelectionHandler";
 import "./ModelViewer.css";

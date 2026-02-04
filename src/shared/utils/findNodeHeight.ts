@@ -1,22 +1,28 @@
 import * as THREE from 'three';
+import type { ThreeEvent } from '@react-three/fiber';
 import { invalidate } from '@react-three/fiber';
 import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
 import { getNodeNameManager } from './NodeNameManager';
 
-// const highlightMaterial = createHighlightMaterial(0xff0000, 0.3);
-
-type FindNodeHeightState = {
+/**
+ * 노드 하이라이트 상태 타입
+ */
+type NodeHighlightState = {
     helper?: THREE.Box3Helper;
     intervalId?: number;
     meshes?: THREE.Mesh[];
 };
 
 /**
- * 이전 하이라이트 상태를 정리하는 함수
- * @param root - 정리할 루트 오브젝트
+ * 노드의 하이라이트 상태를 정리하는 공통 함수
+ * @param target - 정리할 타겟 오브젝트 (루트 또는 타겟 노드)
+ * @param stateKey - userData에 저장된 상태 키 (기본값: '__findNodeHeight')
  */
-const clearPrevious = (root: THREE.Object3D) => {
-    const state = root.userData.__findNodeHeight as FindNodeHeightState | undefined;
+const clearHighlightState = (
+    target: THREE.Object3D,
+    stateKey: string = '__findNodeHeight'
+): void => {
+    const state = target.userData[stateKey] as NodeHighlightState | undefined;
 
     if (state?.intervalId) {
         clearInterval(state.intervalId);
@@ -35,11 +41,111 @@ const clearPrevious = (root: THREE.Object3D) => {
         });
     }
 
-    delete root.userData.__findNodeHeight;
+    delete target.userData[stateKey];
 };
 
 /**
- * 노드의 높이를 찾고 하이라이트하는 함수
+ * 씬 루트에서 모든 Box3Helper를 제거하는 함수
+ * @param sceneRoot - 씬 루트 노드
+ */
+const clearAllBoxHelpers = (sceneRoot: THREE.Object3D): void => {
+    const toRemove: THREE.Object3D[] = [];
+    sceneRoot.traverse((child) => {
+        if (child.type === "Box3Helper") {
+            toRemove.push(child);
+        }
+    });
+    toRemove.forEach(c => c.parent?.remove(c));
+};
+
+/**
+ * 노드에 하이라이트를 적용하는 공통 함수
+ * @param targetNode - 하이라이트할 타겟 노드
+ * @param sceneRoot - 씬 루트 노드
+ * @param options - 하이라이트 옵션
+ * @returns 하이라이트된 노드의 바운딩 박스
+ */
+export const highlightNode = (
+    targetNode: THREE.Object3D,
+    sceneRoot: THREE.Object3D,
+    options?: {
+        highlightColor?: number;
+        highlightOpacity?: number;
+        boxColor?: number;
+        camera?: THREE.PerspectiveCamera;
+        controls?: { target: THREE.Vector3; update: () => void };
+        duration?: number;
+    }
+): THREE.Box3 => {
+    const {
+        highlightColor = 0xff0000,
+        highlightOpacity = 0.2,
+        boxColor = 0xffff00,
+        camera,
+        controls,
+        duration = 1.0
+    } = options || {};
+
+    // 1. 월드 좌표 정보 추출
+    targetNode.updateMatrixWorld(true);
+
+    // 2. 오리지널 노드에 하이라이트 적용
+    const highlightMaterial = createHighlightMaterial(highlightColor, highlightOpacity);
+    const meshes: THREE.Mesh[] = [];
+
+    targetNode.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+            // 원본 머티리얼 저장 (나중에 복원용)
+            if (!child.userData.originalMaterial) {
+                child.userData.originalMaterial = child.material;
+            }
+            child.material = highlightMaterial;
+            child.renderOrder = 99999; // 맨 위에 그리기
+            meshes.push(child);
+        }
+    });
+
+    // 3. 기존 Box3Helper 제거
+    clearAllBoxHelpers(sceneRoot);
+
+    // 4. 바운딩 박스 하이라이트 (노드를 따라 움직임)
+    const preciseBox = getPreciseBoundingBox(targetNode);
+
+    // Box3Helper는 월드 좌표 기준으로 생성되므로 sceneRoot에 추가
+    const boxHelper = new THREE.Box3Helper(preciseBox, boxColor);
+    sceneRoot.add(boxHelper);
+
+    // 박스 헬퍼를 타겟 노드와 연결하여 업데이트 함수 생성
+    const updateBoxHelper = () => {
+        const currentBox = getPreciseBoundingBox(targetNode);
+        boxHelper.box.copy(currentBox);
+        invalidate();
+    };
+
+    // 타이머로 주기적으로 업데이트 (노드 움직임 추적)
+    const updateInterval = setInterval(updateBoxHelper, 16); // 60fps
+
+    // 메모리 누수 방지를 위해 interval 저장
+    if (!targetNode.userData.boxUpdateInterval) {
+        targetNode.userData.boxUpdateInterval = [];
+    }
+    targetNode.userData.boxUpdateInterval.push(updateInterval);
+
+    // 상태 저장 (정리 함수에서 사용)
+    targetNode.userData.__findNodeHeight = { helper: boxHelper, intervalId: updateInterval, meshes };
+
+    // 5. 카메라 이동 (선택 사항)
+    if (camera && controls) {
+        debugFocusCamera(camera, preciseBox, controls, duration);
+    }
+
+    invalidate();
+
+    return preciseBox;
+};
+
+/**
+ * 노드의 높이를 찾고 하이라이트하는 함수 (이름 기반 검색)
  * @param root - 루트 오브젝트
  * @param camera - 카메라 오브젝트
  * @param controls - 카메라 컨트롤 옵션
@@ -65,10 +171,8 @@ export const findNodeHeight = (
     const boxColor = options?.boxColor ?? 0xffff00;
     const append = options?.append ?? false;
 
-    const dynamicHighlightMaterial = createHighlightMaterial(boxColor, 0.3);  // 노드 전용 하이라이트 재질 생성
-
     if (!append) {
-        clearPrevious(root);
+        clearHighlightState(root);
     }
 
     const matched: THREE.Object3D[] = [];
@@ -84,41 +188,62 @@ export const findNodeHeight = (
     });
 
     if (matched.length === 0) {
-        return { matchedNodes: [] as THREE.Object3D[], clear: () => clearPrevious(root) };
+        return { matchedNodes: [] as THREE.Object3D[], clear: () => clearHighlightState(root) };
     }
 
-    const meshes: THREE.Mesh[] = [];
-    matched.forEach((node) => {
-        node.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                if (!child.userData.originalMaterial) {
-                    child.userData.originalMaterial = child.material;
-                }
-                child.material = dynamicHighlightMaterial;  // 공통 재질이 아닌, 방금 생성한 dynamicHighlightMaterial 적용
-                child.renderOrder = 99999;
-                meshes.push(child);
+    // 첫 번째 매치된 노드에 하이라이트 적용
+    const firstMatched = matched[0];
+    highlightNode(firstMatched, root, {
+        boxColor,
+        camera,
+        controls,
+        duration
+    });
+
+    return { matchedNodes: matched, clear: () => clearHighlightState(root) };
+};
+
+/**
+ * 선택된 노드의 높이를 찾아 하이라이트하는 함수 (클릭 이벤트 기반)
+ * @param event - 마우스 이벤트
+ */
+export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    if (!event.intersections || event.intersections.length === 0) return;
+
+    const clickedObject = event.intersections[0].object;
+
+    // NodeNameManager를 사용하여 도어 노드 이름 가져오기
+    const nodeNameManager = getNodeNameManager();
+    const highlightNodeName = nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody') || 'MCK71751101_Cover,Body_3117001';
+
+    let currentNode: THREE.Object3D | null = clickedObject;
+    let targetAncestor: THREE.Object3D | null = null;
+
+    while (currentNode) {
+        targetAncestor = currentNode;
+
+        let damperChild: THREE.Object3D | undefined;
+        targetAncestor.traverse((child) => {
+            if (child.name.includes(highlightNodeName)) {
+                damperChild = child as THREE.Object3D;
+                return true;
             }
         });
-    });
 
-    const unionBox = new THREE.Box3();
-    matched.forEach((node) => {
-        unionBox.union(getPreciseBoundingBox(node));
-    });
+        if (damperChild) {
+            // 1. 씬 루트 찾기
+            let sceneRoot = damperChild;
+            while (sceneRoot.parent) {
+                sceneRoot = sceneRoot.parent;
+            }
 
-    const helper = new THREE.Box3Helper(unionBox, boxColor);
-    root.add(helper);
-
-    const intervalId = window.setInterval(() => {
-        const nextBox = new THREE.Box3();
-        matched.forEach((node) => nextBox.union(getPreciseBoundingBox(node)));
-        helper.box.copy(nextBox);
-        invalidate();
-    }, 16);
-
-    root.userData.__findNodeHeight = { helper, intervalId, meshes } satisfies FindNodeHeightState;
-
-    // debugFocusCamera(camera, unionBox, controls, duration); // 카메라 이동 주석 처리
-
-    return { matchedNodes: matched, clear: () => clearPrevious(root) };
+            // 공통 하이라이트 함수 호출
+            highlightNode(damperChild, sceneRoot, {
+                camera: event.camera as THREE.PerspectiveCamera
+            });
+        }
+        if (!currentNode.parent) break;
+        currentNode = currentNode.parent;
+    }
 };
