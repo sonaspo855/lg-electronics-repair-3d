@@ -61,10 +61,10 @@
             "rotationAngle": 720,
             "extractDirection": [
                 0,
-                1,
-                0
+                0,
+                1
             ],
-            "extractDistance": 0.02,
+            "extractDistance": 10.015,
             "duration": 1500,
             "easing": "power2.inOut"
         },

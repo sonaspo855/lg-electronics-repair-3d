@@ -182,12 +182,12 @@ export class ScrewAnimationService {
             ease: config.easing
         }, 0);
 
-        // 빼내는 방향을 로컬 좌표계에서 월드 좌표계로 변환
+        // 빼내는 방향을 로컬 좌표계로 유지한 채 이동 (z축 방향으로 빼내기)
         const localExtractDir = new THREE.Vector3(...config.extractDirection!);
-        localExtractDir.applyQuaternion(screwNodeObj.getWorldQuaternion(new THREE.Quaternion()));
         localExtractDir.normalize().multiplyScalar(translationDistance);
-
-        // 이동 애니메이션 (로컬 방향 기준)
+        console.log('localExtractDir>> ', localExtractDir);
+        console.log('screwNodeObj.position>> ', screwNodeObj.position);
+        // 이동 애니메이션 (로컬 좌표계 기준)
         this.timeline.to(screwNodeObj.position, {
             x: screwNodeObj.position.x + localExtractDir.x,
             y: screwNodeObj.position.y + localExtractDir.y,
