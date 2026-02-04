@@ -267,6 +267,8 @@ export class MetadataLoader {
      * @returns 스크류 애니메이션 설정 또는 null
      */
     public getScrewAnimationConfig(nodeName: string): ScrewAnimationConfig | null {
+        console.log('getScrewAnimationConfig!!!>> ', nodeName);
+        console.log('this.metadata>> ', this.metadata);
         if (!this.metadata?.screwAnimations) {
             return null;
         }
@@ -275,6 +277,7 @@ export class MetadataLoader {
         if (this.metadata.screwAnimations[nodeName]) {
             return this.metadata.screwAnimations[nodeName];
         }
+
 
         // 노드 이름의 일부로 검색 (예: screw1Customized -> screw_1)
         // const shortName = nodeName.replace('Customized', '').toLowerCase();

@@ -142,11 +142,11 @@ export class ManualAssemblyManager {
 
     /**
      * Screw를 돌려서 빼는 애니메이션을 실행합니다.
-     * @param nodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
+     * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
      * @param options 애니메이션 옵션
      */
     public async loosenScrew(
-        nodeNameOrPath: string,
+        screwNodePath: string,
         options?: {
             duration?: number;
             rotationAngle?: number;
@@ -158,14 +158,20 @@ export class ManualAssemblyManager {
         }
     ): Promise<void> {
         // 경로이면 실제 노드 이름으로 변환
-        const actualNodeName = this.nodeNameLoader.getNodeName(nodeNameOrPath) || nodeNameOrPath;
+        const actualNodeName = this.nodeNameLoader.getNodeName(screwNodePath) || screwNodePath;
+        console.log('actualNodeName>> ', actualNodeName);
 
         if (!this.screwAnimationService.isScrewNode(actualNodeName)) {
             console.warn(`${actualNodeName}은 Screw 노드가 아님`);
             return;
         }
-        console.log('options>> ', options);
-        await this.screwAnimationService.animateScrewRotation(actualNodeName, nodeNameOrPath);
+
+        // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
+        const metadataKey = screwNodePath.includes('.')
+            ? screwNodePath.split('.').pop() || screwNodePath
+            : screwNodePath;
+        // console.log('metadataKey>> ', metadataKey);
+        await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
     }
 
     public dispose(): void {

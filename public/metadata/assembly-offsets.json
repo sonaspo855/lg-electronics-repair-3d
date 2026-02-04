@@ -3,8 +3,8 @@
     "lastUpdated": "2024-01-23T12:00:00Z",
     "assemblies": {
         "damper_cover_assembly": {
-            "targetNode": "ref:fridge.leftDoor.damperAssembly",
-            "partNode": "ref:fridge.leftDoor.damperCoverBody",
+            "targetNode": "ref:fridge.leftDoorDamper.damperAssembly",
+            "partNode": "ref:fridge.leftDoorDamper.damperCoverBody",
             "grooveDetection": {
                 "method": "normal_filter",
                 "innerBoundRatio": 0.2,
@@ -61,8 +61,8 @@
             "rotationAngle": 720,
             "extractDirection": [
                 0,
-                0,
-                1
+                1,
+                0
             ],
             "extractDistance": 0.02,
             "duration": 1500,

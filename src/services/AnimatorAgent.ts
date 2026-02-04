@@ -980,17 +980,21 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           // 스크류 분리 애니매이션 실행
           try {
             const manualAssemblyManager = getManualAssemblyManager();
+            // const screw1NodePath = 'screwAnimations.screw1Customized';
+            // const screw2NodePath = 'screwAnimations.screw2Customized';
+            const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
+            const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
             // 왼쪽 스크류 1 분리
             if (screw1NodeName) {
               console.log(screw1NodeName, ' Screw1를 돌려서 빼는 애니메이션을 실행!');
-              await manualAssemblyManager.loosenScrew(screw1NodeName);
+              await manualAssemblyManager.loosenScrew(screw1NodePath);
               console.log('Left screw 1 loosened');
             }
 
             // 왼쪽 스크류 2 분리
             if (screw2NodeName) {
-              await manualAssemblyManager.loosenScrew(screw2NodeName);
+              await manualAssemblyManager.loosenScrew(screw2NodePath);
               console.log('Left screw 2 loosened');
             }
           } catch (error) {
