@@ -93,7 +93,7 @@ export const highlightNode = (
  */
 export const selectedNodeHeight = (event: ThreeEvent<MouseEvent>) => {
     console.log('selectedNodeHeight!!');
-    const HighlightNode = 'MBN66561101_Case,Body_18065';
+    const HighlightNode = 'aa';
 
     event.stopPropagation();
     if (!event.intersections || event.intersections.length === 0) return;
