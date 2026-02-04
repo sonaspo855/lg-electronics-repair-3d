@@ -209,6 +209,7 @@ export class AnimatorAgent {
   private availableModels: string[] = [];
   private animationHistoryService: AnimationHistoryService | null = null;
   private nodeNameManager = getNodeNameManager();
+  private manualAssemblyManager = getManualAssemblyManager();
 
   constructor() {
     this.ollama = new OllamaClient('http://localhost:11434');
@@ -970,8 +971,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
           // 댐퍼 커버 조립 애니메이션 실행
           try {
-            const manualAssemblyManager = getManualAssemblyManager();
-            await manualAssemblyManager.assembleDamperCover({ duration: 1500 });
+            await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
             console.log('Damper cover assembly completed');
           } catch (error) {
             console.error('Error during damper cover assembly:', error);
@@ -979,22 +979,19 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
           // 스크류 분리 애니매이션 실행
           try {
-            const manualAssemblyManager = getManualAssemblyManager();
-            // const screw1NodePath = 'screwAnimations.screw1Customized';
-            // const screw2NodePath = 'screwAnimations.screw2Customized';
             const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
             const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
             // 왼쪽 스크류 1 분리
             if (screw1NodeName) {
               console.log(screw1NodeName, ' Screw1를 돌려서 빼는 애니메이션을 실행!');
-              await manualAssemblyManager.loosenScrew(screw1NodePath);
+              await this.manualAssemblyManager.loosenScrew(screw1NodePath);
               console.log('Left screw 1 loosened');
             }
 
             // 왼쪽 스크류 2 분리
             if (screw2NodeName) {
-              await manualAssemblyManager.loosenScrew(screw2NodePath);
+              await this.manualAssemblyManager.loosenScrew(screw2NodePath);
               console.log('Left screw 2 loosened');
             }
           } catch (error) {
