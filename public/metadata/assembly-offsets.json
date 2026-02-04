@@ -64,7 +64,7 @@
                 0,
                 1
             ],
-            "extractDistance": 10,
+            "extractDistance": 50,
             "duration": 1500,
             "easing": "power2.inOut"
         },
@@ -76,8 +76,8 @@
                 0,
                 1
             ],
-            "extractDistance": 0.02,
-            "duration": 10,
+            "extractDistance": 50,
+            "duration": 1500,
             "easing": "power2.inOut"
         }
     }
