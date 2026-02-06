@@ -12,6 +12,7 @@ import { selectedNodeHeight } from "../../../shared/utils/findNodeHeight";
 import { SelectionHandler } from "../../../shared/utils/SelectionHandler";
 import "./ModelViewer.css";
 import { getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
+import { getDamperCaseBodyAnimationService } from '../../../services/fridge/DamperCaseBodyAnimationService';
 // import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 // import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 
@@ -511,6 +512,11 @@ export default function ModelViewer({
     if (controlsRef.current) {
       animatorAgent.setCameraControls(controlsRef.current, sceneRoot);
     }
+
+    // DamperCaseBodyAnimationService 초기화
+    const damperCaseBodyAnimationService = getDamperCaseBodyAnimationService();
+    damperCaseBodyAnimationService.setSceneRoot(sceneRoot);
+    animatorAgent.setDamperCaseBodyAnimationService(damperCaseBodyAnimationService);
 
     // ManualAssemblyManager 초기화
     const manualAssemblyManager = getManualAssemblyManager();

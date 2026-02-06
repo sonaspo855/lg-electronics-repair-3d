@@ -13,6 +13,9 @@ export interface AssemblyOffsetMetadata {
     screwAnimations?: {
         [nodeName: string]: ScrewAnimationConfig;
     };
+    damperCaseBodyAnimations?: {
+        linearMovement: LinearMovementAnimationConfig;
+    };
 }
 
 /**
@@ -25,6 +28,25 @@ export interface ScrewAnimationConfig {
     extractDistance: number;
     duration: number;
     easing: string;
+}
+
+/**
+ * 선형 이동 애니메이션 설정 인터페이스
+ */
+export interface LinearMovementAnimationConfig {
+    direction: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    distance: number;
+    duration: number;
+    easing: string;
+    stages: Array<{
+        name: string;
+        progress: number;
+        description: string;
+    }>;
 }
 
 /**

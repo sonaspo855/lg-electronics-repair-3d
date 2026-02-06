@@ -37,6 +37,7 @@ class OllamaClient {
   }
 }
 
+import { DamperCaseBodyAnimationService } from './fridge/DamperCaseBodyAnimationService';
 import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
 import { CameraMovementService } from './fridge/CameraMovementService';
 import { AnimationHistoryService } from './AnimationHistoryService';
@@ -208,6 +209,7 @@ export class AnimatorAgent {
     };
   private availableModels: string[] = [];
   private animationHistoryService: AnimationHistoryService | null = null;
+  private damperCaseBodyAnimationService: DamperCaseBodyAnimationService | null = null;
   private nodeNameManager = getNodeNameManager();
   private manualAssemblyManager = getManualAssemblyManager();
 
@@ -223,10 +225,18 @@ export class AnimatorAgent {
   // Set camera controls reference
   setCameraControls(cameraControls: any, sceneRoot?: any) {
     this.cameraMovementService = new CameraMovementService(cameraControls, sceneRoot);
+    // DamperCaseBodyAnimationService에 sceneRoot 설정
+    if (this.damperCaseBodyAnimationService && sceneRoot) {
+      this.damperCaseBodyAnimationService.setSceneRoot(sceneRoot);
+    }
   }
 
   setOnActionCompleted(callback?: (message: string) => void) {
     this.onActionCompleted = callback;
+  }
+
+  setDamperCaseBodyAnimationService(service: DamperCaseBodyAnimationService) {
+    this.damperCaseBodyAnimationService = service;
   }
 
   setAnimationHistoryService(service: AnimationHistoryService) {
@@ -998,7 +1008,38 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('Error during screw loosening:', error);
           }
 
-          // damperCaseBody 힌지 반대 방향으로 선형이동
+          // damperCaseBody 힌지 반대 방향으로 선형이동 실행
+          if (this.damperCaseBodyAnimationService) {
+            try {
+              console.log('damperCaseBody 힌지 반대 방향으로 선형이동 시작!!!');
+
+              // 애니메이션 실행
+              await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
+                duration: 1000,
+                easing: 'power2.inOut',
+                onComplete: () => {
+                  console.log('damperCaseBody 힌지 반대 방향으로 선형이동 완료!!!');
+                }
+              });
+
+              // 애니메이션 히스토리 기록
+              if (this.animationHistoryService) {
+                const animationCommand = {
+                  door: DoorType.TOP_LEFT,
+                  action: AnimationAction.CAMERA_MOVE,
+                  degrees: 0,
+                  speed: 1
+                };
+                const animationMessage = '가장 알까리 코치 반대 방향으로 선형 이동 완료';
+                this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
+              }
+
+            } catch (error) {
+              console.error('damperCaseBody 힌지 반대 방향으로 선형이동 실행 중 에러:', error);
+            }
+          } else {
+            console.log('damperCaseBody 힌지 반대 방향으로 선형이동 서비스가 초기화되지 않음');
+          }
 
 
 
