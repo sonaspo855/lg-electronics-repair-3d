@@ -297,6 +297,26 @@ export class MetadataLoader {
     }
 
     /**
+     * 댐퍼 케이스 바디 선형 이동 애니메이션 설정을 반환합니다.
+     * @param nodeName 댐퍼 케이스 바디 노드 이름
+     * @returns 선형 이동 애니메이션 설정 또는 null
+     */
+    public getDamperCaseBodyAnimationConfig(nodeName: string): LinearMovementAnimationConfig | null {
+        console.log('getDamperCaseBodyAnimationConfig!!!>> ', nodeName);
+        console.log('this.metadata>> ', this.metadata);
+        if (!this.metadata?.damperCaseBodyAnimations) {
+            return null;
+        }
+
+        // 직접 일치하는 이름 검색
+        if (this.metadata.damperCaseBodyAnimations.linearMovement) {
+            return this.metadata.damperCaseBodyAnimations.linearMovement;
+        }
+
+        return null;
+    }
+
+    /**
      * 메타데이터가 로딩되었는지 확인합니다.
      */
     public isLoaded(): boolean {

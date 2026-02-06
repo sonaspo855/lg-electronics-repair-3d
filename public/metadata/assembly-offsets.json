@@ -80,5 +80,34 @@
             "duration": 1500,
             "easing": "power2.inOut"
         }
+    },
+    "damperCaseBodyAnimations": {
+        "linearMovement": {
+            "direction": {
+                "x": 0,
+                "y": 0,
+                "z": -1
+            },
+            "distance": 20,
+            "duration": 1000,
+            "easing": "power2.inOut",
+            "stages": [
+                {
+                    "name": "approach",
+                    "progress": 0.3,
+                    "description": "힌지 반대 방향으로 접근"
+                },
+                {
+                    "name": "movement",
+                    "progress": 0.7,
+                    "description": "선형 이동 실행"
+                },
+                {
+                    "name": "complete",
+                    "progress": 1.0,
+                    "description": "이동 완료"
+                }
+            ]
+        }
     }
 }
