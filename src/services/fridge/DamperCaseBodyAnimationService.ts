@@ -150,17 +150,6 @@ export class DamperCaseBodyAnimationService {
                     z: localTargetPosition.z,
                     duration: mergedOptions.duration / 1000, // ms를 초로 변환
                     ease: mergedOptions.easing,
-                    onUpdate: () => {
-                        // 스테이지별 진행 상황 출력
-                        const progress = gsap.getProperty(damperCaseBodyNode.position, 'x') as number;
-                        const currentProgress = (progress - damperCaseBodyNode.position.x) / (localTargetPosition.x - damperCaseBodyNode.position.x);
-
-                        for (const stage of animationConfig.stages) {
-                            if (currentProgress >= stage.progress) {
-                                console.log(`스테이지 [${stage.name}] 진행: ${stage.progress * 100}% - ${stage.description}`);
-                            }
-                        }
-                    },
                     onComplete: () => {
                         console.log('댐퍼 케이스 바디 선형 이동 애니메이션 완료');
 
