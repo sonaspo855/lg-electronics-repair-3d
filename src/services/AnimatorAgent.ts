@@ -998,7 +998,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('Error during screw loosening:', error);
           }
 
-          // damperCaseBody 힌지 반다 방향으로 선형이동
+          // damperCaseBody 힌지 반대 방향으로 선형이동
 
 
 
