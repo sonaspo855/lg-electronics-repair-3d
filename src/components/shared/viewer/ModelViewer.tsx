@@ -13,7 +13,7 @@ import { SelectionHandler } from "../../../shared/utils/SelectionHandler";
 import "./ModelViewer.css";
 import { getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
 import { getDamperCaseBodyAnimationService } from '../../../services/fridge/DamperCaseBodyAnimationService';
-// import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
+import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 // import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 
 
@@ -193,8 +193,15 @@ function ModelContent({
 
   const handleClick = (event: any) => {
     event.stopPropagation();
+
     selectionHandlerRef.current?.handleClick(event, sceneRoot || undefined, camera as THREE.PerspectiveCamera);
     // selectedNodeHeight(event); // 클릭시 지정한 노드 하이라이트, 테스트용으로 임시 추가
+
+    // Alt + Click으로 노드 삭제 기능
+    if (event.altKey) {
+      removeClickedNode(event);
+      return;
+    }
   };
 
   return (
