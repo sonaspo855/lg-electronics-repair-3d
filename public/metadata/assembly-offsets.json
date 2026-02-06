@@ -83,19 +83,28 @@
     },
     "damperCaseBodyAnimations": {
         "linearMovement": {
-            "direction": {
-                "x": 1,
+            "method": "screwPositionBased",
+            "targetScrewNode": "fridge.leftDoorDamper.screw2Customized",
+            "offset": {
+                "x": 10,
                 "y": 0,
                 "z": 0
             },
-            "distance": 1,
+            "fallback": {
+                "direction": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "distance": 10
+            },
             "duration": 1000,
             "easing": "power2.inOut",
             "stages": [
                 {
                     "name": "approach",
                     "progress": 0.3,
-                    "description": "힌지 반대 방향으로 접근"
+                    "description": "screw2Customized 위치로 접근"
                 },
                 {
                     "name": "movement",

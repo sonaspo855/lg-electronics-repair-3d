@@ -34,12 +34,27 @@ export interface ScrewAnimationConfig {
  * 선형 이동 애니메이션 설정 인터페이스
  */
 export interface LinearMovementAnimationConfig {
-    direction: {
+    method?: 'screwPositionBased' | 'fallback';
+    targetScrewNode?: string;
+    offset?: {
         x: number;
         y: number;
         z: number;
     };
-    distance: number;
+    fallback?: {
+        direction: {
+            x: number;
+            y: number;
+            z: number;
+        };
+        distance: number;
+    };
+    direction?: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    distance?: number;
     duration: number;
     easing: string;
     stages: Array<{
