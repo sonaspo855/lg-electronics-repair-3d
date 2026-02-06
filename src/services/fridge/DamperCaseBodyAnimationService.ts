@@ -119,17 +119,16 @@ export class DamperCaseBodyAnimationService {
                         targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
                         console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
                     } else {
-                        console.warn('screw2Customized 노드를 찾을 수 없어 fallback 방식 사용');
-                        targetPosition = this.calculateFallbackPosition(damperCaseBodyNode, animationConfig);
+                        console.error('screw2Customized 노드를 찾을 수 없습니다:', screw2NodeName);
+                        return false;
                     }
                 } else {
-                    console.warn('screw2Customized 노드 이름을 찾을 수 없어 fallback 방식 사용');
-                    targetPosition = this.calculateFallbackPosition(damperCaseBodyNode, animationConfig);
+                    console.error('screw2Customized 노드 이름을 찾을 수 없습니다:', animationConfig.targetScrewNode);
+                    return false;
                 }
             } else {
-                // Fallback 방식 (기존 방식)
-                console.log('Fallback 방식 사용');
-                targetPosition = this.calculateFallbackPosition(damperCaseBodyNode, animationConfig);
+                console.error('지원하지 않는 method입니다:', method);
+                return false;
             }
 
             // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
@@ -210,30 +209,6 @@ export class DamperCaseBodyAnimationService {
     }> | null {
         const config = this.getAnimationConfig();
         return config?.stages || null;
-    }
-
-    /**
-     * Fallback 방식으로 타겟 위치를 계산합니다.
-     * @param damperCaseBodyNode 댐퍼 케이스 바디 노드
-     * @param animationConfig 애니메이션 설정
-     * @returns 계산된 타겟 위치
-     */
-    private calculateFallbackPosition(
-        damperCaseBodyNode: THREE.Object3D,
-        animationConfig: LinearMovementAnimationConfig
-    ): THREE.Vector3 {
-        // 기존 방식: direction + distance
-        const direction = new THREE.Vector3(
-            animationConfig.fallback?.direction.x || animationConfig.direction?.x || 1,
-            animationConfig.fallback?.direction.y || animationConfig.direction?.y || 0,
-            animationConfig.fallback?.direction.z || animationConfig.direction?.z || 0
-        ).normalize();
-
-        const distance = animationConfig.fallback?.distance || animationConfig.distance || 1;
-
-        return damperCaseBodyNode.position.clone().add(
-            direction.clone().multiplyScalar(distance)
-        );
     }
 
     /**
