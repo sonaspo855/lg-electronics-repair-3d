@@ -113,8 +113,11 @@ export class DamperCaseBodyAnimationService {
                             animationConfig.offset?.y || 0,
                             animationConfig.offset?.z || 0
                         );
-                        targetPosition = screw2Position.clone().add(offset);
-                        console.log('오프셋 적용 후 타겟 위치:', targetPosition);
+                        // [수정] 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 구합니다.
+                        // localToWorld는 노드의 현재 회전과 위치를 모두 반영하여 해당 방향의 월드 좌표를 반환합니다.
+                        damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
+                        targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
+                        console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
                     } else {
                         console.warn('screw2Customized 노드를 찾을 수 없어 fallback 방식 사용');
                         targetPosition = this.calculateFallbackPosition(damperCaseBodyNode, animationConfig);
@@ -129,18 +132,29 @@ export class DamperCaseBodyAnimationService {
                 targetPosition = this.calculateFallbackPosition(damperCaseBodyNode, animationConfig);
             }
 
+            // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
+            const localTargetPosition = targetPosition.clone();
+            const parent = damperCaseBodyNode.parent;
+            if (parent) {
+                // 부모의 world matrix가 업데이트 되었는지 확인 후 역행렬을 이용해 로컬로 변환합니다.
+                parent.updateMatrixWorld();
+                parent.worldToLocal(localTargetPosition);
+                console.log('월드 타겟 좌표:', targetPosition);
+                console.log('변환된 로컬 타겟 좌표:', localTargetPosition);
+            }
+
             // GSAP를 사용한 선형 이동 애니메이션
             return new Promise<boolean>((resolve) => {
                 gsap.to(damperCaseBodyNode.position, {
-                    x: targetPosition.x,
-                    y: targetPosition.y,
-                    z: targetPosition.z,
+                    x: localTargetPosition.x,
+                    y: localTargetPosition.y,
+                    z: localTargetPosition.z,
                     duration: mergedOptions.duration / 1000, // ms를 초로 변환
                     ease: mergedOptions.easing,
                     onUpdate: () => {
                         // 스테이지별 진행 상황 출력
                         const progress = gsap.getProperty(damperCaseBodyNode.position, 'x') as number;
-                        const currentProgress = (progress - damperCaseBodyNode.position.x) / (targetPosition.x - damperCaseBodyNode.position.x);
+                        const currentProgress = (progress - damperCaseBodyNode.position.x) / (localTargetPosition.x - damperCaseBodyNode.position.x);
 
                         for (const stage of animationConfig.stages) {
                             if (currentProgress >= stage.progress) {
