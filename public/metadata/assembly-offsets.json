@@ -88,7 +88,7 @@
                 "y": 0,
                 "z": 0
             },
-            "distance": 20,
+            "distance": 1,
             "duration": 1000,
             "easing": "power2.inOut",
             "stages": [
