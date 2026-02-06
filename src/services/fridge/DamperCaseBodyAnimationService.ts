@@ -53,6 +53,7 @@ export class DamperCaseBodyAnimationService {
 
             // 노드 이름 가져오기
             const damperCaseBodyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCaseBody');
+            console.log('damperCaseBodyNodeName>> ', damperCaseBodyNodeName);
             if (!damperCaseBodyNodeName) {
                 console.error('댐퍼 케이스 바디 노드 이름을 찾을 수 없습니다.');
                 return false;

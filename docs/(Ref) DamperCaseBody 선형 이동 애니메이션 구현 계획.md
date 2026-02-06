@@ -787,14 +787,6 @@ export class AnimatorAgent {
 | **ScrewAnimationService** | `src/services/fridge/ScrewAnimationService.ts` | 스크류 애니메이션 핵심 로직 |
 
 ### 9-2. DamperCaseBody 애니메이션에서 재활용 가능한 코드 조각
-#### 9-2-1. 노드 경로 → 실제 노드 이름 변환
-```typescript
-// ManualAssemblyManager.ts:161 (재활용 가능)
-function resolveNodeName(nodePath: string): string {
-    const nodeNameLoader = getNodeNameLoader();
-    return nodeNameLoader.getNodeName(nodePath) || nodePath;
-}
-```
 #### 9-2-2. 메타데이터 키 추출
 ```typescript
 // ManualAssemblyManager.ts:170-172 (재활용 가능)
@@ -866,7 +858,7 @@ function calculateOffsetDistance(
 
 | 파일명 | 위치 | 포함 함수/클래스 |
 |-------|------|----------------|
-| `linearMoveAnimationUtils.ts` | `src/shared/utils/` | `createLinearMoveTimeline`, `calculateOffsetDistance`, `resolveNodeName`, `extractMetadataKey` |
+| `linearMoveAnimationUtils.ts` | `src/shared/utils/` | `createLinearMoveTimeline`, `calculateOffsetDistance`, `extractMetadataKey` |
 | `gsapAnimationUtils.ts` | `src/shared/utils/` | `createAnimationTimeline`, `degreesToRadians` |
 
 ### 9-4. 현재 공통化管理 상태 요약

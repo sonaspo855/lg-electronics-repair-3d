@@ -201,16 +201,6 @@ sequenceDiagram
 
 ### 8-2. 재활용 가능한 코드 조각
 
-#### 8-2-1. 노드 경로 → 실제 노드 이름 변환
-
-```typescript
-// ManualAssemblyManager.ts:161 (재활용 가능)
-function resolveNodeName(nodePath: string): string {
-    const nodeNameLoader = getNodeNameLoader();
-    return nodeNameLoader.getNodeName(nodePath) || nodePath;
-}
-```
-
 #### 8-2-2. 메타데이터 키 추출
 
 ```typescript
@@ -315,7 +305,7 @@ function degreesToRadians(degrees: number): number {
 
 | 파일명 | 위치 | 포함 함수/클래스 |
 |-------|------|----------------|
-| `screwAnimationUtils.ts` | `src/shared/utils/` | `calculateTranslationDistance`, `extractMetadataKey`, `resolveNodeName` |
+| `screwAnimationUtils.ts` | `src/shared/utils/` | `calculateTranslationDistance`, `extractMetadataKey`, |
 | `gsapAnimationUtils.ts` | `src/shared/utils/` | `createAnimationTimeline`, `degreesToRadians` |
 
 ### 8-4. 현재 공통化管理 상태 요약

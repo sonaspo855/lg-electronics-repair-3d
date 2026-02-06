@@ -8,7 +8,7 @@ import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionSer
 import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager';
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
 import { getScrewAnimationService } from './ScrewAnimationService';
-import { resolveNodeName, extractMetadataKey } from '../../shared/utils/commonUtils';
+import { extractMetadataKey } from '../../shared/utils/commonUtils';
 
 /**
  * 수동 조립 관리자
@@ -25,6 +25,7 @@ export class ManualAssemblyManager {
     private assemblyStateManager = getAssemblyStateManager();
     private holeCenterManager = getHoleCenterManager();
     private screwAnimationService = getScrewAnimationService();
+    private nodeNameManager = getNodeNameManager();
 
     public async initialize(sceneRoot: THREE.Object3D, cameraControls?: any): Promise<void> {
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
@@ -52,8 +53,8 @@ export class ManualAssemblyManager {
         console.log('분해 시작');
         this.assemblyStateManager.startAssembly();
 
-        const nodeNameManager = getNodeNameManager();
-        const damperCoverBodyNode = nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
+        // const nodeNameManager = getNodeNameManager();
+        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
         if (!damperCoverBodyNode) {
             throw new Error('damperCoverBodyNode를 찾을 수 없습니다.');
@@ -159,8 +160,13 @@ export class ManualAssemblyManager {
         }
     ): Promise<void> {
         // 경로이면 실제 노드 이름으로 변환
-        const actualNodeName = resolveNodeName(screwNodePath);
-        console.log('actualNodeName>> ', actualNodeName);
+        const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
+
+
+        if (!actualNodeName) {
+            console.warn(`${screwNodePath}에 해당하는 노드 이름을 찾을 수 없음`);
+            return;
+        }
 
         if (!this.screwAnimationService.isScrewNode(actualNodeName)) {
             console.warn(`${actualNodeName}은 Screw 노드가 아님`);

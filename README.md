@@ -223,7 +223,6 @@ UI 컴포넌트가 아닌 공용 코드
     - `createHighlightMaterial`: 하이라이트용 MeshBasicMaterial 생성
     - `getNodeHierarchy`: Three.js 객체의 계층 구조 추출
     - `exportHierarchyToJson`: 노드 계층 구조를 JSON 파일로 내보내기
-    - `resolveNodeName`: 노드 경로를 실제 노드 이름으로 변환
     - `extractMetadataKey`: 노드 경로에서 메타데이터 키 추출
     - `degreesToRadians`: 각도를 도에서 라디안으로 변환
   - `CoordinateTransformUtils.ts`: 좌표 변환 유틸리티

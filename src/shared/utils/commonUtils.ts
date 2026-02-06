@@ -161,16 +161,6 @@ export const exportHierarchyToJson = (hierarchy: any, filename: string = "scene_
 };
 
 /**
- * 노드 경로를 실제 노드 이름으로 변환합니다.
- * @param nodePath 노드 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
- * @returns 실제 노드 이름
- */
-export function resolveNodeName(nodePath: string): string {
-    const nodeNameLoader = getNodeNameLoader();
-    return nodeNameLoader.getNodeName(nodePath) || nodePath;
-}
-
-/**
  * 노드 경로에서 메타데이터 키를 추출합니다.
  * @param nodePath 노드 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
  * @returns 메타데이터 키 (예: 'screw1Customized')
