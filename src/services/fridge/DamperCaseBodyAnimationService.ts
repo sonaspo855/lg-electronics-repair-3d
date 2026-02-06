@@ -90,46 +90,20 @@ export class DamperCaseBodyAnimationService {
             damperCaseBodyNode.getWorldPosition(damperCaseBodyCurrentPosition);
             console.log('damperCaseBody 현재 위치:', damperCaseBodyCurrentPosition);
 
-            // 타겟 위치 계산 (screw2Customized 위치 기반 또는 fallback)
+            // 타겟 위치 계산 (로컬 오프셋 기반)
             let targetPosition: THREE.Vector3;
-            const method = animationConfig.method || 'fallback';
 
-            if (method === 'screwPositionBased') {
-                // screw2Customized 위치 기반 방식
-                const screw2NodeName = this.nodeNameManager.getNodeName(animationConfig.targetScrewNode || '');
-                console.log('screw2NodeName>> ', screw2NodeName);
+            // 오프셋 적용
+            const offset = new THREE.Vector3(
+                animationConfig.offset?.x || 0,
+                animationConfig.offset?.y || 0,
+                animationConfig.offset?.z || 0
+            );
 
-                if (screw2NodeName) {
-                    const screw2Node = this.sceneRoot.getObjectByName(screw2NodeName);
-                    if (screw2Node) {
-                        // screw2Customized의 현재 월드 위치 가져오기
-                        const screw2Position = new THREE.Vector3();
-                        screw2Node.getWorldPosition(screw2Position);
-                        console.log('screw2Customized 월드 위치:', screw2Position);
-
-                        // 오프셋 적용
-                        const offset = new THREE.Vector3(
-                            animationConfig.offset?.x || 0,
-                            animationConfig.offset?.y || 0,
-                            animationConfig.offset?.z || 0
-                        );
-                        // [수정] 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 구합니다.
-                        // localToWorld는 노드의 현재 회전과 위치를 모두 반영하여 해당 방향의 월드 좌표를 반환합니다.
-                        damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
-                        targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
-                        console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
-                    } else {
-                        console.error('screw2Customized 노드를 찾을 수 없습니다:', screw2NodeName);
-                        return false;
-                    }
-                } else {
-                    console.error('screw2Customized 노드 이름을 찾을 수 없습니다:', animationConfig.targetScrewNode);
-                    return false;
-                }
-            } else {
-                console.error('지원하지 않는 method입니다:', method);
-                return false;
-            }
+            // 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 구합니다.
+            damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
+            targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
+            console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
 
             // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetPosition.clone();
