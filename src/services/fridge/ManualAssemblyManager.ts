@@ -188,7 +188,7 @@ export class ManualAssemblyManager {
         const metadataKey = extractMetadataKey(screwNodePath);
         const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
 
-        console.log('usedConfig000>> ', usedConfig);
+        // console.log('usedConfig000>> ', usedConfig);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {

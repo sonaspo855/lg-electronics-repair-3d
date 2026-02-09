@@ -319,10 +319,10 @@ export class MetadataLoader {
         // 노드 이름의 일부로 검색 (예: screw1Customized -> screw_1)
         // const shortName = nodeName.replace('Customized', '').toLowerCase();
         const shortName = nodeName;
-        console.log('shortName>> ', shortName);
+        // console.log('shortName>> ', shortName);
         for (const [key, config] of Object.entries(this.metadata.screwAnimations)) {
             const keyLower = key.toLowerCase();
-            console.log('keyLower>> ', keyLower);
+            // console.log('keyLower>> ', keyLower);
             if (keyLower === shortName ||
                 shortName.includes(keyLower) ||
                 keyLower.includes(shortName)) {
@@ -339,8 +339,8 @@ export class MetadataLoader {
      * @returns 선형 이동 애니메이션 설정 또는 null
      */
     public getDamperCaseBodyAnimationConfig(nodeName: string): LinearMovementAnimationConfig | null {
-        console.log('getDamperCaseBodyAnimationConfig!!!>> ', nodeName);
-        console.log('this.metadata>> ', this.metadata);
+        // console.log('getDamperCaseBodyAnimationConfig!!!>> ', nodeName);
+        // console.log('this.metadata>> ', this.metadata);
         if (!this.metadata?.damperCaseBodyAnimations) {
             return null;
         }

@@ -141,15 +141,19 @@ export class DamperCaseBodyAnimationService {
                             mergedOptions.onComplete();
                         }
 
-                        `resolve`({
-                            position: {
-                                x: localTargetPosition.x,
-                                y: localTargetPosition.y,
-                                z: localTargetPosition.z
-                            },
+                        const position = {
+                            x: localTargetPosition.x,
+                            y: localTargetPosition.y,
+                            z: localTargetPosition.z
+                        };
+
+                        const result = {
+                            position,
                             duration: mergedOptions.duration,
                             easing: mergedOptions.easing
-                        });
+                        };
+
+                        resolve(result);
                     }
                 });
             });
