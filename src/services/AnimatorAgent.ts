@@ -984,18 +984,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
             console.log('Damper cover assembly completed');
 
-            // 댐퍼 커버 조립 히스토리 기록
-            if (this.animationHistoryService) {
-              const assemblyCommand: AnimationCommand = {
-                door: DoorType.TOP_LEFT,
-                action: AnimationAction.CAMERA_MOVE,
-                degrees: 0,
-                speed: 1
-              };
-              const assemblyMessage = '댐퍼 커버 조립 완료';
-              const historyItem = this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
-              console.log('[Animation History] 댐퍼 커버 조립 히스토리 추가:', historyItem);
-            }
+
           } catch (error) {
             console.error('Error during damper cover assembly:', error);
           }
