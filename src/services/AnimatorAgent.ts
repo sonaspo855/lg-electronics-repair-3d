@@ -249,6 +249,8 @@ export class AnimatorAgent {
 
   setAnimationHistoryService(service: AnimationHistoryService) {
     this.animationHistoryService = service;
+    // ManualAssemblyManager에도 AnimationHistoryService 설정
+    this.manualAssemblyManager.setAnimationHistoryService(service);
   }
 
   setActionVerbResolver(
@@ -1029,12 +1031,18 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               console.log(screw1NodeName, ' Screw1를 돌려서 빼는 애니메이션을 실행!');
               await this.manualAssemblyManager.loosenScrew(screw1NodePath);
               console.log('Left screw 1 loosened');
+              if (this.animationHistoryService) {
+                // console.log('333_Animation history after screw 1 loosened:', this.animationHistoryService.getAllHistory());
+              }
             }
 
             // 왼쪽 스크류 2 분리
             if (screw2NodeName) {
               await this.manualAssemblyManager.loosenScrew(screw2NodePath);
               console.log('Left screw 2 loosened');
+              if (this.animationHistoryService) {
+                // console.log('444_Animation history after screw 2 loosened:', this.animationHistoryService.getAllHistory());
+              }
             }
           } catch (error) {
             console.error('Error during screw loosening:', error);

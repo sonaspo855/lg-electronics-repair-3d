@@ -77,8 +77,8 @@ export class ScrewAnimationService {
     }
 
     /**
-     * Screw 회전+이동 동시 애니메이션을 실행합니다.
-     * 메타데이터가 있으면 메타데이터를 우선 사용합니다.
+     * Screw 회전+이동 동시 애니메이션을 실행
+     * 메타데이터가 있으면 메타데이터를 우선 사용
      * @param nodeName 대상 노드 이름
      * @param metadataKey 메타데이터 키 (예: 'screw1Customized')
      * @param options 애니메이션 옵션 (메타데이터가 있을 경우 옵션은 덮어씌워짐)

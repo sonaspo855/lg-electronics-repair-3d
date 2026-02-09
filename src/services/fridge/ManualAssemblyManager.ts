@@ -9,6 +9,7 @@ import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
 import { getScrewAnimationService } from './ScrewAnimationService';
 import { extractMetadataKey } from '../../shared/utils/commonUtils';
+import { AnimationHistoryService } from '../AnimationHistoryService';
 
 /**
  * 수동 조립 관리자
@@ -26,6 +27,11 @@ export class ManualAssemblyManager {
     private holeCenterManager = getHoleCenterManager();
     private screwAnimationService = getScrewAnimationService();
     private nodeNameManager = getNodeNameManager();
+    private animationHistoryService: AnimationHistoryService | null = null;
+
+    public setAnimationHistoryService(service: AnimationHistoryService): void {
+        this.animationHistoryService = service;
+    }
 
     public async initialize(sceneRoot: THREE.Object3D, cameraControls?: any): Promise<void> {
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
@@ -165,7 +171,6 @@ export class ManualAssemblyManager {
         // 경로이면 실제 노드 이름으로 변환
         const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
 
-
         if (!actualNodeName) {
             console.warn(`${screwNodePath}에 해당하는 노드 이름을 찾을 수 없음`);
             return;
@@ -179,6 +184,21 @@ export class ManualAssemblyManager {
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
         await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
+
+        // 애니메이션 히스토리 기록
+        if (this.animationHistoryService) {
+            const screwMessage = `${actualNodeName} 스크류 분리 완료`;
+            this.animationHistoryService.addAnimationHistory(
+                {
+                    door: 'top_left' as any,
+                    action: 'camera_move' as any,
+                    degrees: 0,
+                    speed: options?.duration || 1500
+                },
+                screwMessage
+            );
+            console.log('Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
+        }
     }
 
     public dispose(): void {
