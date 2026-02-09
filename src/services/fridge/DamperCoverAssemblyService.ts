@@ -171,7 +171,7 @@ export class DamperCoverAssemblyService {
                     x: targetLocalPos.x,
                     y: targetLocalPos.y,
                     z: targetLocalPos.z,
-                    duration: duration,
+                    duration: duration / 1000, // 밀리초를 초 단위로 변환
                     ease: easing,
                     onComplete: () => {
                         console.log('커버 노드 이동 완료');
@@ -182,15 +182,19 @@ export class DamperCoverAssemblyService {
             });
 
             // 좌표 정보 반환
-            return {
-                position: {
-                    x: targetLocalPos.x,
-                    y: targetLocalPos.y,
-                    z: targetLocalPos.z
-                },
-                duration: duration * 1000, // ms 단위로 변환
-                easing: easing
+            const position = {
+                x: targetLocalPos.x,
+                y: targetLocalPos.y,
+                z: targetLocalPos.z
             };
+
+            const result = {
+                position,
+                duration,
+                easing
+            };
+
+            return result;
         }
 
         // 돌출부나 홈이 없는 경우 null 반환
