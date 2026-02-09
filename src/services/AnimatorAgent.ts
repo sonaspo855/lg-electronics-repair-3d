@@ -1110,6 +1110,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.log('damperCaseBody 힌지 반대 방향으로 선형이동 서비스가 초기화되지 않음');
           }
 
+          // 분리된 왼쪽 스크류2 노드의 위치에서 오른쪽 방향으로 선형이동
+
 
 
 
