@@ -156,6 +156,7 @@ export const AnimationAction = {
   SET_SPEED: 'set_speed',
   CAMERA_MOVE: 'camera_move',
   SCREW_LOOSEN: 'screw_loosen',
+  DAMPER_COVER_BODY: 'damper_cover_body',
   DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
 } as const;
 
@@ -1010,7 +1011,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               // console.log('assemblyResult>>> ', assemblyResult);
               const assemblyCommand: AnimationCommand = {
                 door: commandsArray[0].door,
-                action: AnimationAction.CAMERA_MOVE,
+                action: AnimationAction.DAMPER_COVER_BODY,
                 degrees: 0,
                 speed: 1,
                 position: assemblyResult.position,
@@ -1051,7 +1052,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
               console.log('Left screw 1 loosened');
               if (this.animationHistoryService) {
-                // console.log('333_Animation history after screw 1 loosened:', this.animationHistoryService.getAllHistory());
               }
             }
 
@@ -1063,7 +1063,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               await this.manualAssemblyManager.loosenScrew(screw2NodePath, config2 || {});
               console.log('Left screw 2 loosened');
               if (this.animationHistoryService) {
-                // console.log('444_Animation history after screw 2 loosened:', this.animationHistoryService.getAllHistory());
               }
             }
           } catch (error) {
@@ -1076,7 +1075,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               console.log('damperCaseBody 힌지 반대 방향으로 선형이동 시작!!!');
 
               // 애니메이션 실행
-              await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
+              const animationResult = await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
                 duration: 1000,
                 easing: 'power2.inOut',
                 onComplete: () => {
@@ -1085,16 +1084,23 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               });
 
               // 애니메이션 히스토리 기록
-              if (this.animationHistoryService) {
+              if (animationResult && this.animationHistoryService) {
                 const animationCommand = {
                   door: commandsArray[0].door,
                   action: AnimationAction.DAMPER_CASE_BODY_MOVE,
                   degrees: 0,
-                  speed: 1
+                  speed: 1,
+                  position: animationResult.position,
+                  easing: animationResult.easing,
+                  duration: animationResult.duration
                 };
                 const animationMessage = 'damperCaseBody 힌지 반대 방향으로 선형이동 완료';
                 this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
                 console.log('333_Animation history after damper case body linear move:', this.animationHistoryService.getAllHistory());
+              } else if (!animationResult) {
+                console.warn('Damper case body animation returned null, skipping history logging');
+              } else {
+                console.warn('Animation history service not available');
               }
 
             } catch (error) {

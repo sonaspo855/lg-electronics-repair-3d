@@ -37,18 +37,22 @@ export class DamperCaseBodyAnimationService {
     /**
      * 댐퍼 케이스 바디 선형 이동 애니메이션을 실행합니다.
      * @param options 애니메이션 옵션
-     * @returns 애니메이션 완료 여부
+     * @returns 애니메이션 정보 (위치, duration, easing) 또는 null
      */
     public async animateDamperCaseBodyLinearMove(options: {
         duration?: number;
         easing?: string;
         onComplete?: () => void;
-    } = {}): Promise<boolean> {
+    } = {}): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
         try {
-            // console.log('animateDamperCaseBodyLinearMove!!!');
+            // console.log('animateDamperCaseBodyLinearMove options>>> ', options);
             if (!this.sceneRoot) {
                 console.error('Scene Root가 설정되지 않았습니다. setSceneRoot()를 먼저 호출해주세요.');
-                return false;
+                return null;
             }
 
             // 노드 이름 가져오기
@@ -56,20 +60,21 @@ export class DamperCaseBodyAnimationService {
             // console.log('damperCaseBodyNodeName>> ', damperCaseBodyNodeName);
             if (!damperCaseBodyNodeName) {
                 console.error('댐퍼 케이스 바디 노드 이름을 찾을 수 없습니다.');
-                return false;
+                return null;
             }
 
             // 메타데이터 설정 가져오기
             const animationConfig = this.metadataLoader.getDamperCaseBodyAnimationConfig(damperCaseBodyNodeName);
             if (!animationConfig) {
                 console.error('댐퍼 케이스 바디 애니메이션 설정을 찾을 수 없습니다.');
-                return false;
+                return null;
             }
+            console.log('animationConfig000>> ', animationConfig);
 
             // 애니메이션 옵션 병합
             const mergedOptions = {
-                duration: options.duration || animationConfig.duration,
-                easing: options.easing || animationConfig.easing,
+                duration: animationConfig.duration,
+                easing: animationConfig.easing,
                 onComplete: options.onComplete
             };
 
@@ -82,7 +87,7 @@ export class DamperCaseBodyAnimationService {
             const damperCaseBodyNode = this.sceneRoot.getObjectByName(damperCaseBodyNodeName);
             if (!damperCaseBodyNode) {
                 console.error(`댐퍼 케이스 바디 노드를 찾을 수 없습니다: ${damperCaseBodyNodeName}`);
-                return false;
+                return null;
             }
 
             // damperCaseBody 현재 위치 출력
@@ -117,7 +122,11 @@ export class DamperCaseBodyAnimationService {
             }
 
             // GSAP를 사용한 선형 이동 애니메이션
-            return new Promise<boolean>((resolve) => {
+            return new Promise<{
+                position: { x: number; y: number; z: number };
+                duration: number;
+                easing: string;
+            } | null>((resolve) => {
                 gsap.to(damperCaseBodyNode.position, {
                     x: localTargetPosition.x,
                     y: localTargetPosition.y,
@@ -132,14 +141,22 @@ export class DamperCaseBodyAnimationService {
                             mergedOptions.onComplete();
                         }
 
-                        resolve(true);
+                        `resolve`({
+                            position: {
+                                x: localTargetPosition.x,
+                                y: localTargetPosition.y,
+                                z: localTargetPosition.z
+                            },
+                            duration: mergedOptions.duration,
+                            easing: mergedOptions.easing
+                        });
                     }
                 });
             });
 
         } catch (error) {
             console.error('댐퍼 케이스 바디 애니메이션 실행 중 오류:', error);
-            return false;
+            return null;
         }
     }
 

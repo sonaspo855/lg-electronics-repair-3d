@@ -155,6 +155,11 @@ export class AnimationHistoryService {
             }
         }
 
+        // 댐퍼 케이스 바디 이동 애니메이션 속성 표시 (DAMPER_CASE_BODY_MOVE도 position, duration, easing 표시)
+        if (command.action === AnimationAction.DAMPER_CASE_BODY_MOVE) {
+            // position, duration, easing은 위에서 already added
+        }
+
         return parts.join(' ');
     }
 
