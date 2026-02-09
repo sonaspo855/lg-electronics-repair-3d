@@ -44,6 +44,8 @@ import { AnimationHistoryService } from './AnimationHistoryService';
 import { getManualAssemblyManager } from './fridge/ManualAssemblyManager';
 // import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
 import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
+import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
+import { extractMetadataKey } from '@/shared/utils/commonUtils';
 
 // Door types and their identifiers
 export const DoorType = {
@@ -1033,10 +1035,30 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
             const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
+            // 메타데이터 로더 초기화
+            const metadataLoader = getMetadataLoader();
+
+            // 메타데이터 로드
+            if (!metadataLoader.isLoaded()) {
+              try {
+                await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+              } catch (error) {
+                console.error('Metadata loading failed:', error);
+                throw new Error('Failed to load metadata');
+              }
+            }
+
             // 왼쪽 스크류 1 분리
             if (screw1NodeName) {
               console.log(screw1NodeName, ' Screw1를 돌려서 빼는 애니메이션을 실행!');
-              await this.manualAssemblyManager.loosenScrew(screw1NodePath);
+
+              // 메타데이터 키 추출
+              const metadataKey1 = extractMetadataKey(screw1NodePath);
+              console.log('metadataKey1>> ', metadataKey1);
+              const config1 = metadataLoader.getScrewAnimationConfig(metadataKey1);
+              console.log('config1>>> ', config1);
+
+              await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
               console.log('Left screw 1 loosened');
               if (this.animationHistoryService) {
                 // console.log('333_Animation history after screw 1 loosened:', this.animationHistoryService.getAllHistory());
@@ -1045,7 +1067,10 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
             // 왼쪽 스크류 2 분리
             if (screw2NodeName) {
-              await this.manualAssemblyManager.loosenScrew(screw2NodePath);
+              const metadataKey2 = extractMetadataKey(screw2NodePath);
+              const config2 = metadataLoader.getScrewAnimationConfig(metadataKey2);
+
+              await this.manualAssemblyManager.loosenScrew(screw2NodePath, config2 || {});
               console.log('Left screw 2 loosened');
               if (this.animationHistoryService) {
                 // console.log('444_Animation history after screw 2 loosened:', this.animationHistoryService.getAllHistory());

@@ -182,6 +182,8 @@ export class ManualAssemblyManager {
             return;
         }
 
+        console.log('options11>> ', options);
+
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
         const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
