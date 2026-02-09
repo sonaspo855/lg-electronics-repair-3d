@@ -13,6 +13,14 @@ export interface AnimationHistoryItem {
         action: AnimationAction;
         degrees?: number;
         speed?: number;
+        // 좌표 정보 (댐퍼 커버 조립 등에서 사용)
+        position?: {
+            x: number;
+            y: number;
+            z: number;
+        };
+        easing?: string;
+        duration?: number;
     };
 }
 

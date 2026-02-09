@@ -173,6 +173,14 @@ export interface AnimationCommand {
   action: AnimationAction;
   degrees?: number;
   speed?: number;
+  // 좌표 정보 (댐퍼 커버 조립 등에서 사용)
+  position?: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  easing?: string;
+  duration?: number;
 }
 
 // LLM Response types
@@ -981,9 +989,20 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
           // 댐퍼 돌출부/홈 결합 애니메이션 실행
           try {
-            await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
+            const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
             console.log('Damper cover assembly completed');
 
+            // 댐퍼 커버 조립 히스토리 기록
+            if (assemblyResult && this.animationHistoryService) {
+
+              const assemblyMessage = `댐퍼 커버 조립 완료 (위치: x=${assemblyResult.position.x.toFixed(4)}, y=${assemblyResult.position.y.toFixed(4)}, z=${assemblyResult.position.z.toFixed(4)}, 지속시간: ${assemblyResult.duration}ms, 이징: ${assemblyResult.easing})`;
+              console.log('assemblyResult>>> ', assemblyResult);
+
+            } else if (!assemblyResult) {
+              console.warn('Damper cover assembly returned null, skipping history logging');
+            } else {
+              console.warn('Animation history service not available');
+            }
 
           } catch (error) {
             console.error('Error during damper cover assembly:', error);

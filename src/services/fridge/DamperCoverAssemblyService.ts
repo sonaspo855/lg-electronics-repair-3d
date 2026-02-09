@@ -47,10 +47,14 @@ export class DamperCoverAssemblyService {
     public async assembleDamperCover(options?: {
         duration?: number;
         onComplete?: () => void;
-    }): Promise<void> {
+    }): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
         if (!this.sceneRoot) {
             console.error('Scene root not initialized.');
-            return;
+            return null;
         }
 
         // const nodeNameManager = getNodeNameManager();
@@ -62,7 +66,7 @@ export class DamperCoverAssemblyService {
                 coverName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody'),
                 assemblyName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')
             });
-            return;
+            return null;
         }
 
         const assemblyKey = 'damper_cover_assembly';
@@ -147,18 +151,28 @@ export class DamperCoverAssemblyService {
             const targetWorldPos = currentWorldPos.clone().add(worldMoveVector);
 
             // 부모 좌표계로 변환 (로컬 position 업데이트를 위해)
+            // targetLocalPos: 이동될 목표 위치의 좌표
             const targetLocalPos = coverNode.parent
                 ? coverNode.parent.worldToLocal(targetWorldPos.clone())
                 : targetWorldPos;
 
             // GSAP 선형 이동 애니메이션
+            // const duration = options?.duration ? options.duration / 1000 : 1.5;
+            const duration = options?.duration;
+
+            if (!duration) {
+                return null;
+            }
+
+            const easing = 'power2.inOut';
+
             await new Promise<void>((resolve) => {
                 gsap.to(coverNode.position, {
                     x: targetLocalPos.x,
                     y: targetLocalPos.y,
                     z: targetLocalPos.z,
-                    duration: options?.duration ? options.duration / 1000 : 1.5,
-                    ease: 'power2.inOut',
+                    duration: duration,
+                    ease: easing,
                     onComplete: () => {
                         console.log('커버 노드 이동 완료');
                         if (options?.onComplete) options.onComplete();
@@ -166,7 +180,21 @@ export class DamperCoverAssemblyService {
                     }
                 });
             });
+
+            // 좌표 정보 반환
+            return {
+                position: {
+                    x: targetLocalPos.x,
+                    y: targetLocalPos.y,
+                    z: targetLocalPos.z
+                },
+                duration: duration * 1000, // ms 단위로 변환
+                easing: easing
+            };
         }
+
+        // 돌출부나 홈이 없는 경우 null 반환
+        return null;
     }
 
     /**

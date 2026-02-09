@@ -137,8 +137,12 @@ export class ManualAssemblyManager {
             duration?: number;
             onComplete?: () => void;
         }
-    ): Promise<void> {
-        await this.damperCoverAssemblyService.assembleDamperCover(options);
+    ): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        return await this.damperCoverAssemblyService.assembleDamperCover(options);
     }
 
     /**
