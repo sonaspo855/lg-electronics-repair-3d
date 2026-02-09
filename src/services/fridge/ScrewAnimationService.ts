@@ -16,6 +16,7 @@ export interface ScrewAnimationOptions {
     screwPitch?: number;         // 나사산 간격 (m, 기본값: 0.005m = 0.5cm)
     rotationAxis?: 'x' | 'y' | 'z'; // 회전축 (기본값: 'z')
     extractDirection?: [number, number, number]; // 빼내는 방향 (로컬 좌표계, 기본값: [0, 0, 1])
+    easing?: string;             // 이징 함수 (기본값: 메타데이터에서 가져옴)
     onComplete?: () => void;    // 완료 콜백
     onProgress?: (progress: number) => void; // 진행률 콜백
 }
@@ -62,7 +63,8 @@ export class ScrewAnimationService {
             try {
                 await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
             } catch (error) {
-                console.error('메타데이터 로드 실패:', error);
+                console.error('Metadata loading failed:', error);
+                throw new Error('Failed to load metadata');
             }
         }
     }
@@ -82,16 +84,16 @@ export class ScrewAnimationService {
      * @param nodeName 대상 노드 이름
      * @param metadataKey 메타데이터 키 (예: 'screw1Customized')
      * @param options 애니메이션 옵션 (메타데이터가 있을 경우 옵션은 덮어씌워짐)
-     * @returns Promise (애니메이션 완료 시 resolve)
+     * @returns Promise (애니메이션 완료 시 resolve, 실제 사용된 설정값 반환)
      */
     public async animateScrewRotation(
         nodePath: string,
         metadataKey: string,
         options: ScrewAnimationOptions = {}
-    ): Promise<void> {
+    ): Promise<ScrewAnimationMetadata> {
         if (!this.sceneRoot) {
             console.error('Scene root not initialized.');
-            return;
+            throw new Error('Scene root not initialized.');
         }
 
         // 기존 애니메이션 정리 (메모리 누수 방지)
@@ -110,13 +112,16 @@ export class ScrewAnimationService {
         const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
         const hasMetadata = metadata !== null;
 
+        console.log('options333>> ', options.duration);
+        console.log('options333>> ', options.rotationAngle);
+
         // 옵션과 메타데이터 병합 (메타데이터 우선)
         const config = {
             duration: options.duration ?? metadata?.duration ?? 1500,
             rotationAngle: options.rotationAngle ?? metadata?.rotationAngle ?? 720,
             screwPitch: options.screwPitch ?? 0.005,
             rotationAxis: options.rotationAxis ?? metadata?.rotationAxis ?? 'z',
-            easing: metadata?.easing ?? 'power2.inOut',
+            easing: options.easing ?? metadata?.easing ?? 'power2.inOut',
             extractDirection: options.extractDirection ?? metadata?.extractDirection ?? [0, 0, 1],
             ...options
         };
@@ -124,7 +129,7 @@ export class ScrewAnimationService {
         const screwNodeName = this.nodeNameManager.getNodeName(nodePath);  // `fridge.leftDoorDamper.screw2Customized` 로 노드 이름 추출
         if (!screwNodeName) {
             console.error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
-            return;
+            throw new Error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
         }
         // console.log('screwNodeName>> ', screwNodeName);  // 4J01424B_Screw,Customized_4168029
 
@@ -132,7 +137,7 @@ export class ScrewAnimationService {
         // console.log('screwNodeObj>> ', screwNodeObj);
         if (!screwNodeObj) {
             console.error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
-            return;
+            throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
         }
 
         // pullDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
@@ -142,6 +147,17 @@ export class ScrewAnimationService {
             config.screwPitch!,
             config.rotationAngle!
         );
+        // console.log('translationDistance>> ', translationDistance);  // 10, 50
+
+        // 실제 사용된 설정값 (반환용)
+        const usedConfig: ScrewAnimationMetadata = {
+            rotationAxis: config.rotationAxis!,
+            rotationAngle: config.rotationAngle!,
+            extractDirection: config.extractDirection!,
+            extractDistance: translationDistance,
+            duration: config.duration!,
+            easing: config.easing!
+        };
 
         // 회전+이동 동시 애니메이션 생성
         this.timeline = createAnimationTimeline(
@@ -182,7 +198,7 @@ export class ScrewAnimationService {
 
         return new Promise((resolve) => {
             this.timeline?.eventCallback('onComplete', () => {
-                resolve();
+                resolve(usedConfig);
             });
         });
     }

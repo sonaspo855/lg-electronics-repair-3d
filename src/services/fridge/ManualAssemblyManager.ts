@@ -184,7 +184,9 @@ export class ManualAssemblyManager {
 
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
-        await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
+        const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
+
+        console.log('usedConfig000>> ', usedConfig);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {
@@ -193,12 +195,16 @@ export class ManualAssemblyManager {
                 {
                     door: 'top_left' as any,
                     action: AnimationAction.SCREW_LOOSEN,
-                    degrees: 0,
-                    speed: options?.duration || 1500
+                    duration: usedConfig.duration,
+                    easing: usedConfig.easing,
+                    rotationAngle: usedConfig.rotationAngle,
+                    rotationAxis: usedConfig.rotationAxis,
+                    extractDirection: usedConfig.extractDirection,
+                    translationDistance: usedConfig.extractDistance
                 },
                 screwMessage
             );
-            console.log('Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
+            console.log('3344_Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
         }
     }
 

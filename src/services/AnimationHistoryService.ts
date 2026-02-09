@@ -21,6 +21,11 @@ export interface AnimationHistoryItem {
         };
         easing?: string;
         duration?: number;
+        // 스크류 애니메이션 관련 속성 추가
+        rotationAngle?: number;        // 회전 각도 (도)
+        rotationAxis?: 'x' | 'y' | 'z'; // 회전축
+        extractDirection?: [number, number, number]; // 추출 방향
+        translationDistance?: number;  // 이동 거리
     };
 }
 
@@ -76,7 +81,11 @@ export class AnimationHistoryService {
                 speed: command.speed,
                 position: command.position,
                 easing: command.easing,
-                duration: command.duration
+                duration: command.duration,
+                rotationAngle: command.rotationAngle,
+                rotationAxis: command.rotationAxis,
+                extractDirection: command.extractDirection,
+                translationDistance: command.translationDistance
             }
         };
 
@@ -128,6 +137,22 @@ export class AnimationHistoryService {
 
         if (command.easing) {
             parts.push(`easing:${command.easing}`);
+        }
+
+        // 스크류 애니메이션 관련 속성 표시
+        if (command.action === AnimationAction.SCREW_LOOSEN) {
+            if (command.rotationAngle !== undefined) {
+                parts.push(`${command.rotationAngle}°`);
+            }
+            if (command.rotationAxis) {
+                parts.push(`axis:${command.rotationAxis}`);
+            }
+            if (command.extractDirection) {
+                parts.push(`dir(${command.extractDirection.join(',')})`);
+            }
+            if (command.translationDistance !== undefined) {
+                parts.push(`dist:${command.translationDistance.toFixed(3)}m`);
+            }
         }
 
         return parts.join(' ');

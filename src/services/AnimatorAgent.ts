@@ -183,6 +183,11 @@ export interface AnimationCommand {
   };
   easing?: string;
   duration?: number;
+  // 스크류 애니메이션 관련 속성 추가
+  rotationAngle?: number;        // 회전 각도 (도)
+  rotationAxis?: 'x' | 'y' | 'z'; // 회전축
+  extractDirection?: [number, number, number]; // 추출 방향
+  translationDistance?: number;  // 이동 거리
 }
 
 // LLM Response types
