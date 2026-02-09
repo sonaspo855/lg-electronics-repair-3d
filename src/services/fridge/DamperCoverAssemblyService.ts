@@ -182,6 +182,7 @@ export class DamperCoverAssemblyService {
             });
 
             // 좌표 정보 반환
+            // targetLocalPos: 이동될 목표 위치의 좌표
             const position = {
                 x: targetLocalPos.x,
                 y: targetLocalPos.y,
