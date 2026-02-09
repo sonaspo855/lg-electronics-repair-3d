@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { invalidate } from '@react-three/fiber';
 import { getNodeNameLoader } from './NodeNameLoader';
+import { getMetadataLoader } from './MetadataLoader';
 
 /**
  * Three.js 객체의 정밀 바운딩 박스를 계산하는 함수
@@ -178,4 +179,20 @@ export function extractMetadataKey(nodePath: string): string {
  */
 export function degreesToRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
+}
+
+/**
+ * 메타데이터 전역 초기화 함수
+ * 애플리케이션 시작 시 메타데이터를 한 번만 로드합니다.
+ */
+export async function initializeMetadata(): Promise<void> {
+    const metadataLoader = getMetadataLoader();
+    if (!metadataLoader.isLoaded()) {
+        try {
+            await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+            console.log('메타데이터 전역 초기화 완료');
+        } catch (error) {
+            console.error('메타데이터 로드 실패:', error);
+        }
+    }
 }

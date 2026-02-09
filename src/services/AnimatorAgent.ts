@@ -1035,18 +1035,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
             const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
-            // 메타데이터 로더 초기화
+            // 메타데이터 로더 초기화 (전역에서 이미 로드됨)
             const metadataLoader = getMetadataLoader();
-
-            // 메타데이터 로드
-            if (!metadataLoader.isLoaded()) {
-              try {
-                await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
-              } catch (error) {
-                console.error('Metadata loading failed:', error);
-                throw new Error('Failed to load metadata');
-              }
-            }
 
             // 왼쪽 스크류 1 분리
             if (screw1NodeName) {

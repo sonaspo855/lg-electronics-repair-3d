@@ -112,17 +112,14 @@ export class ScrewAnimationService {
         const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
         const hasMetadata = metadata !== null;
 
-        console.log('options333>> ', options.duration);
-        console.log('options333>> ', options.rotationAngle);
-
-        // 옵션과 메타데이터 병합 (메타데이터 우선)
+        // 옵션과 메타데이터 병합 (options가 항상 전달되므로 metadata 기본값 불필요)
         const config = {
-            duration: options.duration ?? metadata?.duration ?? 1500,
-            rotationAngle: options.rotationAngle ?? metadata?.rotationAngle ?? 720,
+            duration: options.duration ?? 1500,
+            rotationAngle: options.rotationAngle ?? 720,
             screwPitch: options.screwPitch ?? 0.005,
-            rotationAxis: options.rotationAxis ?? metadata?.rotationAxis ?? 'z',
-            easing: options.easing ?? metadata?.easing ?? 'power2.inOut',
-            extractDirection: options.extractDirection ?? metadata?.extractDirection ?? [0, 0, 1],
+            rotationAxis: options.rotationAxis ?? 'z',
+            easing: options.easing ?? 'power2.inOut',
+            extractDirection: options.extractDirection ?? [0, 0, 1],
             ...options
         };
 
