@@ -99,7 +99,9 @@ export class AnimationHistoryService {
             [AnimationAction.CLOSE]: 'Close',
             [AnimationAction.SET_DEGREES]: 'Set Degrees',
             [AnimationAction.SET_SPEED]: 'Set Speed',
-            [AnimationAction.CAMERA_MOVE]: 'Camera Move'
+            [AnimationAction.CAMERA_MOVE]: 'Camera Move',
+            [AnimationAction.SCREW_LOOSEN]: 'Screw Loosen',
+            [AnimationAction.DAMPER_CASE_BODY_MOVE]: 'Damper Case Body Move'
         };
 
         return `${actionNames[command.action]} ${doorNames[command.door]}`;

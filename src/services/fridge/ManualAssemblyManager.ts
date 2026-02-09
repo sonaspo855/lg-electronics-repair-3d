@@ -10,6 +10,7 @@ import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/Ho
 import { getScrewAnimationService } from './ScrewAnimationService';
 import { extractMetadataKey } from '../../shared/utils/commonUtils';
 import { AnimationHistoryService } from '../AnimationHistoryService';
+import { AnimationAction } from '../AnimatorAgent';
 
 /**
  * 수동 조립 관리자
@@ -191,7 +192,7 @@ export class ManualAssemblyManager {
             this.animationHistoryService.addAnimationHistory(
                 {
                     door: 'top_left' as any,
-                    action: 'camera_move' as any,
+                    action: AnimationAction.SCREW_LOOSEN,
                     degrees: 0,
                     speed: options?.duration || 1500
                 },

@@ -152,7 +152,9 @@ export const AnimationAction = {
   CLOSE: 'close',
   SET_DEGREES: 'set_degrees',
   SET_SPEED: 'set_speed',
-  CAMERA_MOVE: 'camera_move'
+  CAMERA_MOVE: 'camera_move',
+  SCREW_LOOSEN: 'screw_loosen',
+  DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
 } as const;
 
 export type AnimationAction = typeof AnimationAction[keyof typeof AnimationAction];
@@ -1066,7 +1068,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               if (this.animationHistoryService) {
                 const animationCommand = {
                   door: commandsArray[0].door,
-                  action: AnimationAction.CAMERA_MOVE,
+                  action: AnimationAction.DAMPER_CASE_BODY_MOVE,
                   degrees: 0,
                   speed: 1
                 };
