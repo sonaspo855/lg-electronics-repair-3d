@@ -8,7 +8,7 @@ import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionSer
 
 /**
  * 댐퍼 커버 조립 서비스
- * 댐퍼 커버 조립 로직을 담당합니다.
+ * 댐퍼 커버 조립 로직을 담당
  */
 export class DamperCoverAssemblyService {
     private sceneRoot: THREE.Object3D | null = null;
@@ -26,9 +26,11 @@ export class DamperCoverAssemblyService {
         insertionDirection?: THREE.Vector3;
         filteredVerticesCount?: number;
     }> = [];
+    private nodeNameManager = getNodeNameManager();
+    private metadataLoader = getMetadataLoader();
 
     /**
-     * 댐퍼 커버 조립 서비스를 초기화합니다.
+     * 댐퍼 커버 조립 서비스를 초기화
      * @param sceneRoot 씬 루트 객체
      */
     public initialize(sceneRoot: THREE.Object3D): void {
@@ -36,14 +38,11 @@ export class DamperCoverAssemblyService {
         this.assemblyPathVisualizer.initialize(sceneRoot);
         this.grooveDetectionService.initialize(sceneRoot);
 
-        // 메타데이터 미리 로드
-        const nodeNameManager = getNodeNameManager();
-        nodeNameManager.enableMetadataMode();
+        this.nodeNameManager.enableMetadataMode();
     }
 
     /**
-     * 댐퍼 커버 조립 (메타데이터 기반)
-     * 메타데이터가 항상 존재한다고 가정하여 메타데이터 정보로 동작합니다.
+     * 댐퍼 돌출부/홈 결합
      */
     public async assembleDamperCover(options?: {
         duration?: number;
@@ -54,43 +53,37 @@ export class DamperCoverAssemblyService {
             return;
         }
 
-        const nodeNameManager = getNodeNameManager();
-        const coverNode = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!
-        ) as THREE.Mesh;
-        const assemblyNode = this.sceneRoot.getObjectByName(
-            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
-        ) as THREE.Mesh;
+        // const nodeNameManager = getNodeNameManager();
+        const coverNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!) as THREE.Mesh;
+        const assemblyNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!) as THREE.Mesh;
 
         if (!coverNode || !assemblyNode) {
             console.error('Target nodes not found for assembly:', {
-                coverName: nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody'),
-                assemblyName: nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')
+                coverName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody'),
+                assemblyName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')
             });
             return;
         }
 
-        // 메타데이터 로드
-        const metadataLoader = getMetadataLoader();
         const assemblyKey = 'damper_cover_assembly';
 
-        if (!metadataLoader.isLoaded()) {
+        if (!this.metadataLoader.isLoaded()) {
             try {
-                await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+                await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
             } catch (error) {
                 console.error('Metadata loading failed:', error);
                 throw new Error('Failed to load metadata');
             }
         }
 
-        const config = metadataLoader.getAssemblyConfig(assemblyKey);
+        const config = this.metadataLoader.getAssemblyConfig(assemblyKey);
         if (!config) {
             throw new Error(`Config not found for key: ${assemblyKey}`);
         }
 
         const grooveParams = config.grooveDetection;
 
-        // [Cover 분석] 결합 돌출부(Plug) 탐지
+        // 결합 돌출부(Plug) 탐지
         const plugAnalyses = NormalBasedHighlight.calculatePlugByEdgeAnalysis(
             coverNode,
             grooveParams.plugSearchDirection ?? new THREE.Vector3(0, 1, 0),
@@ -103,13 +96,13 @@ export class DamperCoverAssemblyService {
             plugAnalyses,
             (grooveParams.plugClusteringDistance ?? 0.005) * 1.5
         );
-        // console.log('this.detectedPlugs>> ', this.detectedPlugs);
+        console.log('this.detectedPlugs>> ', this.detectedPlugs);
 
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
         this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
-            nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
+            this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
-        // console.log('this.detectedHoles>>> ', this.detectedHoles);
+        console.log('this.detectedHoles>>> ', this.detectedHoles);
 
 
         // 탐지된 좌표 시각화 (AssemblyPathVisualizer 사용)

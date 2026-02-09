@@ -130,8 +130,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * 댐퍼 커버 조립 (메타데이터 기반)
-     * 메타데이터가 항상 존재한다고 가정하여 메타데이터 정보로 동작합니다.
+     * 댐퍼 돌출부/홈 결합
      */
     public async assembleDamperCover(
         options?: {
