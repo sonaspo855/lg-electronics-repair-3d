@@ -922,6 +922,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 commandsArray.forEach(command => {
                   this.animationHistoryService?.addAnimationHistory(command, completionMessage);
                 });
+                console.log('000_Animation history after adding damper commands:', this.animationHistoryService.getAllHistory());
               } else {
                 console.warn('Animation history service not available');
               }
@@ -983,6 +984,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           const cameraMessage = 'Camera moved to damper position';
           if (this.animationHistoryService) {
             this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
+            console.log('111_Animation history after camera move:', this.animationHistoryService.getAllHistory());
           } else {
             console.warn('Animation history service not available');
           }
@@ -1006,6 +1008,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               };
               const assemblyMessage = '댐퍼 커버 조립 완료';
               this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
+              console.log('222_Animation history after damper cover assembly:', this.animationHistoryService.getAllHistory());
             } else if (!assemblyResult) {
               console.warn('Damper cover assembly returned null, skipping history logging');
             } else {
@@ -1059,8 +1062,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                   degrees: 0,
                   speed: 1
                 };
-                const animationMessage = '가장 알까리 코치 반대 방향으로 선형 이동 완료';
+                const animationMessage = 'damperCaseBody 힌지 반대 방향으로 선형이동 완료';
                 this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
+                console.log('333_Animation history after damper case body linear move:', this.animationHistoryService.getAllHistory());
               }
 
             } catch (error) {
@@ -1108,6 +1112,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             if (this.animationHistoryService) {
               console.log('Adding to animation history:', command);
               this.animationHistoryService.addAnimationHistory(command, completionMessage);
+              console.log('444_Animation history after single command:', this.animationHistoryService.getAllHistory());
             } else {
               console.warn('Animation history service not available for single command');
             }
@@ -1474,6 +1479,7 @@ What would you like to do next?`,
                 completionMessage
               );
             });
+            console.log('Animation history after close all doors:', this.animationHistoryService.getAllHistory());
           } else {
             console.warn('Animation history service not available for close all');
           }
