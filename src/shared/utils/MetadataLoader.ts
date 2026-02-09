@@ -304,8 +304,8 @@ export class MetadataLoader {
      * @returns 스크류 애니메이션 설정 또는 null
      */
     public getScrewAnimationConfig(nodeName: string): ScrewAnimationConfig | null {
-        console.log('getScrewAnimationConfig!!!>> ', nodeName);
-        console.log('this.metadata>> ', this.metadata);
+        // console.log('getScrewAnimationConfig!!!>> ', nodeName);
+        // console.log('this.metadata>> ', this.metadata);
         if (!this.metadata?.screwAnimations) {
             return null;
         }

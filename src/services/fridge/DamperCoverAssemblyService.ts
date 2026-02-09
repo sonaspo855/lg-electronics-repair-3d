@@ -100,13 +100,13 @@ export class DamperCoverAssemblyService {
             plugAnalyses,
             (grooveParams.plugClusteringDistance ?? 0.005) * 1.5
         );
-        console.log('this.detectedPlugs>> ', this.detectedPlugs);
+        // console.log('this.detectedPlugs>> ', this.detectedPlugs);
 
         // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
         this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
             this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
-        console.log('this.detectedHoles>>> ', this.detectedHoles);
+        // console.log('this.detectedHoles>>> ', this.detectedHoles);
 
 
         // 탐지된 좌표 시각화 (AssemblyPathVisualizer 사용)

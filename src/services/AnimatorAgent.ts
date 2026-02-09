@@ -975,7 +975,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
           // 카메라 이동 히스토리 기록
           const cameraMoveCommand: AnimationCommand = {
-            door: DoorType.TOP_LEFT,
+            door: commandsArray[0].door,
             action: AnimationAction.CAMERA_MOVE,
             degrees: 0,
             speed: 1
@@ -994,10 +994,18 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
             // 댐퍼 커버 조립 히스토리 기록
             if (assemblyResult && this.animationHistoryService) {
-
-              const assemblyMessage = `댐퍼 커버 조립 완료 (위치: x=${assemblyResult.position.x.toFixed(4)}, y=${assemblyResult.position.y.toFixed(4)}, z=${assemblyResult.position.z.toFixed(4)}, 지속시간: ${assemblyResult.duration}ms, 이징: ${assemblyResult.easing})`;
-              console.log('assemblyResult>>> ', assemblyResult);
-
+              // console.log('assemblyResult>>> ', assemblyResult);
+              const assemblyCommand: AnimationCommand = {
+                door: commandsArray[0].door,
+                action: AnimationAction.CAMERA_MOVE,
+                degrees: 0,
+                speed: 1,
+                position: assemblyResult.position,
+                easing: assemblyResult.easing,
+                duration: assemblyResult.duration
+              };
+              const assemblyMessage = '댐퍼 커버 조립 완료';
+              this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
             } else if (!assemblyResult) {
               console.warn('Damper cover assembly returned null, skipping history logging');
             } else {
@@ -1046,7 +1054,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               // 애니메이션 히스토리 기록
               if (this.animationHistoryService) {
                 const animationCommand = {
-                  door: DoorType.TOP_LEFT,
+                  door: commandsArray[0].door,
                   action: AnimationAction.CAMERA_MOVE,
                   degrees: 0,
                   speed: 1

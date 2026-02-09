@@ -61,9 +61,8 @@ export class ScrewAnimationService {
         if (!this.metadataLoader.isLoaded()) {
             try {
                 await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
-                console.log('[ScrewAnimation] 메타데이터 로드 완료');
             } catch (error) {
-                console.error('[ScrewAnimation] 메타데이터 로드 실패:', error);
+                console.error('메타데이터 로드 실패:', error);
             }
         }
     }
@@ -124,15 +123,15 @@ export class ScrewAnimationService {
 
         const screwNodeName = this.nodeNameManager.getNodeName(nodePath);  // `fridge.leftDoorDamper.screw2Customized` 로 노드 이름 추출
         if (!screwNodeName) {
-            console.error(`[ScrewAnimation] 노드 이름을 찾을 수 없습니다: ${nodePath}`);
+            console.error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
             return;
         }
         // console.log('screwNodeName>> ', screwNodeName);  // 4J01424B_Screw,Customized_4168029
 
         const screwNodeObj = this.sceneRoot.getObjectByName(screwNodeName);
-        console.log('screwNodeObj>> ', screwNodeObj);
+        // console.log('screwNodeObj>> ', screwNodeObj);
         if (!screwNodeObj) {
-            console.error(`[ScrewAnimation] 노드를 찾을 수 없습니다: ${screwNodeName}`);
+            console.error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
             return;
         }
 
@@ -158,9 +157,9 @@ export class ScrewAnimationService {
             {
                 onStart: () => {
                     this.isAnimating = true;
-                    console.log(`[ScrewAnimation] ${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                    console.log(`${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
                     if (hasMetadata) {
-                        console.log(`[ScrewAnimation] 사용된 설정:`, {
+                        console.log(`사용된 설정:`, {
                             rotationAxis: config.rotationAxis,
                             rotationAngle: config.rotationAngle,
                             extractDirection: config.extractDirection,
@@ -172,7 +171,7 @@ export class ScrewAnimationService {
                 },
                 onComplete: () => {
                     this.isAnimating = false;
-                    console.log(`[ScrewAnimation] ${screwNodeName} 회전 완료`);
+                    console.log(`${screwNodeName} 회전 완료`);
                     config.onComplete?.();
                 },
                 onProgress: (progress) => {
@@ -199,24 +198,24 @@ export class ScrewAnimationService {
     public pause(): void {
         if (this.timeline && this.isAnimating) {
             this.timeline.pause();
-            console.log('[ScrewAnimation] 애니메이션 일시정지');
+            console.log('애니메이션 일시정지');
         }
     }
 
     public resume(): void {
         if (this.timeline) {
             this.timeline.resume();
-            console.log('[ScrewAnimation] 애니메이션 재개');
+            console.log('애니메이션 재개');
         }
     }
 
     public async reverse(): Promise<void> {
         if (this.timeline) {
-            console.log('[ScrewAnimation] 애니메이션 되돌리기 시작');
+            console.log('애니메이션 되돌리기 시작');
             return new Promise((resolve) => {
                 this.timeline?.reverse();
                 this.timeline?.eventCallback('onReverseComplete', () => {
-                    console.log('[ScrewAnimation] 애니메이션 되돌리기 완료');
+                    console.log('애니메이션 되돌리기 완료');
                     resolve();
                 });
             });

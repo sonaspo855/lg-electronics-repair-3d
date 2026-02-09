@@ -45,7 +45,7 @@ export class DamperCaseBodyAnimationService {
         onComplete?: () => void;
     } = {}): Promise<boolean> {
         try {
-            console.log('animateDamperCaseBodyLinearMove!!!');
+            // console.log('animateDamperCaseBodyLinearMove!!!');
             if (!this.sceneRoot) {
                 console.error('Scene Root가 설정되지 않았습니다. setSceneRoot()를 먼저 호출해주세요.');
                 return false;
@@ -53,7 +53,7 @@ export class DamperCaseBodyAnimationService {
 
             // 노드 이름 가져오기
             const damperCaseBodyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCaseBody');
-            console.log('damperCaseBodyNodeName>> ', damperCaseBodyNodeName);
+            // console.log('damperCaseBodyNodeName>> ', damperCaseBodyNodeName);
             if (!damperCaseBodyNodeName) {
                 console.error('댐퍼 케이스 바디 노드 이름을 찾을 수 없습니다.');
                 return false;
@@ -74,9 +74,9 @@ export class DamperCaseBodyAnimationService {
             };
 
             // 애니메이션 실행
-            console.log('댐퍼 케이스 바디 선형 이동 애니메이션 시작');
-            console.log('애니메이션 설정:', animationConfig);
-            console.log('병합된 옵션:', mergedOptions);
+            // console.log('댐퍼 케이스 바디 선형 이동 애니메이션 시작');
+            // console.log('애니메이션 설정:', animationConfig);
+            // console.log('병합된 옵션:', mergedOptions);
 
             // 노드 찾기
             const damperCaseBodyNode = this.sceneRoot.getObjectByName(damperCaseBodyNodeName);
@@ -88,7 +88,7 @@ export class DamperCaseBodyAnimationService {
             // damperCaseBody 현재 위치 출력
             const damperCaseBodyCurrentPosition = new THREE.Vector3();
             damperCaseBodyNode.getWorldPosition(damperCaseBodyCurrentPosition);
-            console.log('damperCaseBody 현재 위치:', damperCaseBodyCurrentPosition);
+            // console.log('damperCaseBody 현재 위치:', damperCaseBodyCurrentPosition);
 
             // 타겟 위치 계산 (로컬 오프셋 기반)
             let targetPosition: THREE.Vector3;
@@ -103,7 +103,7 @@ export class DamperCaseBodyAnimationService {
             // 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 구합니다.
             damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
             targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
-            console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
+            // console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
 
             // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetPosition.clone();
@@ -112,8 +112,8 @@ export class DamperCaseBodyAnimationService {
                 // 부모의 world matrix가 업데이트 되었는지 확인 후 역행렬을 이용해 로컬로 변환합니다.
                 parent.updateMatrixWorld();
                 parent.worldToLocal(localTargetPosition);
-                console.log('월드 타겟 좌표:', targetPosition);
-                console.log('변환된 로컬 타겟 좌표:', localTargetPosition);
+                // console.log('월드 타겟 좌표:', targetPosition);
+                // console.log('변환된 로컬 타겟 좌표:', localTargetPosition);
             }
 
             // GSAP를 사용한 선형 이동 애니메이션

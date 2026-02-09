@@ -73,7 +73,10 @@ export class AnimationHistoryService {
                 door: command.door,
                 action: command.action,
                 degrees: command.degrees,
-                speed: command.speed
+                speed: command.speed,
+                position: command.position,
+                easing: command.easing,
+                duration: command.duration
             }
         };
 
@@ -111,6 +114,18 @@ export class AnimationHistoryService {
 
         if (command.speed !== undefined) {
             parts.push(`${command.speed}s`);
+        }
+
+        if (command.position) {
+            parts.push(`pos(${command.position.x.toFixed(3)}, ${command.position.y.toFixed(3)}, ${command.position.z.toFixed(3)})`);
+        }
+
+        if (command.duration !== undefined) {
+            parts.push(`${command.duration}ms`);
+        }
+
+        if (command.easing) {
+            parts.push(`easing:${command.easing}`);
         }
 
         return parts.join(' ');
