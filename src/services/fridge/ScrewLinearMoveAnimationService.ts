@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
 import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
-import { visualizeScrewHeadCenter } from '@/shared/utils/commonUtils';
+// import { visualizeScrewHeadCenter } from '@/shared/utils/commonUtils';
 import gsap from 'gsap';
 
 export class ScrewLinearMoveAnimationService {
@@ -112,8 +112,8 @@ export class ScrewLinearMoveAnimationService {
             const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
 
             // 스크류 머리 중심 시각화를 위한 설정 저장 (애니메이션 완료 후 시각화)
-            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
+            // const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+            // const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
 
             // 월드 타겟 좌표를 스크류 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetWorldPosition.clone();
@@ -139,12 +139,12 @@ export class ScrewLinearMoveAnimationService {
                         console.log(`스크류 ${screwNodeName} damperCaseBody 방향으로 선형 이동 완료`);
 
                         // 스크류 머리 중심 시각화 - 이동된 위치에서 시각화
-                        visualizeScrewHeadCenter(
-                            this.sceneRoot!,
-                            screwNode,
-                            targetWorldPosition,
-                            localExtractDir
-                        );
+                        // visualizeScrewHeadCenter(
+                        //     this.sceneRoot!,
+                        //     screwNode,
+                        //     targetWorldPosition,
+                        //     localExtractDir
+                        // );
 
                         if (mergedOptions.onComplete) {
                             mergedOptions.onComplete();
