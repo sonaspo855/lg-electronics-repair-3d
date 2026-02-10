@@ -230,7 +230,7 @@ export class ManualAssemblyManager {
         duration: number;
         easing: string;
     } | null> {
-        console.log('moveScrewLinear!!! options>>> ', options);
+        // console.log('moveScrewLinear!!! options>>> ', options);
         return await this.screwLinearMoveAnimationService.animateScrewLinearMove(screwNodePath, options);
     }
 

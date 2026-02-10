@@ -59,25 +59,8 @@ export class ScrewLinearMoveAnimationService {
                 return null;
             }
 
-            // [추가] 스크류 머리 중심 시각화 (추출 방향의 끝점을 머리로 간주)
+            // 메타데이터 키 추출
             const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
-            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
-            
-            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
-            const worldQuaternion = new THREE.Quaternion();
-            screwNode.getWorldQuaternion(worldQuaternion);
-            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
-
-            // 추출 방향의 끝점(머리) 계산
-            const headCenter = CoordinateTransformUtils.getExtremeWorldPosition(screwNode, worldExtractDir);
-            
-            const visualizer = getAssemblyPathVisualizer();
-            visualizer.initialize(this.sceneRoot);
-            
-            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
-            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
-            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 
             // 메타데이터 설정 가져오기
             const animationConfig = this.metadataLoader.getScrewLinearMoveConfig(metadataKey);
@@ -107,6 +90,26 @@ export class ScrewLinearMoveAnimationService {
 
             // 타겟 위치 계산 (월드 좌표)
             const targetWorldPosition = currentWorldPosition.clone().add(offset);
+
+            // [수정] 스크류 머리 중심 시각화 - 이동된 위치(targetWorldPosition)에서 시각화
+            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
+
+            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
+            const worldQuaternion = new THREE.Quaternion();
+            screwNode.getWorldQuaternion(worldQuaternion);
+            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
+
+            // 이동된 위치에서 추출 방향의 끝점(머리) 계산
+            // 타겟 위치에 스크류의 로컬 오프셋을 적용하여 머리 위치 계산
+            const headCenter = targetWorldPosition.clone().add(worldExtractDir.clone().multiplyScalar(0.02)); // 머리 길이 가정
+
+            const visualizer = getAssemblyPathVisualizer();
+            visualizer.initialize(this.sceneRoot);
+
+            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
+            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
+            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 
             // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetWorldPosition.clone();
@@ -194,26 +197,6 @@ export class ScrewLinearMoveAnimationService {
                 return null;
             }
 
-            // [추가] 스크류 머리 중심 시각화 (추출 방향의 끝점을 머리로 간주)
-            const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
-            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
-            
-            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
-            const worldQuaternion = new THREE.Quaternion();
-            screwNode.getWorldQuaternion(worldQuaternion);
-            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
-
-            // 추출 방향의 끝점(머리) 계산
-            const headCenter = CoordinateTransformUtils.getExtremeWorldPosition(screwNode, worldExtractDir);
-            
-            const visualizer = getAssemblyPathVisualizer();
-            visualizer.initialize(this.sceneRoot);
-            
-            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
-            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
-            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
-
             // damperCaseBody 노드 찾기
             const damperCaseBodyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCaseBody');
             if (!damperCaseBodyNodeName) {
@@ -264,6 +247,26 @@ export class ScrewLinearMoveAnimationService {
 
             // 스크류 타겟 위치 계산 (현재 위치 + 이동 벡터)
             const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
+
+            // [수정] 스크류 머리 중심 시각화 - 이동된 위치(targetWorldPosition)에서 시각화
+            const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
+            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
+
+            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
+            const worldQuaternion = new THREE.Quaternion();
+            screwNode.getWorldQuaternion(worldQuaternion);
+            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
+
+            // 이동된 위치에서 추출 방향의 끝점(머리) 계산
+            const headCenter = targetWorldPosition.clone().add(worldExtractDir.clone().multiplyScalar(0.02));
+
+            const visualizer = getAssemblyPathVisualizer();
+            visualizer.initialize(this.sceneRoot);
+
+            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
+            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
+            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 
             // 월드 타겟 좌표를 스크류 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetWorldPosition.clone();
