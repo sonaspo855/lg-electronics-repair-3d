@@ -8,6 +8,7 @@ import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionSer
 import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager';
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
 import { getScrewAnimationService } from './ScrewAnimationService';
+import { getScrewLinearMoveAnimationService } from './ScrewLinearMoveAnimationService';
 import { extractMetadataKey } from '../../shared/utils/commonUtils';
 import { AnimationHistoryService } from '../AnimationHistoryService';
 import { AnimationAction } from '../AnimatorAgent';
@@ -27,6 +28,7 @@ export class ManualAssemblyManager {
     private assemblyStateManager = getAssemblyStateManager();
     private holeCenterManager = getHoleCenterManager();
     private screwAnimationService = getScrewAnimationService();
+    private screwLinearMoveAnimationService = getScrewLinearMoveAnimationService();
     private nodeNameManager = getNodeNameManager();
     private animationHistoryService: AnimationHistoryService | null = null;
 
@@ -42,6 +44,7 @@ export class ManualAssemblyManager {
         this.damperCoverAssemblyService.initialize(sceneRoot);
         this.grooveDetectionService.initialize(sceneRoot, cameraControls);
         this.screwAnimationService.initialize(sceneRoot);
+        this.screwLinearMoveAnimationService.setSceneRoot(sceneRoot);
 
         // 노드 이름 로드
         if (!this.nodeNameLoader.isLoadedData()) {
@@ -208,6 +211,27 @@ export class ManualAssemblyManager {
             );
             console.log('3344_Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
         }
+    }
+
+    /**
+     * 스크류 노드를 기준으로 선형 이동 애니메이션을 실행합니다.
+     * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
+     * @param options 애니메이션 옵션
+     */
+    public async moveScrewLinear(
+        screwNodePath: string,
+        options?: {
+            duration?: number;
+            easing?: string;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        console.log('moveScrewLinear!!! options>>> ', options);
+        return await this.screwLinearMoveAnimationService.animateScrewLinearMove(screwNodePath, options);
     }
 
     public dispose(): void {

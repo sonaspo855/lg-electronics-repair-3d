@@ -110,5 +110,27 @@
                 }
             ]
         }
+    },
+    "screwLinearMovements": {
+        "screw1Customized": {
+            "method": "screwPositionBased",
+            "offset": {
+                "x": 1,
+                "y": 0,
+                "z": 0
+            },
+            "duration": 1000,
+            "easing": "power2.inOut"
+        },
+        "screw2Customized": {
+            "method": "screwPositionBased",
+            "offset": {
+                "x": 1,
+                "y": 0,
+                "z": 0
+            },
+            "duration": 1000,
+            "easing": "power2.inOut"
+        }
     }
 }

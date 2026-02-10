@@ -888,6 +888,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
   private async executeAnimationCommand(commands: AnimationCommand | AnimationCommand[]): Promise<LLMResponse> {
     const screw1NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw1Customized');
     const screw2NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw2Customized');
+    const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
+    const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
 
     if (!this.doorControls) {
@@ -1033,9 +1035,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
           // 스크류 분리 애니매이션 실행
           try {
-            const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
-            const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
-
             // 메타데이터 로더 초기화 (전역에서 이미 로드됨)
             const metadataLoader = getMetadataLoader();
 
@@ -1045,9 +1044,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
               // 메타데이터 키 추출
               const metadataKey1 = extractMetadataKey(screw1NodePath);
-              console.log('metadataKey1>> ', metadataKey1);
+              // console.log('metadataKey1>> ', metadataKey1);
               const config1 = metadataLoader.getScrewAnimationConfig(metadataKey1);
-              console.log('config1>>> ', config1);
+              // console.log('config1>>> ', config1);
 
               await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
               console.log('Left screw 1 loosened');
@@ -1096,7 +1095,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 };
                 const animationMessage = 'damperCaseBody 힌지 반대 방향으로 선형이동 완료';
                 this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
-                console.log('333_Animation history after damper case body linear move:', this.animationHistoryService.getAllHistory());
+                // console.log('333_Animation history after damper case body linear move:', this.animationHistoryService.getAllHistory());
               } else if (!animationResult) {
                 console.warn('Damper case body animation returned null, skipping history logging');
               } else {
@@ -1111,10 +1110,41 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           }
 
           // 분리된 왼쪽 스크류2 노드의 위치에서 오른쪽 방향으로 선형이동
+          try {
+            console.log('스크류2 오른쪽 방향 선형 이동 시작!!!');
 
+            const animationResult = await this.manualAssemblyManager.moveScrewLinear(screw2NodePath, {
+              duration: 1000,
+              easing: 'power2.inOut',
+              onComplete: () => {
+                console.log('스크류2 오른쪽 방향 선형 이동 완료!!!');
+              }
+            });
 
+            // console.log('animationResult000>>> ', animationResult);
+            // 애니메이션 히스토리 기록
+            if (animationResult && this.animationHistoryService) {
+              const animationCommand = {
+                door: commandsArray[0].door,
+                action: AnimationAction.SCREW_LOOSEN,
+                degrees: 0,
+                speed: 1,
+                position: animationResult.position,
+                easing: animationResult.easing,
+                duration: animationResult.duration
+              };
+              const animationMessage = '스크류2 오른쪽 방향 선형 이동 완료';
+              this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
+              console.log('Animation history after screw2 linear move:', this.animationHistoryService.getAllHistory());
+            } else if (!animationResult) {
+              console.warn('스크류2 선형 이동 애니메이션이 null을 반환했습니다.');
+            } else {
+              console.warn('Animation history service not available');
+            }
 
-
+          } catch (error) {
+            console.error('스크류2 오른쪽 방향 선형 이동 실행 중 에러:', error);
+          }
 
         } else {
           console.log('CameraMovementService is not initialized');

@@ -16,6 +16,9 @@ export interface AssemblyOffsetMetadata {
     damperCaseBodyAnimations?: {
         linearMovement: LinearMovementAnimationConfig;
     };
+    screwLinearMovements?: {
+        [nodeName: string]: LinearMovementAnimationConfig;
+    };
 }
 
 /**
@@ -350,6 +353,41 @@ export class MetadataLoader {
             return this.metadata.damperCaseBodyAnimations.linearMovement;
         }
 
+        return null;
+    }
+
+    /**
+     * 스크류 선형 이동 설정을 반환합니다.
+     * @param metadataKey 메타데이터 키 (스크류 노드 이름)
+     * @returns 스크류 선형 이동 설정 또는 null
+     */
+    public getScrewLinearMoveConfig(metadataKey: string): LinearMovementAnimationConfig | null {
+        // 먼저 screwLinearMovements에서 개별 설정 검색
+        if (this.metadata?.screwLinearMovements) {
+            // 직접 일치하는 이름 검색
+            if (this.metadata.screwLinearMovements[metadataKey]) {
+                return this.metadata.screwLinearMovements[metadataKey];
+            }
+
+            // 노드 이름의 일부로 검색 (예: screw1Customized -> screw_1)
+            const shortName = metadataKey;
+            for (const [key, config] of Object.entries(this.metadata.screwLinearMovements)) {
+                const keyLower = key.toLowerCase();
+                if (keyLower === shortName ||
+                    shortName.includes(keyLower) ||
+                    keyLower.includes(shortName)) {
+                    return config;
+                }
+            }
+        }
+
+        // 개별 설정이 없으면 damperCaseBodyAnimations.linearMovement를 fallback으로 사용
+        if (this.metadata?.damperCaseBodyAnimations?.linearMovement) {
+            console.warn(`[MetadataLoader] ${metadataKey}에 대한 개별 스크류 선형 이동 설정이 없어 공통 설정을 사용합니다.`);
+            return this.metadata.damperCaseBodyAnimations.linearMovement;
+        }
+
+        console.warn(`[MetadataLoader] 스크류 선형 이동 설정을 찾을 수 없습니다: ${metadataKey}`);
         return null;
     }
 
