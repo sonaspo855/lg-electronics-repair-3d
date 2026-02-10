@@ -1171,6 +1171,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('Error during screw tightening:', error);
           }
 
+          // 댐퍼를 고정했던 홀더를 제거
+
 
 
 
