@@ -110,6 +110,7 @@ export class AnimationHistoryService {
             [AnimationAction.SET_SPEED]: 'Set Speed',
             [AnimationAction.CAMERA_MOVE]: 'Camera Move',
             [AnimationAction.SCREW_LOOSEN]: 'Screw Loosen',
+            [AnimationAction.DAMPER_COVER_BODY]: 'Damper Cover Body',
             [AnimationAction.DAMPER_CASE_BODY_MOVE]: 'Damper Case Body Move'
         };
 
