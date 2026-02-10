@@ -281,7 +281,12 @@ export class ManualAssemblyManager {
                     rotationAngle: usedConfig.rotationAngle,
                     rotationAxis: usedConfig.rotationAxis,
                     extractDirection: usedConfig.extractDirection,
-                    translationDistance: usedConfig.extractDistance
+                    translationDistance: usedConfig.extractDistance,
+                    position: usedConfig.finalPosition ? {
+                        x: usedConfig.finalPosition.x,
+                        y: usedConfig.finalPosition.y,
+                        z: usedConfig.finalPosition.z
+                    } : undefined
                 },
                 screwMessage
             );
