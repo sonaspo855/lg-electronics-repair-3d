@@ -86,7 +86,7 @@
             "method": "screwPositionBased",
             "targetScrewNode": "fridge.leftDoorDamper.screw2Customized",
             "offset": {
-                "x": 1,
+                "x": 1.5,
                 "y": 0,
                 "z": 0
             },
@@ -125,7 +125,7 @@
         "screw2Customized": {
             "method": "screwPositionBased",
             "offset": {
-                "x": 10,
+                "x": 13,
                 "y": 0,
                 "z": 0
             },

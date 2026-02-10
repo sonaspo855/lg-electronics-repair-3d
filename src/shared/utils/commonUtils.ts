@@ -216,7 +216,7 @@ export const visualizeScrewHeadCenter = (
         downwardOffset?: number;
     } = {}
 ): void => {
-    const { headOffset = 0.02, downwardOffset = 0.05 } = options;
+    const { headOffset = 0.02, downwardOffset = 0.07 } = options;
 
     // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
     const worldQuaternion = new THREE.Quaternion();
@@ -231,6 +231,7 @@ export const visualizeScrewHeadCenter = (
 
     // "아래로" 선 그리기 (월드 Y축 양의 방향으로 오프셋)
     const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, downwardOffset, 0));
+    console.log('downwardPoint>>> ', downwardPoint);
     visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 };
 
