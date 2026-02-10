@@ -325,6 +325,14 @@ export const calculateCameraTargetPosition = (
 
 // ============================================================================
 /**
+ * 애니메이션 결과 인터페이스
+ */
+export interface AnimationResult {
+    timeline: gsap.core.Timeline;
+    targetObj: THREE.Object3D;
+}
+
+/**
  * 용도: 회전+이동 동시 애니메이션 생성 (GSAP Timeline 기반)
  * 장점: 복잡한 부품 분해/조립 애니메이션을 간편하게 구현
  * 재사용 시나리오: 스크류 분리, 커버 회전 등의 복합 동작 애니메이션
@@ -333,7 +341,7 @@ export const calculateCameraTargetPosition = (
  * @param targetObj 대상 THREE.js 객체
  * @param config 애니메이션 설정
  * @param callbacks 콜백 함수들
- * @returns GSAP Timeline 객체
+ * @returns AnimationResult (Timeline과 targetObj 포함)
  */
 export function createAnimationTimeline(
     targetObj: THREE.Object3D,
@@ -350,9 +358,10 @@ export function createAnimationTimeline(
         onComplete?: () => void;
         onProgress?: (progress: number) => void;
     }
-): gsap.core.Timeline {
+): AnimationResult {
     const axis = config.rotationAxis as 'x' | 'y' | 'z';
     const timeline = gsap.timeline({
+        paused: true,
         onStart: callbacks?.onStart,
         onComplete: callbacks?.onComplete,
         onUpdate: () => {
@@ -367,8 +376,10 @@ export function createAnimationTimeline(
         ease: config.easing
     }, 0);
 
+
     // 이동 애니메이션 (로컬 좌표계)
     const localExtractDir = config.extractDirection.clone().normalize().multiplyScalar(config.translationDistance);
+
     timeline.to(targetObj.position, {
         x: targetObj.position.x + localExtractDir.x,
         y: targetObj.position.y + localExtractDir.y,
@@ -377,7 +388,7 @@ export function createAnimationTimeline(
         ease: config.easing
     }, 0);
 
-    return timeline;
+    return { timeline, targetObj };
 }
 
 // ============================================================================

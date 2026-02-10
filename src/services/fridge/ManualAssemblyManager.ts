@@ -185,13 +185,13 @@ export class ManualAssemblyManager {
             return;
         }
 
-        console.log('options11>> ', options);
+        // console.log('options11>> ', options);
 
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
         const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
 
-        // console.log('usedConfig000>> ', usedConfig);
+        console.log('usedConfig000>> ', usedConfig);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {
@@ -232,6 +232,27 @@ export class ManualAssemblyManager {
     } | null> {
         console.log('moveScrewLinear!!! options>>> ', options);
         return await this.screwLinearMoveAnimationService.animateScrewLinearMove(screwNodePath, options);
+    }
+
+    /**
+     * 스크류 노드를 damperCaseBody 노드 방향으로 선형 이동 애니메이션을 실행합니다.
+     * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
+     * @param options 애니메이션 옵션
+     */
+    public async moveScrewLinearToDamperCaseBody(
+        screwNodePath: string,
+        options?: {
+            duration?: number;
+            easing?: string;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        console.log('moveScrewLinearToDamperCaseBody!!! options>>> ', options);
+        return await this.screwLinearMoveAnimationService.animateScrewLinearMoveToDamperCaseBody(screwNodePath, options);
     }
 
     public dispose(): void {

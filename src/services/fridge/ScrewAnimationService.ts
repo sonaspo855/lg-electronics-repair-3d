@@ -31,6 +31,8 @@ export interface ScrewAnimationMetadata {
     extractDistance: number;
     duration: number;
     easing: string;
+    finalPosition?: THREE.Vector3;
+    finalRotation?: THREE.Euler;
 }
 
 /**
@@ -153,50 +155,53 @@ export class ScrewAnimationService {
             extractDirection: config.extractDirection!,
             extractDistance: translationDistance,
             duration: config.duration!,
-            easing: config.easing!
+            easing: config.easing!,
+            finalPosition: screwNodeObj.position.clone(),
+            finalRotation: screwNodeObj.rotation.clone()
         };
 
-        // 회전+이동 동시 애니메이션 생성
-        this.timeline = createAnimationTimeline(
-            screwNodeObj,
-            {
-                rotationAxis: config.rotationAxis!,
-                rotationAngle: config.rotationAngle!,
-                extractDirection: new THREE.Vector3(...config.extractDirection!),
-                translationDistance,
-                duration: config.duration!,
-                easing: config.easing!
-            },
-            {
-                onStart: () => {
-                    this.isAnimating = true;
-                    console.log(`${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
-                    if (hasMetadata) {
-                        console.log(`사용된 설정:`, {
-                            rotationAxis: config.rotationAxis,
-                            rotationAngle: config.rotationAngle,
-                            extractDirection: config.extractDirection,
-                            extractDistance: translationDistance,
-                            duration: config.duration,
-                            easing: config.easing
-                        });
-                    }
-                },
-                onComplete: () => {
-                    this.isAnimating = false;
-                    console.log(`${screwNodeName} 회전 완료`);
-                    config.onComplete?.();
-                },
-                onProgress: (progress) => {
-                    config.onProgress?.(progress);
-                }
-            }
-        );
-
+        // Promise 내부에서 애니메이션 생성 및 실행
         return new Promise((resolve) => {
-            this.timeline?.eventCallback('onComplete', () => {
-                resolve(usedConfig);
-            });
+            const animationResult = createAnimationTimeline(
+                screwNodeObj,
+                {
+                    rotationAxis: config.rotationAxis!,
+                    rotationAngle: config.rotationAngle!,
+                    extractDirection: new THREE.Vector3(...config.extractDirection!),
+                    translationDistance,
+                    duration: config.duration!,
+                    easing: config.easing!
+                },
+                {
+                    onStart: () => {
+                        this.isAnimating = true;
+                        console.log(`${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                    },
+                    onComplete: () => {
+                        this.isAnimating = false;
+                        console.log(`${screwNodeName} 회전 완료`);
+                        // 최종 좌표 업데이트
+                        usedConfig.finalPosition = screwNodeObj.position.clone();
+                        usedConfig.finalRotation = screwNodeObj.rotation.clone();
+                        console.log('최종 위치:', usedConfig.finalPosition);
+                        console.log('최종 회전:', usedConfig.finalRotation);
+
+                        // 사용자 콜백 실행
+                        config.onComplete?.();
+
+                        // Promise 완료
+                        resolve(usedConfig);
+                    },
+                    onProgress: (progress) => {
+                        config.onProgress?.(progress);
+                    }
+                }
+            );
+
+            this.timeline = animationResult.timeline;
+
+            // Timeline 재생 시작
+            this.timeline.play();
         });
     }
 

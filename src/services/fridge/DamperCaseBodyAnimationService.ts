@@ -69,7 +69,7 @@ export class DamperCaseBodyAnimationService {
                 console.error('댐퍼 케이스 바디 애니메이션 설정을 찾을 수 없습니다.');
                 return null;
             }
-            console.log('animationConfig000>> ', animationConfig);
+            // console.log('animationConfig000>> ', animationConfig);
 
             // 애니메이션 옵션 병합
             const mergedOptions = {
