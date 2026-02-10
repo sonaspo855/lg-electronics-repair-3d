@@ -1044,9 +1044,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
               // 메타데이터 키 추출
               const metadataKey1 = extractMetadataKey(screw1NodePath);
-              // console.log('metadataKey1>> ', metadataKey1);
               const config1 = metadataLoader.getScrewAnimationConfig(metadataKey1);
-              // console.log('config1>>> ', config1);
 
               await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
               console.log('Left screw 1 loosened');
@@ -1121,7 +1119,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               }
             });
 
-            // console.log('animationResult000>>> ', animationResult);
             // 애니메이션 히스토리 기록
             if (animationResult && this.animationHistoryService) {
               const animationCommand = {
@@ -1145,6 +1142,11 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           } catch (error) {
             console.error('스크류2 오른쪽 방향 선형 이동 실행 중 에러:', error);
           }
+
+          // 스크류 노드를 다시 조이는 코드
+
+
+
 
         } else {
           console.log('CameraMovementService is not initialized');
