@@ -175,4 +175,33 @@ export class CoordinateTransformUtils {
         bbox.getSize(size);
         return size;
     }
+
+    /**
+     * 특정 월드 방향으로 객체의 가장 끝점 좌표를 계산합니다.
+     * 스크류 머리 위치 등을 찾을 때 유용합니다.
+     * 
+     * @param object 대상 객체
+     * @param worldDirection 월드 좌표계 기준 방향 벡터
+     * @returns 월드 좌표계 기준 끝점
+     */
+    static getExtremeWorldPosition(object: THREE.Object3D, worldDirection: THREE.Vector3): THREE.Vector3 {
+        const bbox = this.getPreciseBoundingBox(object);
+        const center = new THREE.Vector3();
+        bbox.getCenter(center);
+
+        // 바운딩 박스의 크기 절반
+        const halfSize = new THREE.Vector3();
+        bbox.getSize(halfSize).multiplyScalar(0.5);
+
+        // 방향 벡터를 정규화하여 각 축의 끝점으로 이동
+        const normalizedDir = worldDirection.clone().normalize();
+        
+        // 중심점에서 방향 벡터의 성분만큼 이동하여 바운딩 박스 표면의 점을 구함
+        const extremePoint = center.clone();
+        extremePoint.x += normalizedDir.x * halfSize.x;
+        extremePoint.y += normalizedDir.y * halfSize.y;
+        extremePoint.z += normalizedDir.z * halfSize.z;
+
+        return extremePoint;
+    }
 }

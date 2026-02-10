@@ -251,7 +251,6 @@ export class ManualAssemblyManager {
         duration: number;
         easing: string;
     } | null> {
-        console.log('moveScrewLinearToDamperCaseBody!!! options>>> ', options);
         return await this.screwLinearMoveAnimationService.animateScrewLinearMoveToDamperCaseBody(screwNodePath, options);
     }
 

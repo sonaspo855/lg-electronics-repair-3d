@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
 import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
+import { CoordinateTransformUtils } from '@/shared/utils/CoordinateTransformUtils';
+import { getAssemblyPathVisualizer } from '@/shared/utils/AssemblyPathVisualizer';
 import gsap from 'gsap';
 
 export class ScrewLinearMoveAnimationService {
@@ -57,8 +59,27 @@ export class ScrewLinearMoveAnimationService {
                 return null;
             }
 
-            // 메타데이터 설정 가져오기
+            // [추가] 스크류 머리 중심 시각화 (추출 방향의 끝점을 머리로 간주)
             const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
+            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
+            
+            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
+            const worldQuaternion = new THREE.Quaternion();
+            screwNode.getWorldQuaternion(worldQuaternion);
+            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
+
+            // 추출 방향의 끝점(머리) 계산
+            const headCenter = CoordinateTransformUtils.getExtremeWorldPosition(screwNode, worldExtractDir);
+            
+            const visualizer = getAssemblyPathVisualizer();
+            visualizer.initialize(this.sceneRoot);
+            
+            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
+            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
+            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
+
+            // 메타데이터 설정 가져오기
             const animationConfig = this.metadataLoader.getScrewLinearMoveConfig(metadataKey);
             if (!animationConfig) {
                 console.error(`[ScrewLinearMoveAnimationService] 스크류 선형 이동 설정을 찾을 수 없습니다: ${metadataKey}`);
@@ -172,6 +193,26 @@ export class ScrewLinearMoveAnimationService {
                 console.error(`스크류 노드를 찾을 수 없습니다: ${screwNodeName}`);
                 return null;
             }
+
+            // [추가] 스크류 머리 중심 시각화 (추출 방향의 끝점을 머리로 간주)
+            const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
+            const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+            const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
+            
+            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
+            const worldQuaternion = new THREE.Quaternion();
+            screwNode.getWorldQuaternion(worldQuaternion);
+            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
+
+            // 추출 방향의 끝점(머리) 계산
+            const headCenter = CoordinateTransformUtils.getExtremeWorldPosition(screwNode, worldExtractDir);
+            
+            const visualizer = getAssemblyPathVisualizer();
+            visualizer.initialize(this.sceneRoot);
+            
+            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
+            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
+            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 
             // damperCaseBody 노드 찾기
             const damperCaseBodyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCaseBody');
