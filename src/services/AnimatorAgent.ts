@@ -156,6 +156,7 @@ export const AnimationAction = {
   SET_SPEED: 'set_speed',
   CAMERA_MOVE: 'camera_move',
   SCREW_LOOSEN: 'screw_loosen',
+  SCREW_TIGHTEN: 'screw_tighten',
   DAMPER_COVER_BODY: 'damper_cover_body',
   DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
 } as const;
@@ -1144,6 +1145,40 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           }
 
           // 스크류 노드를 다시 조이는 코드
+          try {
+            console.log('스크류 조립 애니메이션 시작!!!');
+
+            // 왼쪽 스크류 2 선형 이동 역방향 (원래 위치로)
+            if (screw2NodeName) {
+              await this.manualAssemblyManager.moveScrewLinearReverse(screw2NodePath, {
+                duration: 1000,
+                easing: 'power2.inOut',
+                onComplete: () => {
+                  console.log('Left screw 2 linear move reverse completed');
+                }
+              });
+            }
+
+            // 왼쪽 스크류 1 조립 (회전+이동 역방향)
+            if (screw1NodeName) {
+              const metadataKey1 = extractMetadataKey(screw1NodePath);
+              const config1 = getMetadataLoader().getScrewAnimationConfig(metadataKey1);
+              await this.manualAssemblyManager.tightenScrew(screw1NodePath, config1 || {});
+              console.log('Left screw 1 tightened');
+            }
+
+            // 왼쪽 스크류 2 조립 (회전+이동 역방향)
+            if (screw2NodeName) {
+              const metadataKey2 = extractMetadataKey(screw2NodePath);
+              const config2 = getMetadataLoader().getScrewAnimationConfig(metadataKey2);
+              await this.manualAssemblyManager.tightenScrew(screw2NodePath, config2 || {});
+              console.log('Left screw 2 tightened');
+            }
+
+            console.log('스크류 조립 애니메이션 완료!!!');
+          } catch (error) {
+            console.error('Error during screw tightening:', error);
+          }
 
 
 

@@ -15,6 +15,7 @@ export const AnimationAction = {
     SET_SPEED: 'set_speed',
     CAMERA_MOVE: 'camera_move',
     SCREW_LOOSEN: 'screw_loosen',
+    SCREW_TIGHTEN: 'screw_tighten',
     DAMPER_COVER_BODY: 'damper_cover_body',
     DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
 } as const;

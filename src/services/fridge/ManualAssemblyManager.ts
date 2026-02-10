@@ -9,6 +9,7 @@ import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager
 import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
 import { getScrewAnimationService } from './ScrewAnimationService';
 import { getScrewLinearMoveAnimationService } from './ScrewLinearMoveAnimationService';
+import { animateScrewLinearMoveReverse } from './ScrewLinearMoveAnimationService';
 import { extractMetadataKey } from '../../shared/utils/commonUtils';
 import { AnimationHistoryService } from '../AnimationHistoryService';
 import { AnimationAction } from '../AnimatorAgent';
@@ -20,6 +21,7 @@ import { AnimationAction } from '../AnimatorAgent';
 export class ManualAssemblyManager {
     private partAssemblyService: PartAssemblyService | null = null;
     private nodeNameLoader = getNodeNameLoader();
+    private sceneRoot: THREE.Object3D | null = null;
 
     // 서비스 인스턴스
     private damperAssemblyService = getDamperAssemblyService();
@@ -37,6 +39,7 @@ export class ManualAssemblyManager {
     }
 
     public async initialize(sceneRoot: THREE.Object3D, cameraControls?: any): Promise<void> {
+        this.sceneRoot = sceneRoot;
         this.partAssemblyService = new PartAssemblyService(sceneRoot);
 
         // 서비스 초기화
@@ -231,6 +234,107 @@ export class ManualAssemblyManager {
         easing: string;
     } | null> {
         return await this.screwLinearMoveAnimationService.animateScrewLinearMoveToDamperCaseBody(screwNodePath, options);
+    }
+
+    /**
+     * Screw를 돌려서 조이는 애니메이션을 실행합니다.
+     * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
+     * @param options 애니메이션 옵션
+     */
+    public async tightenScrew(
+        screwNodePath: string,
+        options?: {
+            duration?: number;
+            rotationAngle?: number;
+            rotationAxis?: 'x' | 'y' | 'z';
+            pullDistance?: number;
+            screwPitch?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<void> {
+        // 경로이면 실제 노드 이름으로 변환
+        const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
+
+        if (!actualNodeName) {
+            console.warn(`${screwNodePath}에 해당하는 노드 이름을 찾을 수 없음`);
+            return;
+        }
+
+        if (!this.screwAnimationService.isScrewNode(actualNodeName)) {
+            console.warn(`${actualNodeName}은 Screw 노드가 아님`);
+            return;
+        }
+
+        // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
+        const metadataKey = extractMetadataKey(screwNodePath);
+        const usedConfig = await this.screwAnimationService.animateScrewRotationReverse(screwNodePath, metadataKey, options);
+
+        // 애니메이션 히스토리 기록
+        if (this.animationHistoryService) {
+            const screwMessage = `${actualNodeName} 스크류 조립 완료`;
+            this.animationHistoryService.addAnimationHistory(
+                {
+                    door: 'top_left' as any,
+                    action: AnimationAction.SCREW_TIGHTEN,
+                    duration: usedConfig.duration,
+                    easing: usedConfig.easing,
+                    rotationAngle: usedConfig.rotationAngle,
+                    rotationAxis: usedConfig.rotationAxis,
+                    extractDirection: usedConfig.extractDirection,
+                    translationDistance: usedConfig.extractDistance
+                },
+                screwMessage
+            );
+            console.log('Animation history after screw tightening:', this.animationHistoryService.getAllHistory());
+        }
+    }
+
+    /**
+     * 스크류 노드를 원래 위치로 선형 이동 애니메이션을 실행합니다 (조립용).
+     * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
+     * @param options 애니메이션 옵션
+     */
+    public async moveScrewLinearReverse(
+        screwNodePath: string,
+        options?: {
+            duration?: number;
+            easing?: string;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        if (!this.sceneRoot) {
+            console.warn('SceneRoot가 초기화되지 않았습니다.');
+            return null;
+        }
+
+        const result = await animateScrewLinearMoveReverse(
+            this.sceneRoot,
+            screwNodePath,
+            options
+        );
+
+        // 애니메이션 히스토리 기록
+        if (result && this.animationHistoryService) {
+            const screwNodeName = this.nodeNameManager.getNodeName(screwNodePath);
+            const screwMessage = `${screwNodeName} 스크류 원래 위치 선형 이동 완료`;
+            this.animationHistoryService.addAnimationHistory(
+                {
+                    door: 'top_left' as any,
+                    action: AnimationAction.SCREW_TIGHTEN,
+                    duration: result.duration,
+                    easing: result.easing,
+                    position: result.position
+                },
+                screwMessage
+            );
+            console.log('Animation history after screw linear reverse:', this.animationHistoryService.getAllHistory());
+        }
+
+        return result;
     }
 
     public dispose(): void {

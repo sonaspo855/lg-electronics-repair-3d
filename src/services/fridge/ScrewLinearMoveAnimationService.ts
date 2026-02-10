@@ -175,3 +175,141 @@ export class ScrewLinearMoveAnimationService {
 export function getScrewLinearMoveAnimationService(): ScrewLinearMoveAnimationService {
     return ScrewLinearMoveAnimationService.getInstance();
 }
+
+/**
+ * 스크류 노드를 원래 위치로 선형 이동시킵니다 (조립용).
+ * @param screwNodePath 스크류 노드 경로
+ * @param options 애니메이션 옵션
+ */
+export async function animateScrewLinearMoveReverse(
+    sceneRoot: THREE.Object3D,
+    screwNodePath: string,
+    options: {
+        duration?: number;
+        easing?: string;
+        onComplete?: () => void;
+    } = {}
+): Promise<{
+    position: { x: number; y: number; z: number };
+    duration: number;
+    easing: string;
+} | null> {
+    const nodeNameManager = getNodeNameManager();
+    const metadataLoader = getMetadataLoader();
+
+    try {
+        if (!sceneRoot) {
+            console.error('Scene Root가 설정되지 않았습니다.');
+            return null;
+        }
+
+        // 스크류 노드 이름 가져오기
+        const screwNodeName = nodeNameManager.getNodeName(screwNodePath);
+        if (!screwNodeName) {
+            console.error(`스크류 노드 이름을 찾을 수 없습니다: ${screwNodePath}`);
+            return null;
+        }
+
+        // 스크류 노드 찾기
+        const screwNode = sceneRoot.getObjectByName(screwNodeName);
+        if (!screwNode) {
+            console.error(`스크류 노드를 찾을 수 없습니다: ${screwNodeName}`);
+            return null;
+        }
+
+        // damperCaseBody 노드 찾기
+        const damperCaseBodyNodeName = nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCaseBody');
+        if (!damperCaseBodyNodeName) {
+            console.error('damperCaseBody 노드 이름을 찾을 수 없습니다.');
+            return null;
+        }
+
+        const damperCaseBodyNode = sceneRoot.getObjectByName(damperCaseBodyNodeName);
+        if (!damperCaseBodyNode) {
+            console.error(`damperCaseBody 노드를 찾을 수 없습니다: ${damperCaseBodyNodeName}`);
+            return null;
+        }
+
+        // 스크류별 선형 이동 설정 가져오기
+        const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
+        const screwLinearMoveConfig = metadataLoader.getScrewLinearMoveConfig(metadataKey);
+        if (!screwLinearMoveConfig) {
+            console.error('스크류 선형 이동 설정을 찾을 수 없습니다.');
+            return null;
+        }
+
+        // 애니메이션 옵션 병합
+        const mergedOptions = {
+            duration: options.duration ?? screwLinearMoveConfig.duration,
+            easing: options.easing ?? screwLinearMoveConfig.easing,
+            onComplete: options.onComplete
+        };
+
+        // 스크류 노드의 현재 월드 위치 가져오기
+        screwNode.updateMatrixWorld();
+        const screwCurrentWorldPosition = new THREE.Vector3();
+        screwNode.getWorldPosition(screwCurrentWorldPosition);
+
+        // 스크류 선형 이동 오프셋 가져오기
+        const offset = new THREE.Vector3(
+            screwLinearMoveConfig.offset?.x || 0,
+            screwLinearMoveConfig.offset?.y || 0,
+            screwLinearMoveConfig.offset?.z || 0
+        );
+
+        // damperCaseBody의 이동 벡터 계산 (역방향)
+        damperCaseBodyNode.updateMatrixWorld();
+        const startVec = damperCaseBodyNode.localToWorld(new THREE.Vector3(0, 0, 0));
+        const endVec = damperCaseBodyNode.localToWorld(offset.clone());
+        const moveVector = endVec.sub(startVec).negate(); // 역방향
+
+        // 스크류 타겟 위치 계산 (현재 위치 + 역방향 이동 벡터)
+        const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
+
+        // 월드 타겟 좌표를 스크류 부모의 로컬 좌표계로 변환
+        const localTargetPosition = targetWorldPosition.clone();
+        const screwParent = screwNode.parent;
+        if (screwParent) {
+            screwParent.updateMatrixWorld();
+            screwParent.worldToLocal(localTargetPosition);
+        }
+
+        // GSAP를 사용한 선형 이동 애니메이션
+        return new Promise<{
+            position: { x: number; y: number; z: number };
+            duration: number;
+            easing: string;
+        } | null>((resolve) => {
+            gsap.to(screwNode.position, {
+                x: localTargetPosition.x,
+                y: localTargetPosition.y,
+                z: localTargetPosition.z,
+                duration: mergedOptions.duration / 1000,
+                ease: mergedOptions.easing,
+                onComplete: () => {
+                    console.log(`스크류 ${screwNodeName} 원래 위치로 선형 이동 완료`);
+
+                    if (mergedOptions.onComplete) {
+                        mergedOptions.onComplete();
+                    }
+
+                    const result = {
+                        position: {
+                            x: localTargetPosition.x,
+                            y: localTargetPosition.y,
+                            z: localTargetPosition.z
+                        },
+                        duration: mergedOptions.duration,
+                        easing: mergedOptions.easing
+                    };
+
+                    resolve(result);
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('스크류 원래 위치 선형 이동 애니메이션 실행 중 오류:', error);
+        return null;
+    }
+}

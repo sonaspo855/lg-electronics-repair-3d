@@ -240,6 +240,121 @@ export class ScrewAnimationService {
         }
     }
 
+    /**
+     * Screw 회전+이동 역방향 애니메이션을 실행 (조립용)
+     * @param nodePath 노드 경로
+     * @param metadataKey 메타데이터 키
+     * @param options 애니메이션 옵션
+     */
+    public async animateScrewRotationReverse(
+        nodePath: string,
+        metadataKey: string,
+        options: ScrewAnimationOptions = {}
+    ): Promise<ScrewAnimationMetadata> {
+        if (!this.sceneRoot) {
+            console.error('Scene root not initialized.');
+            throw new Error('Scene root not initialized.');
+        }
+
+        // 기존 애니메이션 정리
+        if (this.timeline) {
+            this.timeline.kill();
+            this.timeline = null;
+        }
+
+        // 메타데이터가 로드될 때까지 대기
+        await this.loadMetadata();
+
+        // 메타데이터에서 설정 가져오기
+        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
+        const hasMetadata = metadata !== null;
+
+        // 옵션과 메타데이터 병합
+        const config = {
+            duration: options.duration ?? 1500,
+            rotationAngle: options.rotationAngle ?? 720,
+            screwPitch: options.screwPitch ?? 0.005,
+            rotationAxis: options.rotationAxis ?? 'z',
+            easing: options.easing ?? 'power2.inOut',
+            extractDirection: options.extractDirection ?? [0, 0, 1],
+            ...options
+        };
+
+        const screwNodeName = this.nodeNameManager.getNodeName(nodePath);
+        if (!screwNodeName) {
+            console.error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
+            throw new Error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
+        }
+
+        const screwNodeObj = this.sceneRoot.getObjectByName(screwNodeName);
+        if (!screwNodeObj) {
+            console.error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
+            throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
+        }
+
+        // pushDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
+        const translationDistance = options.pullDistance ?? metadata?.extractDistance ?? (config.rotationAngle! / 360) * config.screwPitch!;
+
+        // 역방향 벡터 계산 (extractDirection의 음수)
+        const reverseDirection = new THREE.Vector3(...config.extractDirection!).negate();
+
+        // 실제 사용된 설정값 (반환용)
+        const usedConfig: ScrewAnimationMetadata = {
+            rotationAxis: config.rotationAxis!,
+            rotationAngle: config.rotationAngle!,
+            extractDirection: reverseDirection.toArray() as any, // 역방향
+            extractDistance: translationDistance,
+            duration: config.duration!,
+            easing: config.easing!,
+            finalPosition: screwNodeObj.position.clone(),
+            finalRotation: screwNodeObj.rotation.clone()
+        };
+
+        // Promise 내부에서 애니메이션 생성 및 실행
+        return new Promise((resolve) => {
+            const animationResult = createAnimationTimeline(
+                screwNodeObj,
+                {
+                    rotationAxis: config.rotationAxis!,
+                    rotationAngle: config.rotationAngle!,
+                    extractDirection: reverseDirection, // 역방향
+                    translationDistance,
+                    duration: config.duration!,
+                    easing: config.easing!
+                },
+                {
+                    onStart: () => {
+                        this.isAnimating = true;
+                        console.log(`${screwNodeName} 조립 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                    },
+                    onComplete: () => {
+                        this.isAnimating = false;
+                        console.log(`${screwNodeName} 조립 완료`);
+                        // 최종 좌표 업데이트
+                        usedConfig.finalPosition = screwNodeObj.position.clone();
+                        usedConfig.finalRotation = screwNodeObj.rotation.clone();
+                        console.log('최종 위치:', usedConfig.finalPosition);
+                        console.log('최종 회전:', usedConfig.finalRotation);
+
+                        // 사용자 콜백 실행
+                        config.onComplete?.();
+
+                        // Promise 완료
+                        resolve(usedConfig);
+                    },
+                    onProgress: (progress) => {
+                        config.onProgress?.(progress);
+                    }
+                }
+            );
+
+            this.timeline = animationResult.timeline;
+
+            // Timeline 재생 시작
+            this.timeline.play();
+        });
+    }
+
     public dispose(): void {
         if (this.timeline) {
             this.timeline.kill();
