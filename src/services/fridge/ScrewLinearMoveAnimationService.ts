@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
 import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
-import { getAssemblyPathVisualizer } from '@/shared/utils/AssemblyPathVisualizer';
+import { visualizeScrewHeadCenter } from '@/shared/utils/commonUtils';
 import gsap from 'gsap';
 
 export class ScrewLinearMoveAnimationService {
@@ -110,25 +110,10 @@ export class ScrewLinearMoveAnimationService {
             // 스크류 타겟 위치 계산 (현재 위치 + 이동 벡터)
             const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
 
-            // [수정] 스크류 머리 중심 시각화 - 이동된 위치(targetWorldPosition)에서 시각화
+            // 스크류 머리 중심 시각화를 위한 설정 저장 (애니메이션 완료 후 시각화)
             const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
             const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
             const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
-
-            // 스크류의 월드 회전을 반영하여 추출 방향을 월드 좌표계로 변환
-            const worldQuaternion = new THREE.Quaternion();
-            screwNode.getWorldQuaternion(worldQuaternion);
-            const worldExtractDir = localExtractDir.clone().applyQuaternion(worldQuaternion);
-
-            // 이동된 위치에서 추출 방향의 끝점(머리) 계산
-            const headCenter = targetWorldPosition.clone().add(worldExtractDir.clone().multiplyScalar(0.02));
-
-            const visualizer = getAssemblyPathVisualizer();
-            visualizer.initialize(this.sceneRoot);
-
-            // "아래로" 선 그리기 (월드 Y축 양의 방향으로 0.05m - 프로젝트 좌표계 기준 아래)
-            const downwardPoint = headCenter.clone().add(new THREE.Vector3(0, 0.05, 0));
-            visualizer.visualizeAssemblyPath(headCenter, downwardPoint);
 
             // 월드 타겟 좌표를 스크류 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetWorldPosition.clone();
@@ -152,6 +137,14 @@ export class ScrewLinearMoveAnimationService {
                     ease: mergedOptions.easing,
                     onComplete: () => {
                         console.log(`스크류 ${screwNodeName} damperCaseBody 방향으로 선형 이동 완료`);
+
+                        // 스크류 머리 중심 시각화 - 이동된 위치에서 시각화
+                        visualizeScrewHeadCenter(
+                            this.sceneRoot!,
+                            screwNode,
+                            targetWorldPosition,
+                            localExtractDir
+                        );
 
                         if (mergedOptions.onComplete) {
                             mergedOptions.onComplete();
