@@ -125,7 +125,7 @@
         "screw2Customized": {
             "method": "screwPositionBased",
             "offset": {
-                "x": 13,
+                "x": 7,
                 "y": 0,
                 "z": 0
             },

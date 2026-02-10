@@ -1135,7 +1135,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               };
               const animationMessage = '스크류2 오른쪽 방향 선형 이동 완료';
               this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
-              console.log('Animation history after screw2 linear move:', this.animationHistoryService.getAllHistory());
+              console.log('444_Animation history after screw2 linear move:', this.animationHistoryService.getAllHistory());
             } else if (!animationResult) {
               console.warn('스크류2 선형 이동 애니메이션이 null을 반환했습니다.');
             } else {

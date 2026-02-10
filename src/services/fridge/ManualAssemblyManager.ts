@@ -209,7 +209,7 @@ export class ManualAssemblyManager {
                 },
                 screwMessage
             );
-            console.log('3344_Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
+            console.log('33_Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
         }
     }
 
