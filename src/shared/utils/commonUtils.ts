@@ -207,7 +207,7 @@ export async function initializeMetadata(): Promise<void> {
  * @param options 옵션 (headOffset: 머리 오프셋 거리, downwardOffset: 아래 방향 오프셋 거리)
  */
 export const visualizeScrewHeadCenter = (
-    sceneRoot: THREE.Object3D의 
+    sceneRoot: THREE.Object3D,
     screwNode: THREE.Object3D,
     targetWorldPosition: THREE.Vector3,
     extractDirection: THREE.Vector3,
