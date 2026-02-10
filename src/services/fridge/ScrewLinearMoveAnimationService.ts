@@ -72,17 +72,18 @@ export class ScrewLinearMoveAnimationService {
                 return null;
             }
 
-            // damperCaseBody 메타데이터 설정 가져오기 (이동했던 오프셋 정보 확인용)
-            const damperCaseBodyConfig = this.metadataLoader.getDamperCaseBodyAnimationConfig(damperCaseBodyNodeName);
-            if (!damperCaseBodyConfig) {
-                console.error('damperCaseBody 애니메이션 설정을 찾을 수 없습니다.');
+            // 스크류별 선형 이동 설정 가져오기
+            const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
+            const screwLinearMoveConfig = this.metadataLoader.getScrewLinearMoveConfig(metadataKey);
+            if (!screwLinearMoveConfig) {
+                console.error('스크류 선형 이동 설정을 찾을 수 없습니다.');
                 return null;
             }
 
             // 애니메이션 옵션 병합
             const mergedOptions = {
-                duration: options.duration ?? damperCaseBodyConfig.duration,
-                easing: options.easing ?? damperCaseBodyConfig.easing,
+                duration: options.duration ?? screwLinearMoveConfig.duration,
+                easing: options.easing ?? screwLinearMoveConfig.easing,
                 onComplete: options.onComplete
             };
 
@@ -91,11 +92,11 @@ export class ScrewLinearMoveAnimationService {
             const screwCurrentWorldPosition = new THREE.Vector3();
             screwNode.getWorldPosition(screwCurrentWorldPosition);
 
-            // damperCaseBody의 오프셋 가져오기
+            // 스크류 선형 이동 오프셋 가져오기
             const offset = new THREE.Vector3(
-                damperCaseBodyConfig.offset?.x || 0,
-                damperCaseBodyConfig.offset?.y || 0,
-                damperCaseBodyConfig.offset?.z || 0
+                screwLinearMoveConfig.offset?.x || 0,
+                screwLinearMoveConfig.offset?.y || 0,
+                screwLinearMoveConfig.offset?.z || 0
             );
 
             // damperCaseBody의 이동 벡터 계산 (Scale, Rotation 반영)
@@ -111,7 +112,6 @@ export class ScrewLinearMoveAnimationService {
             const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
 
             // 스크류 머리 중심 시각화를 위한 설정 저장 (애니메이션 완료 후 시각화)
-            const metadataKey = screwNodePath.split('.').pop() || screwNodePath;
             const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
             const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
 
