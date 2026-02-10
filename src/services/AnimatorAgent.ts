@@ -1148,17 +1148,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           try {
             console.log('스크류 조립 애니메이션 시작!!!');
 
-            // 왼쪽 스크류 2 선형 이동 역방향 (원래 위치로)
-            if (screw2NodeName) {
-              await this.manualAssemblyManager.moveScrewLinearReverse(screw2NodePath, {
-                duration: 1000,
-                easing: 'power2.inOut',
-                onComplete: () => {
-                  console.log('Left screw 2 linear move reverse completed');
-                }
-              });
-            }
-
             // 왼쪽 스크류 1 조립 (회전+이동 역방향)
             if (screw1NodeName) {
               const metadataKey1 = extractMetadataKey(screw1NodePath);
@@ -1167,7 +1156,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               console.log('Left screw 1 tightened');
             }
 
-            // 왼쪽 스크류 2 조립 (회전+이동 역방향)
+            // 왼쪽 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
             if (screw2NodeName) {
               const metadataKey2 = extractMetadataKey(screw2NodePath);
               const config2 = getMetadataLoader().getScrewAnimationConfig(metadataKey2);
