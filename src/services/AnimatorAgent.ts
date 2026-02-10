@@ -1144,7 +1144,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('스크류2 오른쪽 방향 선형 이동 실행 중 에러:', error);
           }
 
-          // 스크류 노드를 다시 조이는 코드
+          // 스크류 노드(1,2)를 다시 조이는 코드
           try {
             console.log('스크류 조립 애니메이션 시작!!!');
 
@@ -1154,6 +1154,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               const config1 = getMetadataLoader().getScrewAnimationConfig(metadataKey1);
               await this.manualAssemblyManager.tightenScrew(screw1NodePath, config1 || {});
               console.log('Left screw 1 tightened');
+              // 스크류 1 조립 히스토리 기록 (ManualAssemblyManager.tightenScrew 내부에서 이미 기록됨)
             }
 
             // 왼쪽 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
@@ -1162,6 +1163,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               const config2 = getMetadataLoader().getScrewAnimationConfig(metadataKey2);
               await this.manualAssemblyManager.tightenScrew(screw2NodePath, config2 || {});
               console.log('Left screw 2 tightened');
+              // 스크류 2 조립 히스토리 기록 (ManualAssemblyManager.tightenScrew 내부에서 이미 기록됨)
             }
 
             console.log('스크류 조립 애니메이션 완료!!!');
