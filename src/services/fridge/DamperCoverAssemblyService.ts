@@ -314,7 +314,7 @@ export class DamperCoverAssemblyService {
             // 플러그와 가장 가까운 홈 찾기
             let minDistance = Infinity;
             let bestHole = this.detectedHoles[0];
-            
+
             for (const plug of this.detectedPlugs) {
                 for (const hole of this.detectedHoles) {
                     const dist = plug.position.distanceTo(hole.position);
@@ -328,11 +328,11 @@ export class DamperCoverAssemblyService {
             // 홈 좌표 근처의 노드 외곽 지점을 힌지로 설정
             // X, Y, Z 중 바운딩 박스의 경계와 가장 가까운 쪽을 힌지 축의 외곽으로 결정
             hingeWorldPos.copy(bestHole.position);
-            
+
             // X축 경계 중 가까운 쪽으로 투영 (일반적인 댐퍼 설치 방향 고려)
             const distToMinX = Math.abs(hingeWorldPos.x - box.min.x);
             const distToMaxX = Math.abs(hingeWorldPos.x - box.max.x);
-            
+
             if (distToMinX < distToMaxX) {
                 hingeWorldPos.x = box.min.x;
             } else {
@@ -367,7 +367,7 @@ export class DamperCoverAssemblyService {
         });
 
         // 1단계: 힌지를 고정하고 틸팅 (Pivot Rotation)
-        const tiltAngle = THREE.MathUtils.degToRad(15);
+        const tiltAngle = THREE.MathUtils.degToRad(35);
         const startPos = assemblyNode.position.clone();
         const startRotY = assemblyNode.rotation.y;
 
@@ -375,23 +375,23 @@ export class DamperCoverAssemblyService {
             progress: 1,
             duration: liftDur,
             ease: 'power2.out',
-            onUpdate: function() {
+            onUpdate: function () {
                 const p = this.targets()[0].progress;
                 const currentTilt = tiltAngle * p;
-                
+
                 // 1. 회전 적용
                 assemblyNode.rotation.y = startRotY + currentTilt;
 
                 // 2. 피벗을 고정하기 위한 위치 보정
                 const currentQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, currentTilt, 0));
                 const pivotDelta = localPivot.clone().sub(localPivot.clone().applyQuaternion(currentQuat));
-                
+
                 const initialQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, startRotY, 0));
                 const rotatedDelta = pivotDelta.applyQuaternion(initialQuat);
 
                 // 3. 힌지 쪽 충돌 방지를 위한 미세한 선행 리프트 (Hinge Lift)
                 // 힌지 자체도 약간 들어올려야(Z축 위쪽) 다른 노드와의 간섭을 피할 수 있음
-                const hingeLift = liftDist * 0.3 * p; 
+                const hingeLift = liftDist * 0.3 * p;
 
                 assemblyNode.position.set(
                     startPos.x + rotatedDelta.x,
@@ -411,7 +411,7 @@ export class DamperCoverAssemblyService {
         // 3단계: 페이드 아웃
         tl.to({}, {
             duration: fadeDur,
-            onUpdate: function() {
+            onUpdate: function () {
                 const progress = this.progress();
                 assemblyNode.traverse((child) => {
                     if (child instanceof THREE.Mesh && child.material) {

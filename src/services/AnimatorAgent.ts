@@ -1176,7 +1176,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.log('댐퍼 홀더 제거 애니메이션 시작!!!');
 
             await this.manualAssemblyManager.removeAssemblyNode({
-              liftDistance: 0.008,
+              liftDistance: 0.1,
               liftDuration: 100,
               slideDuration: 600,
               fadeDuration: 400,
