@@ -52,6 +52,14 @@
                         "description": "홈에 삽입"
                     }
                 ]
+            },
+            "disassembly": {
+                "liftDistance": 0.01,
+                "slideDistance": 0.05,
+                "tiltAngle": 35,
+                "liftDuration": 500,
+                "slideDuration": 700,
+                "fadeDuration": 500
             }
         }
     },

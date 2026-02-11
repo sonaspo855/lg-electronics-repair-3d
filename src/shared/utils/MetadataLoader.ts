@@ -98,6 +98,14 @@ export interface AssemblyConfig {
             description: string;
         }>;
     };
+    disassembly?: {
+        liftDistance: number;
+        slideDistance: number;
+        tiltAngle: number;
+        liftDuration: number;
+        slideDuration: number;
+        fadeDuration: number;
+    };
 }
 
 /**

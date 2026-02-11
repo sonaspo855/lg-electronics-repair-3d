@@ -160,16 +160,8 @@ export class ManualAssemblyManager {
 
     /**
      * assemblyNode를 3단계 애니메이션으로 제거합니다.
-     * @param options 애니메이션 옵션
      */
-    public async removeAssemblyNode(options?: {
-        liftDistance?: number;
-        slideDistance?: number;
-        liftDuration?: number;
-        slideDuration?: number;
-        fadeDuration?: number;
-        onComplete?: () => void;
-    }): Promise<void> {
+    public async removeAssemblyNode(): Promise<void> {
         if (!this.sceneRoot) {
             console.warn('[ManualAssemblyManager] sceneRoot가 초기화되지 않았습니다.');
             return;
@@ -187,7 +179,7 @@ export class ManualAssemblyManager {
             return;
         }
 
-        await this.damperCoverAssemblyService.removeAssemblyNode(assemblyNode, options);
+        await this.damperCoverAssemblyService.removeAssemblyNode(assemblyNode);
     }
 
     /**

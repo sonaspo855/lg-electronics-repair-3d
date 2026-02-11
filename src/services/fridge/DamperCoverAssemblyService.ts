@@ -283,15 +283,7 @@ export class DamperCoverAssemblyService {
      * 3단계: 페이드 아웃 및 제거
      */
     public async removeAssemblyNode(
-        assemblyNode: THREE.Object3D,
-        options?: {
-            liftDistance?: number;
-            slideDistance?: number;
-            liftDuration?: number;
-            slideDuration?: number;
-            fadeDuration?: number;
-            onComplete?: () => void;
-        }
+        assemblyNode: THREE.Object3D
     ): Promise<void> {
         if (!assemblyNode) {
             console.warn('[DamperCoverAssemblyService] assemblyNode가 존재하지 않습니다.');
@@ -300,11 +292,17 @@ export class DamperCoverAssemblyService {
 
         console.log('[DamperCoverAssemblyService] 틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
 
-        const liftDist = options?.liftDistance ?? 0.01;
-        const slideDist = options?.slideDistance ?? 0.05;
-        const liftDur = (options?.liftDuration ?? 500) / 1000;
-        const slideDur = (options?.slideDuration ?? 700) / 1000;
-        const fadeDur = (options?.fadeDuration ?? 500) / 1000;
+        // 메타데이터에서 설정 로드
+        const assemblyKey = 'damper_cover_assembly';
+        const config = this.metadataLoader.getAssemblyConfig(assemblyKey);
+        const disassemblyConfig = config?.disassembly;
+
+        const liftDist = disassemblyConfig?.liftDistance ?? 0.01;
+        const slideDist = disassemblyConfig?.slideDistance ?? 0.05;
+        const liftDur = (disassemblyConfig?.liftDuration ?? 500) / 1000;
+        const slideDur = (disassemblyConfig?.slideDuration ?? 700) / 1000;
+        const fadeDur = (disassemblyConfig?.fadeDuration ?? 500) / 1000;
+        const tiltAngleDeg = disassemblyConfig?.tiltAngle ?? 35;
 
         // 1. 힌지(Pivot) 포인트 결정
         let hingeWorldPos = new THREE.Vector3();
@@ -362,12 +360,11 @@ export class DamperCoverAssemblyService {
             onComplete: () => {
                 assemblyNode.visible = false;
                 console.log('[DamperCoverAssemblyService] 제거 애니메이션 완료');
-                options?.onComplete?.();
             }
         });
 
         // 1단계: 힌지를 고정하고 틸팅 (Pivot Rotation)
-        const tiltAngle = THREE.MathUtils.degToRad(35);
+        const tiltAngle = THREE.MathUtils.degToRad(tiltAngleDeg);
         const startPos = assemblyNode.position.clone();
         const startRotY = assemblyNode.rotation.y;
 

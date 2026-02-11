@@ -1175,15 +1175,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           try {
             console.log('댐퍼 홀더 제거 애니메이션 시작!!!');
 
-            await this.manualAssemblyManager.removeAssemblyNode({
-              liftDistance: 0.1,
-              liftDuration: 100,
-              slideDuration: 600,
-              fadeDuration: 400,
-              onComplete: () => {
-                console.log('[AnimatorAgent] 댐퍼 홀더 제거 애니메이션 완료');
-              }
-            });
+            await this.manualAssemblyManager.removeAssemblyNode();
 
             console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
           } catch (error) {
