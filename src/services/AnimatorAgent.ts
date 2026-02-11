@@ -1217,6 +1217,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('댐퍼 홀더 제거 애니메이션 실행 중 에러:', error);
           }
 
+          // coverNode 노드의 본래 위치로 복구하는 애니메이션
 
 
 
