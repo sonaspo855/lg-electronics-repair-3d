@@ -308,13 +308,38 @@ export class DamperCoverAssemblyService {
 
         // 1. 힌지(Pivot) 포인트 결정
         let hingeWorldPos = new THREE.Vector3();
-        if (this.detectedHoles && this.detectedHoles.length > 0) {
-            // 탐지된 홈들의 중심점을 힌지로 사용
-            this.detectedHoles.forEach(h => hingeWorldPos.add(h.position));
-            hingeWorldPos.divideScalar(this.detectedHoles.length);
+        const box = getPreciseBoundingBox(assemblyNode);
+
+        if (this.detectedHoles && this.detectedHoles.length > 0 && this.detectedPlugs && this.detectedPlugs.length > 0) {
+            // 플러그와 가장 가까운 홈 찾기
+            let minDistance = Infinity;
+            let bestHole = this.detectedHoles[0];
+            
+            for (const plug of this.detectedPlugs) {
+                for (const hole of this.detectedHoles) {
+                    const dist = plug.position.distanceTo(hole.position);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestHole = hole;
+                    }
+                }
+            }
+
+            // 홈 좌표 근처의 노드 외곽 지점을 힌지로 설정
+            // X, Y, Z 중 바운딩 박스의 경계와 가장 가까운 쪽을 힌지 축의 외곽으로 결정
+            hingeWorldPos.copy(bestHole.position);
+            
+            // X축 경계 중 가까운 쪽으로 투영 (일반적인 댐퍼 설치 방향 고려)
+            const distToMinX = Math.abs(hingeWorldPos.x - box.min.x);
+            const distToMaxX = Math.abs(hingeWorldPos.x - box.max.x);
+            
+            if (distToMinX < distToMaxX) {
+                hingeWorldPos.x = box.min.x;
+            } else {
+                hingeWorldPos.x = box.max.x;
+            }
         } else {
-            // 탐지된 홈이 없으면 Bounding Box의 한쪽 끝을 힌지로 가정
-            const box = getPreciseBoundingBox(assemblyNode);
+            // 탐지된 정보가 없으면 Bounding Box의 한쪽 끝을 힌지로 가정
             hingeWorldPos.set(box.min.x, (box.min.y + box.max.y) / 2, box.min.z);
         }
 
@@ -342,11 +367,7 @@ export class DamperCoverAssemblyService {
         });
 
         // 1단계: 힌지를 고정하고 틸팅 (Pivot Rotation)
-        // 회전각 (약 15도)
         const tiltAngle = THREE.MathUtils.degToRad(15);
-        
-        // 헬퍼 객체를 이용한 피벗 회전 구현 (또는 직접 계산)
-        // 여기서는 직접 계산 방식을 사용하여 부드러운 애니메이션 구현
         const startPos = assemblyNode.position.clone();
         const startRotY = assemblyNode.rotation.y;
 
@@ -358,24 +379,24 @@ export class DamperCoverAssemblyService {
                 const p = this.targets()[0].progress;
                 const currentTilt = tiltAngle * p;
                 
-                // 1. 회전 적용 (기존 코드의 Y축 회전 패턴 유지)
+                // 1. 회전 적용
                 assemblyNode.rotation.y = startRotY + currentTilt;
 
                 // 2. 피벗을 고정하기 위한 위치 보정
-                // Origin_new = Pivot + R(Origin - Pivot)
-                // Position_delta = Origin_new - Origin = Pivot - R(Pivot)
                 const currentQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, currentTilt, 0));
                 const pivotDelta = localPivot.clone().sub(localPivot.clone().applyQuaternion(currentQuat));
                 
-                // 월드 델타를 부모 좌표계로 변환 (단순화를 위해 현재는 로컬 델타를 직접 적용)
-                // 주의: assemblyNode가 회전된 상태이므로 초기 회전을 고려해야 함
                 const initialQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, startRotY, 0));
                 const rotatedDelta = pivotDelta.applyQuaternion(initialQuat);
+
+                // 3. 힌지 쪽 충돌 방지를 위한 미세한 선행 리프트 (Hinge Lift)
+                // 힌지 자체도 약간 들어올려야(Z축 위쪽) 다른 노드와의 간섭을 피할 수 있음
+                const hingeLift = liftDist * 0.3 * p; 
 
                 assemblyNode.position.set(
                     startPos.x + rotatedDelta.x,
                     startPos.y + rotatedDelta.y,
-                    startPos.z + rotatedDelta.z - (liftDist * p) // 약간 위로 들기 포함
+                    startPos.z + rotatedDelta.z - (liftDist * p) - hingeLift
                 );
             }
         });
