@@ -5,6 +5,7 @@ import { getMetadataLoader } from '../../shared/utils/MetadataLoader';
 import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
 import { getAssemblyPathVisualizer } from '../../shared/utils/AssemblyPathVisualizer';
 import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
+import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
  * 댐퍼 커버 조립 서비스
@@ -57,7 +58,6 @@ export class DamperCoverAssemblyService {
             return null;
         }
 
-        // const nodeNameManager = getNodeNameManager();
         const coverNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!) as THREE.Mesh;
         const assemblyNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!) as THREE.Mesh;
 
@@ -274,6 +274,103 @@ export class DamperCoverAssemblyService {
         });
 
         return uniquePlugs;
+    }
+
+    /**
+     * assemblyNode를 단순화된 3단계 애니메이션으로 제거합니다.
+     * 1단계: 수직 리프트 (Y축 +방향)
+     * 2단계: 바깥쪽 슬라이드 (Z축 -방향)
+     * 3단계: 페이드 아웃 및 제거
+     */
+    public async removeAssemblyNode(
+        assemblyNode: THREE.Object3D,
+        options?: {
+            liftDistance?: number;
+            slideDistance?: number;
+            liftDuration?: number;
+            slideDuration?: number;
+            fadeDuration?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<void> {
+        if (!assemblyNode) {
+            console.warn('[DamperCoverAssemblyService] assemblyNode가 존재하지 않습니다.');
+            return;
+        }
+
+        console.log('[DamperCoverAssemblyService] 단순화된 제거 애니메이션 시작:', assemblyNode.name);
+
+        // 애니메이션 파라미터 (고정값 또는 옵션)
+        const liftDist = options?.liftDistance ?? 0.01;
+        const slideDist = options?.slideDistance ?? 0.05;
+        const liftDur = (options?.liftDuration ?? 500) / 1000;
+        const slideDur = (options?.slideDuration ?? 700) / 1000;
+        const fadeDur = (options?.fadeDuration ?? 500) / 1000;
+
+        console.log('liftDur>> ', liftDur);
+
+        // 초기 상태 보장
+        assemblyNode.visible = true;
+
+        // 투명도 조절을 위한 재질 설정 초기화
+        assemblyNode.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.forEach(m => {
+                    m.transparent = true;
+                    m.opacity = 1;
+                    m.needsUpdate = true;
+                });
+            }
+        });
+
+        // GSAP Timeline 생성
+        const tl = gsap.timeline({
+            onComplete: () => {
+                // 노드를 제거하는 부분을 주석 처리 (애니메이션 확인용)
+                // assemblyNode.visible = false;
+                console.log('[DamperCoverAssemblyService] 제거 애니메이션 완료 (노드 유지됨)');
+                options?.onComplete?.();
+            }
+        });
+
+        // 1단계: Y축 방향으로 리프트 (사용자 피드백에 따라 방향 반전: -= 가 위쪽)
+        tl.to(assemblyNode.position, {
+            z: `-=${liftDist}`,
+            duration: liftDur,
+            ease: 'power2.out'
+        });
+
+        // 2단계: Z축 방향으로 슬라이드 (바깥쪽 방향 - 모델 기준)
+        tl.to(assemblyNode.position, {
+            z: `-=${slideDist}`,
+            duration: slideDur,
+            ease: 'power2.inOut'
+        });
+
+        // 3단계: 페이드 아웃 (애니메이션 확인을 위해 주석 처리)
+        /*
+        const fadeObj = { opacity: 1 };
+        tl.to(fadeObj, {
+            opacity: 0,
+            duration: fadeDur,
+            ease: 'none',
+            onUpdate: () => {
+                assemblyNode.traverse((child) => {
+                    if (child instanceof THREE.Mesh && child.material) {
+                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+                        materials.forEach(m => {
+                            m.opacity = fadeObj.opacity;
+                        });
+                    }
+                });
+            }
+        });
+        */
+
+        return new Promise<void>((resolve) => {
+            tl.eventCallback('onComplete', () => resolve());
+        });
     }
 }
 

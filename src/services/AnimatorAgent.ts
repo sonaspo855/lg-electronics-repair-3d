@@ -1172,6 +1172,23 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           }
 
           // 댐퍼를 고정했던 홀더를 제거
+          try {
+            console.log('댐퍼 홀더 제거 애니메이션 시작!!!');
+
+            await this.manualAssemblyManager.removeAssemblyNode({
+              liftDistance: 10.008,
+              liftDuration: 400,
+              slideDuration: 600,
+              fadeDuration: 400,
+              onComplete: () => {
+                console.log('[AnimatorAgent] 댐퍼 홀더 제거 애니메이션 완료');
+              }
+            });
+
+            console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
+          } catch (error) {
+            console.error('댐퍼 홀더 제거 애니메이션 실행 중 에러:', error);
+          }
 
 
 

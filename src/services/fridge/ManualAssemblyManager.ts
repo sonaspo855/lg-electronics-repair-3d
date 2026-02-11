@@ -159,6 +159,38 @@ export class ManualAssemblyManager {
     }
 
     /**
+     * assemblyNode를 3단계 애니메이션으로 제거합니다.
+     * @param options 애니메이션 옵션
+     */
+    public async removeAssemblyNode(options?: {
+        liftDistance?: number;
+        slideDistance?: number;
+        liftDuration?: number;
+        slideDuration?: number;
+        fadeDuration?: number;
+        onComplete?: () => void;
+    }): Promise<void> {
+        if (!this.sceneRoot) {
+            console.warn('[ManualAssemblyManager] sceneRoot가 초기화되지 않았습니다.');
+            return;
+        }
+
+        const assemblyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly');
+        if (!assemblyNodeName) {
+            console.warn('[ManualAssemblyManager] damperAssembly 노드 이름을 찾을 수 없습니다.');
+            return;
+        }
+
+        const assemblyNode = this.sceneRoot.getObjectByName(assemblyNodeName);
+        if (!assemblyNode) {
+            console.warn('[ManualAssemblyManager] assemblyNode를 찾을 수 없습니다.');
+            return;
+        }
+
+        await this.damperCoverAssemblyService.removeAssemblyNode(assemblyNode, options);
+    }
+
+    /**
      * Screw를 돌려서 빼는 애니메이션을 실행합니다.
      * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
      * @param options 애니메이션 옵션
