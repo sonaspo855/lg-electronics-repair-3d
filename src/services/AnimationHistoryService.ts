@@ -14,6 +14,16 @@ export interface AnimationHistoryItem {
         degrees?: number;
         speed?: number;
         // 좌표 정보 (댐퍼 커버 조립 등에서 사용)
+        targetPosition?: {
+            x: number;
+            y: number;
+            z: number;
+        };
+        originalPosition?: {
+            x: number;
+            y: number;
+            z: number;
+        };
         position?: {
             x: number;
             y: number;
@@ -79,6 +89,8 @@ export class AnimationHistoryService {
                 action: command.action,
                 degrees: command.degrees,
                 speed: command.speed,
+                targetPosition: command.targetPosition,
+                originalPosition: command.originalPosition,
                 position: command.position,
                 easing: command.easing,
                 duration: command.duration,
@@ -130,6 +142,14 @@ export class AnimationHistoryService {
 
         if (command.position) {
             parts.push(`pos(${command.position.x.toFixed(3)}, ${command.position.y.toFixed(3)}, ${command.position.z.toFixed(3)})`);
+        }
+
+        if (command.targetPosition) {
+            parts.push(`target(${command.targetPosition.x.toFixed(3)}, ${command.targetPosition.y.toFixed(3)}, ${command.targetPosition.z.toFixed(3)})`);
+        }
+
+        if (command.originalPosition) {
+            parts.push(`orig(${command.originalPosition.x.toFixed(3)}, ${command.originalPosition.y.toFixed(3)}, ${command.originalPosition.z.toFixed(3)})`);
         }
 
         if (command.duration !== undefined) {

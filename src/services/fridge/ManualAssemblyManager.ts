@@ -151,9 +151,12 @@ export class ManualAssemblyManager {
             onComplete?: () => void;
         }
     ): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
+        originalPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
+        translationDistance: number;
+        extractDirection: [number, number, number];
     } | null> {
         return await this.damperCoverAssemblyService.assembleDamperCover(options);
     }
@@ -162,7 +165,8 @@ export class ManualAssemblyManager {
      * assemblyNode를 3단계 애니메이션으로 제거합니다.
      */
     public async removeAssemblyNode(): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
+        originalPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
         rotationAngle: number;

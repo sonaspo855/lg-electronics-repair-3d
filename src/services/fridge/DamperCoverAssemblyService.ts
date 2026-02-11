@@ -49,9 +49,12 @@ export class DamperCoverAssemblyService {
         duration?: number;
         onComplete?: () => void;
     }): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
+        originalPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
+        translationDistance: number;
+        extractDirection: [number, number, number];
     } | null> {
         if (!this.sceneRoot) {
             console.error('Scene root not initialized.');
@@ -68,6 +71,13 @@ export class DamperCoverAssemblyService {
             });
             return null;
         }
+
+        // 본래 로컬 위치 저장
+        const originalPosition = {
+            x: coverNode.position.x,
+            y: coverNode.position.y,
+            z: coverNode.position.z
+        };
 
         const assemblyKey = 'damper_cover_assembly';
 
@@ -135,6 +145,10 @@ export class DamperCoverAssemblyService {
             // 월드 이동 벡터 계산 (플러그가 홈 위치로 가야 함)
             const worldMoveVector = new THREE.Vector3().subVectors(bestHole.position, bestPlug.position);
 
+            // 추출 방향 (이동 방향) 저장
+            const direction = worldMoveVector.clone().normalize();
+            const extractDirection: [number, number, number] = [direction.x, direction.y, direction.z];
+
             // 선형 이동 거리를 줄임 (오프셋 추가)
             // 현재 위치에서 목표 위치로 향하는 직선 경로상에서 일정 거리만큼 덜 이동하게 함
             const offsetDistance = 0.0005;
@@ -183,16 +197,19 @@ export class DamperCoverAssemblyService {
 
             // 좌표 정보 반환
             // targetLocalPos: 이동될 목표 위치의 좌표
-            const position = {
+            const targetPosition = {
                 x: targetLocalPos.x,
                 y: targetLocalPos.y,
                 z: targetLocalPos.z
             };
 
             const result = {
-                position,
+                targetPosition,
+                originalPosition,
                 duration,
-                easing
+                easing,
+                translationDistance: reducedDistance,
+                extractDirection
             };
 
             return result;
@@ -285,7 +302,8 @@ export class DamperCoverAssemblyService {
     public async removeAssemblyNode(
         assemblyNode: THREE.Object3D
     ): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
+        originalPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
         rotationAngle: number;
@@ -307,6 +325,13 @@ export class DamperCoverAssemblyService {
         }
 
         console.log('[DamperCoverAssemblyService] 틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
+
+        // 본래 위치 저장
+        const originalPosition = {
+            x: assemblyNode.position.x,
+            y: assemblyNode.position.y,
+            z: assemblyNode.position.z
+        };
 
         // 메타데이터에서 설정 로드
         const assemblyKey = 'damper_cover_assembly';
@@ -441,7 +466,7 @@ export class DamperCoverAssemblyService {
             tl.eventCallback('onComplete', () => resolve());
         });
 
-        const position = {
+        const targetPosition = {
             x: assemblyNode.position.x,
             y: assemblyNode.position.y,
             z: assemblyNode.position.z
@@ -449,7 +474,8 @@ export class DamperCoverAssemblyService {
         const duration = (liftDur + slideDur + fadeDur) * 1000; // 전체 시간 (ms)
 
         const result = {
-            position,
+            targetPosition,
+            originalPosition,
             duration,
             easing: 'power2.inOut',
             rotationAngle: tiltAngleDeg,

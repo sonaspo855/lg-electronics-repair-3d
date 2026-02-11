@@ -181,6 +181,16 @@ export interface AnimationCommand {
   degrees?: number;
   speed?: number;
   // 좌표 정보 (댐퍼 커버 조립 등에서 사용)
+  targetPosition?: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  originalPosition?: {
+    x: number;
+    y: number;
+    z: number;
+  };
   position?: {
     x: number;
     y: number;
@@ -1018,9 +1028,12 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 action: AnimationAction.DAMPER_COVER_BODY,
                 degrees: 0,
                 speed: 1,
-                position: assemblyResult.position,
+                targetPosition: assemblyResult.targetPosition,
+                originalPosition: assemblyResult.originalPosition,
                 easing: assemblyResult.easing,
-                duration: assemblyResult.duration
+                duration: assemblyResult.duration,
+                translationDistance: assemblyResult.translationDistance,
+                extractDirection: assemblyResult.extractDirection
               };
               const assemblyMessage = '댐퍼 커버 조립 완료';
               this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
@@ -1185,7 +1198,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 action: AnimationAction.DAMPER_HOLDER_REMOVAL,
                 degrees: 0,
                 speed: 1,
-                position: removeResult.position,
+                targetPosition: removeResult.targetPosition,
+                originalPosition: removeResult.originalPosition,
                 easing: removeResult.easing,
                 duration: removeResult.duration,
                 rotationAngle: removeResult.rotationAngle,
