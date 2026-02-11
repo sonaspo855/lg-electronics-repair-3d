@@ -284,10 +284,14 @@ export class DamperCoverAssemblyService {
      */
     public async removeAssemblyNode(
         assemblyNode: THREE.Object3D
-    ): Promise<void> {
+    ): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
         if (!assemblyNode) {
             console.warn('[DamperCoverAssemblyService] assemblyNode가 존재하지 않습니다.');
-            return;
+            return null;
         }
 
         console.log('[DamperCoverAssemblyService] 틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
@@ -421,9 +425,26 @@ export class DamperCoverAssemblyService {
             }
         });
 
-        return new Promise<void>((resolve) => {
+        await new Promise<void>((resolve) => {
             tl.eventCallback('onComplete', () => resolve());
         });
+
+        const position = {
+            x: assemblyNode.position.x,
+            y: assemblyNode.position.y,
+            z: assemblyNode.position.z
+        };
+        const duration = (liftDur + slideDur + fadeDur) * 1000; // 전체 시간 (ms)
+
+        const result = {
+            position,
+            duration,
+            easing: 'power2.inOut'
+        };
+
+
+        // 애니메이션 결과 반환
+        return result;
     }
 }
 

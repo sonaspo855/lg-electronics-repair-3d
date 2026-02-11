@@ -161,25 +161,29 @@ export class ManualAssemblyManager {
     /**
      * assemblyNode를 3단계 애니메이션으로 제거합니다.
      */
-    public async removeAssemblyNode(): Promise<void> {
+    public async removeAssemblyNode(): Promise<{
+        position: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
         if (!this.sceneRoot) {
             console.warn('[ManualAssemblyManager] sceneRoot가 초기화되지 않았습니다.');
-            return;
+            return null;
         }
 
         const assemblyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly');
         if (!assemblyNodeName) {
             console.warn('[ManualAssemblyManager] damperAssembly 노드 이름을 찾을 수 없습니다.');
-            return;
+            return null;
         }
 
         const assemblyNode = this.sceneRoot.getObjectByName(assemblyNodeName);
         if (!assemblyNode) {
             console.warn('[ManualAssemblyManager] assemblyNode를 찾을 수 없습니다.');
-            return;
+            return null;
         }
 
-        await this.damperCoverAssemblyService.removeAssemblyNode(assemblyNode);
+        return await this.damperCoverAssemblyService.removeAssemblyNode(assemblyNode);
     }
 
     /**

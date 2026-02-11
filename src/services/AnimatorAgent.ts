@@ -158,7 +158,8 @@ export const AnimationAction = {
   SCREW_LOOSEN: 'screw_loosen',
   SCREW_TIGHTEN: 'screw_tighten',
   DAMPER_COVER_BODY: 'damper_cover_body',
-  DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
+  DAMPER_CASE_BODY_MOVE: 'damper_case_body_move',
+  DAMPER_HOLDER_REMOVAL: 'damper_holder_removal'
 } as const;
 
 export type AnimationAction = typeof AnimationAction[keyof typeof AnimationAction];
@@ -1175,7 +1176,23 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           try {
             console.log('댐퍼 홀더 제거 애니메이션 시작!!!');
 
-            await this.manualAssemblyManager.removeAssemblyNode();
+            const removeResult = await this.manualAssemblyManager.removeAssemblyNode();
+
+            // 애니메이션 히스토리 기록
+            if (removeResult && this.animationHistoryService) {
+              const removeCommand: AnimationCommand = {
+                door: commandsArray[0].door,
+                action: AnimationAction.DAMPER_HOLDER_REMOVAL,
+                degrees: 0,
+                speed: 1,
+                position: removeResult.position,
+                easing: removeResult.easing,
+                duration: removeResult.duration
+              };
+              const removeMessage = '댐퍼 홀더 제거 완료';
+              this.animationHistoryService.addAnimationHistory(removeCommand, removeMessage);
+              console.log('555_Animation history after damper holder removal:', this.animationHistoryService.getAllHistory());
+            }
 
             console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
           } catch (error) {
