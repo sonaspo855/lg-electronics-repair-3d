@@ -334,16 +334,24 @@ export class DamperCoverAssemblyService {
             }
         });
 
-        // 1단계: Y축 방향으로 리프트 (사용자 피드백에 따라 방향 반전: -= 가 위쪽)
+        // 1단계: 힌지(돌출부 쪽)를 고정하고 먼 쪽을 들어 올리는 애니메이션
+        // 전체적으로 위(-Z)로 이동시키되, 회전을 통해 한쪽만 크게 들리는 효과를 줌
         tl.to(assemblyNode.position, {
-            z: `-=${liftDist}`,
+            z: `-=${liftDist * 1.2}`, // 전체적으로 약간 들어올려 충돌 방지
             duration: liftDur,
             ease: 'power2.out'
         });
 
-        // 2단계: Z축 방향으로 슬라이드 (바깥쪽 방향 - 모델 기준)
+        // 돌출부 먼 쪽이 들리는 느낌을 주기 위해 회전(틸팅) 추가 (방향 반전)
+        tl.to(assemblyNode.rotation, {
+            y: `+=${THREE.MathUtils.degToRad(20)}`, // -= 로 방향 반전 및 각도 증가
+            duration: liftDur,
+            ease: 'power2.out'
+        }, "<"); // 이동과 동시에 실행하여 힌지 효과 구현
+
+        // 2단계: 바깥쪽으로 슬라이드 (힌지에서 빠져나오는 방향)
         tl.to(assemblyNode.position, {
-            z: `-=${slideDist}`,
+            y: `+=${slideDist}`,
             duration: slideDur,
             ease: 'power2.inOut'
         });
