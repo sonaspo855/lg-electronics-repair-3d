@@ -288,6 +288,18 @@ export class DamperCoverAssemblyService {
         position: { x: number; y: number; z: number };
         duration: number;
         easing: string;
+        rotationAngle: number;
+        rotationAxis: 'x' | 'y' | 'z';
+        translationDistance: number;
+        extractDirection: [number, number, number];
+        disassemblyConfig: {
+            liftDistance: number;
+            slideDistance: number;
+            liftDuration: number;
+            slideDuration: number;
+            fadeDuration: number;
+            tiltAngle: number;
+        };
     } | null> {
         if (!assemblyNode) {
             console.warn('[DamperCoverAssemblyService] assemblyNode가 존재하지 않습니다.');
@@ -439,7 +451,19 @@ export class DamperCoverAssemblyService {
         const result = {
             position,
             duration,
-            easing: 'power2.inOut'
+            easing: 'power2.inOut',
+            rotationAngle: tiltAngleDeg,
+            rotationAxis: 'y' as const,
+            translationDistance: slideDist,
+            extractDirection: [0, 1, 0] as [number, number, number],
+            disassemblyConfig: {
+                liftDistance: liftDist,
+                slideDistance: slideDist,
+                liftDuration: liftDur * 1000,
+                slideDuration: slideDur * 1000,
+                fadeDuration: fadeDur * 1000,
+                tiltAngle: tiltAngleDeg
+            }
         };
 
 

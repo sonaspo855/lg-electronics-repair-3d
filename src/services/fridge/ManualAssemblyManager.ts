@@ -165,6 +165,10 @@ export class ManualAssemblyManager {
         position: { x: number; y: number; z: number };
         duration: number;
         easing: string;
+        rotationAngle: number;
+        rotationAxis: 'x' | 'y' | 'z';
+        translationDistance: number;
+        extractDirection: [number, number, number];
     } | null> {
         if (!this.sceneRoot) {
             console.warn('[ManualAssemblyManager] sceneRoot가 초기화되지 않았습니다.');

@@ -1187,7 +1187,11 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 speed: 1,
                 position: removeResult.position,
                 easing: removeResult.easing,
-                duration: removeResult.duration
+                duration: removeResult.duration,
+                rotationAngle: removeResult.rotationAngle,
+                rotationAxis: removeResult.rotationAxis,
+                translationDistance: removeResult.translationDistance,
+                extractDirection: removeResult.extractDirection
               };
               const removeMessage = '댐퍼 홀더 제거 완료';
               this.animationHistoryService.addAnimationHistory(removeCommand, removeMessage);
