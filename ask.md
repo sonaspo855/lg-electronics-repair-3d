@@ -1,1 +1,2 @@
-- liftDist 는 위로 들어올리는 것이 아니라 아래 방향으로 이동시키는 것 같다.
+- AnimatorAgent.ts:1007 `댐퍼 돌출부/홈 결합 애니메이션 실행` assembleDamperCover 함수 실행 로직 중 assembleDamperCover 함수에서 this.detectedPlugs, this.detectedHoles 및 `돌출부 좌표부터 가장 가까운 홈 좌표까지 coverNode 선형 이동` 하는 로직이 있다. 이 로직을 가져와서 DamperCoverAssemblyService.ts assembleDamperCover 함수에 `돌출부 쪽을 힌지로 삼아 반대쪽(먼 쪽)을 들어 올리는 틸팅 효과`를 구현할 수 있지 않을까?
+- assembly-node-removal-3-stage-animation-plan.md 를 참고하여 돌출부 쪽을 힌지로 삼아 반대쪽(먼 쪽)을 들어 올리는 틸팅 효과 코드를 구현해줘.

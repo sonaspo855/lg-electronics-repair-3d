@@ -277,9 +277,9 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * assemblyNode를 단순화된 3단계 애니메이션으로 제거합니다.
-     * 1단계: 수직 리프트 (Y축 +방향)
-     * 2단계: 바깥쪽 슬라이드 (Z축 -방향)
+     * assemblyNode를 3단계 애니메이션으로 제거합니다.
+     * 1단계: 힌지(돌출부/홈)를 축으로 한 틸팅 및 리프트
+     * 2단계: 홈에서 빠져나오는 방향으로 슬라이드
      * 3단계: 페이드 아웃 및 제거
      */
     public async removeAssemblyNode(
@@ -298,83 +298,110 @@ export class DamperCoverAssemblyService {
             return;
         }
 
-        console.log('[DamperCoverAssemblyService] 단순화된 제거 애니메이션 시작:', assemblyNode.name);
+        console.log('[DamperCoverAssemblyService] 틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
 
-        // 애니메이션 파라미터 (고정값 또는 옵션)
         const liftDist = options?.liftDistance ?? 0.01;
         const slideDist = options?.slideDistance ?? 0.05;
         const liftDur = (options?.liftDuration ?? 500) / 1000;
         const slideDur = (options?.slideDuration ?? 700) / 1000;
         const fadeDur = (options?.fadeDuration ?? 500) / 1000;
 
-        console.log('liftDur>> ', liftDur);
+        // 1. 힌지(Pivot) 포인트 결정
+        let hingeWorldPos = new THREE.Vector3();
+        if (this.detectedHoles && this.detectedHoles.length > 0) {
+            // 탐지된 홈들의 중심점을 힌지로 사용
+            this.detectedHoles.forEach(h => hingeWorldPos.add(h.position));
+            hingeWorldPos.divideScalar(this.detectedHoles.length);
+        } else {
+            // 탐지된 홈이 없으면 Bounding Box의 한쪽 끝을 힌지로 가정
+            const box = getPreciseBoundingBox(assemblyNode);
+            hingeWorldPos.set(box.min.x, (box.min.y + box.max.y) / 2, box.min.z);
+        }
 
-        // 초기 상태 보장
+        // 로컬 공간의 피벗 좌표 계산
+        const localPivot = assemblyNode.worldToLocal(hingeWorldPos.clone());
+
+        // 초기 상태 설정
         assemblyNode.visible = true;
-
-        // 투명도 조절을 위한 재질 설정 초기화
         assemblyNode.traverse((child) => {
             if (child instanceof THREE.Mesh && child.material) {
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
                 materials.forEach(m => {
                     m.transparent = true;
                     m.opacity = 1;
-                    m.needsUpdate = true;
                 });
             }
         });
 
-        // GSAP Timeline 생성
         const tl = gsap.timeline({
             onComplete: () => {
-                // 노드를 제거하는 부분을 주석 처리 (애니메이션 확인용)
-                // assemblyNode.visible = false;
-                console.log('[DamperCoverAssemblyService] 제거 애니메이션 완료 (노드 유지됨)');
+                assemblyNode.visible = false;
+                console.log('[DamperCoverAssemblyService] 제거 애니메이션 완료');
                 options?.onComplete?.();
             }
         });
 
-        // 1단계: 힌지(돌출부 쪽)를 고정하고 먼 쪽을 들어 올리는 애니메이션
-        // 전체적으로 위(-Z)로 이동시키되, 회전을 통해 한쪽만 크게 들리는 효과를 줌
-        tl.to(assemblyNode.position, {
-            z: `-=${liftDist * 1.2}`, // 전체적으로 약간 들어올려 충돌 방지
+        // 1단계: 힌지를 고정하고 틸팅 (Pivot Rotation)
+        // 회전각 (약 15도)
+        const tiltAngle = THREE.MathUtils.degToRad(15);
+        
+        // 헬퍼 객체를 이용한 피벗 회전 구현 (또는 직접 계산)
+        // 여기서는 직접 계산 방식을 사용하여 부드러운 애니메이션 구현
+        const startPos = assemblyNode.position.clone();
+        const startRotY = assemblyNode.rotation.y;
+
+        tl.to({ progress: 0 }, {
+            progress: 1,
             duration: liftDur,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            onUpdate: function() {
+                const p = this.targets()[0].progress;
+                const currentTilt = tiltAngle * p;
+                
+                // 1. 회전 적용 (기존 코드의 Y축 회전 패턴 유지)
+                assemblyNode.rotation.y = startRotY + currentTilt;
+
+                // 2. 피벗을 고정하기 위한 위치 보정
+                // Origin_new = Pivot + R(Origin - Pivot)
+                // Position_delta = Origin_new - Origin = Pivot - R(Pivot)
+                const currentQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, currentTilt, 0));
+                const pivotDelta = localPivot.clone().sub(localPivot.clone().applyQuaternion(currentQuat));
+                
+                // 월드 델타를 부모 좌표계로 변환 (단순화를 위해 현재는 로컬 델타를 직접 적용)
+                // 주의: assemblyNode가 회전된 상태이므로 초기 회전을 고려해야 함
+                const initialQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, startRotY, 0));
+                const rotatedDelta = pivotDelta.applyQuaternion(initialQuat);
+
+                assemblyNode.position.set(
+                    startPos.x + rotatedDelta.x,
+                    startPos.y + rotatedDelta.y,
+                    startPos.z + rotatedDelta.z - (liftDist * p) // 약간 위로 들기 포함
+                );
+            }
         });
 
-        // 돌출부 먼 쪽이 들리는 느낌을 주기 위해 회전(틸팅) 추가 (방향 반전)
-        tl.to(assemblyNode.rotation, {
-            y: `+=${THREE.MathUtils.degToRad(20)}`, // -= 로 방향 반전 및 각도 증가
-            duration: liftDur,
-            ease: 'power2.out'
-        }, "<"); // 이동과 동시에 실행하여 힌지 효과 구현
-
-        // 2단계: 바깥쪽으로 슬라이드 (힌지에서 빠져나오는 방향)
+        // 2단계: 슬라이드 분리 (바깥쪽 방향)
         tl.to(assemblyNode.position, {
             y: `+=${slideDist}`,
             duration: slideDur,
             ease: 'power2.inOut'
         });
 
-        // 3단계: 페이드 아웃 (애니메이션 확인을 위해 주석 처리)
-        /*
-        const fadeObj = { opacity: 1 };
-        tl.to(fadeObj, {
-            opacity: 0,
+        // 3단계: 페이드 아웃
+        tl.to({}, {
             duration: fadeDur,
-            ease: 'none',
-            onUpdate: () => {
+            onUpdate: function() {
+                const progress = this.progress();
                 assemblyNode.traverse((child) => {
                     if (child instanceof THREE.Mesh && child.material) {
                         const materials = Array.isArray(child.material) ? child.material : [child.material];
                         materials.forEach(m => {
-                            m.opacity = fadeObj.opacity;
+                            m.opacity = 1 - progress;
                         });
                     }
                 });
             }
         });
-        */
 
         return new Promise<void>((resolve) => {
             tl.eventCallback('onComplete', () => resolve());
