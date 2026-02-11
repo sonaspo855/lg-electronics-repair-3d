@@ -164,48 +164,137 @@ lg-electronics-repair-3d/
 
 ### 5. src/services/
 API 호출, AI 통신, 비즈니스 로직을 처리합니다.
-- **AnimatorAgent.ts**: AI 애니메이터 에이전트
-  - Ollama API로 AI와 통신
-  - 자연어 명령을 파싱하여 애니메이션 생성
-  - 대화 상태 관리
-  - 문 열기/닫기 명령 처리
-  - 댐퍼 서비스 명령 감지
-- **AnimationHistoryService.ts**: 애니메이션 히스토리 서비스
-  - 애니메이션 히스토리 저장/불러기
-  - 실행 취소/다시 실행 기능
-- **fridge/**: 냉장고 특화 서비스
-  - `CameraMovementService.ts`: 카메라 이동 서비스
-    - `moveCameraToLeftDoorDamper`: 왼쪽 도어 댐퍼 노드로 카메라 이동
-    - `moveCameraCinematic`: 시네마틱 카메라 워킹 구현 (직선 → 하강 → 로우 앵글)
-    - Bezier 곡선 기반 부드러운 카메라 이동
-    - 대상 물체에 맞춰 동적 시점 계산
-  - `DamperAnimationService.ts`: 댐퍼 애니메이션 서비스
-    - 댐퍼 서비스 명령 생성 및 처리
-  - `DamperCoverAssemblyService.ts`: 댐퍼 커버 조립 서비스
-    - `initialize`: 댐퍼 커버 조립 서비스 초기화
-    - `assembleDamperCover`: 댐퍼 커버 조립 (메타데이터 기반)
-    - `getDetectedPlugs`: 탐지된 돌출부(Plug) 정보 반환
-    - `filterDuplicatePlugs`: 탐지된 돌출부 중 너무 가까운 것들을 필터링
-    - `dispose`: 서비스 정리
-  - `DamperAssemblyService.ts`: 댐퍼 조립 서비스
-    - `debugPrintDamperStructure`: Damper Assembly와 Cover의 노드 구조 출력
-    - 하이라이트 컴포넌트 초기화 및 관리
-  - `ManualAssemblyManager.ts`: 수동 조립 관리자
-    - `initialize`: 서비스 초기화
-    - `disassembleDamperCover`: 댐퍼 커버 분해
-    - `assembleDamperCover`: 댐퍼 커버 조립
-    - `loosenScrew`: 스크류 돌려 빼는 애니메이션
-    - `detectAndHighlightGrooves`: 노드의 면 하이라이트 및 홈 탐지
-  - `PartAssemblyService.ts`: 부품 조립 서비스
-    - 일반 부품 조작 및 애니메이션
-  - `ScrewAnimationService.ts`: 스크류 애니메이션 서비스
-    - `isScrewNode`: 스크류 노드인지 확인
-    - `animateScrewRotation`: 스크류 회전+이동 동시 애니메이션
-    - `isPlaying`: 애니메이션 실행 상태 확인
-    - `getProgress`: 애니메이션 진행률 반환
-    - `pause`: 애니메이션 일시정지
-    - `resume`: 애니메이션 재개
-    - `reverse`: 애니메이션 되돌리기
+
+#### 5.1 AnimatorAgent.ts
+AI 애니메이터 에이전트 - Ollama API로 AI와 통신하여 자연어 명령을 파싱하고 애니메이션을 생성합니다.
+- **OllamaClient 클래스**: Ollama API와 통신하는 클라이언트
+  - `list()`: 사용 가능한 모델 목록 조회
+  - `chat()`: 채팅 API 호출
+- **AnimatorAgent 클래스**: 메인 애니메이터 에이전트
+  - `setDoorControls()`: 도어 컨트롤 설정
+  - `setCameraControls()`: 카메라 컨트롤 설정
+  - `setOnActionCompleted()`: 액션 완료 콜백 설정
+  - `setDamperCaseBodyAnimationService()`: 댐퍼 케이스 바디 애니메이션 서비스 설정
+  - `setAnimationHistoryService()`: 애니메이션 히스토리 서비스 설정
+  - `setActionVerbResolver()`: 액션 동사 해결기 설정
+  - `checkServiceStatus()`: Ollama 서비스 상태 확인
+  - `getServiceStatus()`: 현재 서비스 상태 반환
+  - `getAvailableModels()`: 사용 가능한 모델 목록 반환
+  - `refreshServiceStatus()`: 서비스 상태 새로고침
+  - `processUserInput()`: 사용자 입력 처리 (메인 메서드)
+  - `resetConversation()`: 대화 상태 초기화
+  - `resetDoors()`: 모든 도어 상태 초기화
+  - `getConversationState()`: 대화 상태 반환
+
+#### 5.2 AnimationHistoryService.ts
+애니메이션 히스토리 서비스 - 애니메이션 히스토리를 저장/불러오고 실행 취소/다시 실행 기능을 제공합니다.
+- **AnimationHistoryService 클래스**:
+  - `addAnimationHistory()`: 애니메이션 히스토리 추가
+  - `getAllHistory()`: 전체 히스토리 반환
+  - `clearHistory()`: 히스토리 초기화
+  - `removeHistoryItem()`: 특정 히스토리 항목 제거
+  - `reorderHistory()`: 히스토리 순서 재정렬
+  - `exportToJson()`: JSON으로 내보내기
+  - `importFromJson()`: JSON에서 가져오기
+
+#### 5.3 fridge/CameraMovementService.ts
+카메라 이동 서비스 - 시네마틱 카메라 워킹을 구현합니다.
+- **CameraMovementService 클래스**:
+  - `setSceneRoot()`: 씬 루트 설정
+  - `setCameraControls()`: 카메라 컨트롤 설정
+  - `moveCameraToLeftDoorDamper()`: 왼쪽 도어 댐퍼 노드로 카메라 이동
+  - `moveCameraCinematic()`: 시네마틱 카메라 워킹 (직선 → 하강 → 로우 앵글)
+  - `applyEmissive()`: Emissive 효과 적용 (내부 메서드)
+  - `getNodeByName()`: 이름으로 노드 찾기 (내부 메서드)
+
+#### 5.4 fridge/DamperAnimationService.ts
+댐퍼 애니메이션 서비스 - 댐퍼 서비스 명령을 생성하고 처리합니다.
+- **함수**:
+  - `getFridgeDamperAnimationCommands()`: 댐퍼 애니메이션 명령 반환
+  - `areFridgeDamperCommands()`: 댐퍼 명령인지 확인
+  - `isFridgeDamperCommand()`: 입력에 댐퍼 키워드 포함 여부 확인
+
+#### 5.5 fridge/DamperAssemblyService.ts
+댐퍼 조립 서비스 - 디버깅용 노드 구조 출력 기능을 제공합니다.
+- **DamperAssemblyService 클래스**:
+  - `initialize()`: 서비스 초기화
+  - `clearHighlights()`: 하이라이트 제거
+  - `dispose()`: 서비스 정리
+  - `debugPrintDamperStructure()`: Damper Assembly와 Cover의 노드 구조 출력
+
+#### 5.6 fridge/DamperCoverAssemblyService.ts
+댐퍼 커버 조립 서비스 - 댐퍼 커버 조립 로직을 담당합니다.
+- **DamperCoverAssemblyService 클래스**:
+  - `initialize()`: 서비스 초기화
+  - `assembleDamperCover()`: 댐퍼 돌출부/홈 결합
+  - `dispose()`: 서비스 정리
+  - `getDetectedPlugs()`: 탐지된 돌출부(Plug) 정보 반환
+  - `filterDuplicatePlugs()`: 탐지된 돌출부 중 너무 가까운 것들을 필터링 (내부 메서드)
+  - `removeAssemblyNode()`: assemblyNode를 3단계 애니메이션으로 제거
+
+#### 5.7 fridge/ManualAssemblyManager.ts
+수동 조립 관리자 - 조립/분해 관련 함수를 중앙 집중식 관리합니다.
+- **ManualAssemblyManager 클래스**:
+  - `setAnimationHistoryService()`: 애니메이션 히스토리 서비스 설정
+  - `initialize()`: 서비스 초기화
+  - `disassembleDamperCover()`: 댐퍼 커버 분해
+  - `getProgress()`: 진행률 반환
+  - `isPlaying()`: 재생 중인지 확인
+  - `getHoleCenters()`: 홈 중심점 정보 반환
+  - `getHoleCenterById()`: ID로 홈 중심점 찾기
+  - `getHoleCenterByIndex()`: 인덱스로 홈 중심점 찾기
+  - `getHoleCentersCount()`: 홈 중심점 개수 반환
+  - `detectAndHighlightGrooves()`: 노드의 면 하이라이트 및 홈 탐지
+  - `assembleDamperCover()`: 댐퍼 돌출부/홈 결합
+  - `removeAssemblyNode()`: assemblyNode 제거
+  - `loosenScrew()`: 스크류 돌려 빼는 애니메이션
+  - `moveScrewLinearToDamperCaseBody()`: 스크류 노드를 damperCaseBody 방향으로 선형 이동
+  - `tightenScrew()`: 스크류 돌려 조이는 애니메이션
+  - `moveScrewLinearReverse()`: 스크류 노드를 원래 위치로 선형 이동 (조립용)
+  - `dispose()`: 서비스 정리
+
+#### 5.8 fridge/PartAssemblyService.ts
+부품 조립 서비스 - GSAP Timeline을 활용한 정밀한 부품 조립/분해 애니메이션 관리합니다.
+- **PartAssemblyService 클래스**:
+  - `getBoundingBoxCached()`: 캐시된 바운딩 박스 가져오기 (내부 메서드)
+  - `animateLinearAssembly()`: 선형 조립 애니메이션
+  - `prepareManualAssembly()`: 수동 조립 준비 (타임라인만 생성)
+  - `updateManualProgress()`: 수동 진행률 업데이트
+  - `assemblePart()`: 부품을 타겟 위치로 조립
+  - `disassemblePart()`: 조립된 부품을 원래 위치로 분해
+  - `pause()`: 애니메이션 일시정지
+  - `resume()`: 애니메이션 재개
+  - `reverse()`: 애니메이션 되돌리기
+  - `getProgress()`: 현재 진행률 반환
+  - `isPlaying()`: 애니메이션 중인지 확인
+  - `dispose()`: 타임라인 정리
+  - `getOriginalPosition()`: 저장된 원래 위치 가져오기
+  - `movePartRelative()`: 특정 노드를 현재 위치에서 상대적으로 이동
+
+#### 5.9 fridge/ScrewAnimationService.ts
+스크류 애니메이션 서비스 - 스크류를 돌려서 빼는 애니메이션을 담당합니다.
+- **ScrewAnimationService 클래스**:
+  - `initialize()`: 서비스 초기화
+  - `isScrewNode()`: 스크류 노드인지 확인
+  - `animateScrewRotation()`: 스크류 회전+이동 동시 애니메이션 (분해용)
+  - `isPlaying()`: 애니메이션 실행 상태 확인
+  - `getProgress()`: 애니메이션 진행률 반환
+  - `pause()`: 애니메이션 일시정지
+  - `resume()`: 애니메이션 재개
+  - `reverse()`: 애니메이션 되돌리기
+  - `animateScrewRotationReverse()`: 스크류 회전+이동 역방향 애니메이션 (조립용)
+  - `dispose()`: 서비스 정리
+
+#### 5.10 fridge/DamperCaseBodyAnimationService.ts
+댐퍼 케이스 바디 애니메이션 서비스 - 댐퍼 케이스 바디의 선형 이동 애니메이션을 관리합니다.
+- **DamperCaseBodyAnimationService 클래스**:
+  - `setSceneRoot()`: Scene Root 설정
+  - `getInstance()`: 싱글톤 인스턴스 반환
+  - `animateDamperCaseBodyLinearMove()`: 댐퍼 케이스 바디 선형 이동 애니메이션 실행
+  - `getDamperCaseBodyNodeName()`: 댐퍼 케이스 바디 노드 이름 가져오기
+  - `getAnimationConfig()`: 애니메이션 설정 가져오기
+  - `getAnimationStages()`: 애니메이션 스테이지 정보 가져오기
+  - `debugAnimationInfo()`: 애니메이션 디버그 정보 출력
 
 ### 6. src/shared/
 UI 컴포넌트가 아닌 공용 코드
