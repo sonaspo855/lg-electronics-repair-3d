@@ -18,6 +18,53 @@ export class DamperServiceOrchestrator {
         private damperCaseBodyAnimationService: DamperCaseBodyAnimationService
     ) { }
 
+    /**
+     * 애니메이션 히스토리 기록을 위한 공통 메서드
+     * @param action 애니메이션 액션 타입
+     * @param door 도어 타입
+     * @param result 애니메이션 실행 결과 (옵션)
+     * @param message 히스토리 메시지
+     */
+    private recordAnimationHistory(
+        action: AnimationAction,
+        door: DoorType,
+        result?: any,
+        message?: string
+    ): void {
+        const animationCommand: AnimationCommand = {
+            door,
+            action,
+            degrees: 0,
+            speed: 1,
+            ...(result || {}) // 결과 객체의 속성을 명령에 병합
+        };
+
+        const historyMessage = message || this.getDefaultMessage(action);
+        this.animationHistoryService.addAnimationHistory(animationCommand, historyMessage);
+        console.log(`Animation history after ${action}:`, this.animationHistoryService.getAllHistory());
+    }
+
+    /**
+     * 애니메이션 액션에 대한 기본 메시지 반환
+     */
+    private getDefaultMessage(action: AnimationAction): string {
+        const messageMap: Record<AnimationAction, string> = {
+            [AnimationAction.OPEN]: '도어 열림 완료',
+            [AnimationAction.CLOSE]: '도어 닫힘 완료',
+            [AnimationAction.SET_DEGREES]: '도어 각도 설정 완료',
+            [AnimationAction.SET_SPEED]: '도어 속도 설정 완료',
+            [AnimationAction.CAMERA_MOVE]: '카메라 이동 완료',
+            [AnimationAction.DAMPER_COVER_BODY]: '댐퍼 커버 조립 완료',
+            [AnimationAction.DAMPER_CASE_BODY_MOVE]: 'damperCaseBody 힌지 반대 방향으로 선형이동 완료',
+            [AnimationAction.SCREW_LOOSEN]: '스크류 분리 완료',
+            [AnimationAction.SCREW_TIGHTEN]: '스크류 조립 완료',
+            [AnimationAction.DAMPER_HOLDER_REMOVAL]: '댐퍼 홀더 제거 완료',
+            [AnimationAction.DAMPER_COVER_RESTORE]: '댐퍼 커버 복구 완료'
+        };
+
+        return messageMap[action] || '애니메이션 완료';
+    }
+
     async execute(commandsArray: AnimationCommand[]): Promise<void> {
         const screw1NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw1Customized');
         const screw2NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw2Customized');
@@ -60,15 +107,12 @@ export class DamperServiceOrchestrator {
         console.log('Moving camera to left door damper');
         await this.cameraMovementService.moveCameraToLeftDoorDamper();
 
-        // 카메라 이동 히스토리 기록
-        const cameraMoveCommand: AnimationCommand = {
-            door: DoorType.TOP_LEFT,
-            action: AnimationAction.CAMERA_MOVE,
-            degrees: 0,
-            speed: 1
-        };
-        const cameraMessage = 'Camera moved to damper position';
-        this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
+        this.recordAnimationHistory(
+            AnimationAction.CAMERA_MOVE,
+            DoorType.TOP_LEFT,
+            undefined,
+            'Camera moved to damper position'
+        );
         console.log('Animation history after camera move:', this.animationHistoryService.getAllHistory());
     }
 
@@ -77,27 +121,17 @@ export class DamperServiceOrchestrator {
         const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
         console.log('Damper cover assembly completed');
 
-        // 댐퍼 커버 조립 히스토리 기록
         if (assemblyResult) {
-            const assemblyCommand: AnimationCommand = {
+            this.recordAnimationHistory(
+                AnimationAction.DAMPER_COVER_BODY,
                 door,
-                action: AnimationAction.DAMPER_COVER_BODY,
-                degrees: 0,
-                speed: 1,
-                targetPosition: assemblyResult.targetPosition,
-                originalPosition: assemblyResult.originalPosition,
-                easing: assemblyResult.easing,
-                duration: assemblyResult.duration,
-                translationDistance: assemblyResult.translationDistance,
-                extractDirection: assemblyResult.extractDirection
-            };
-            const assemblyMessage = '댐퍼 커버 조립 완료';
-            this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
-            console.log('Animation history after damper cover assembly:', this.animationHistoryService.getAllHistory());
+                assemblyResult,
+                '댐퍼 커버 조립 완료'
+            );
         } else {
             console.warn('Damper cover assembly returned null, skipping history logging');
         }
-
+        console.log('Animation history after damper cover assembly:', this.animationHistoryService.getAllHistory());
         return assemblyResult;
     }
 
@@ -138,23 +172,17 @@ export class DamperServiceOrchestrator {
             }
         });
 
-        // 애니메이션 히스토리 기록
         if (animationResult) {
-            const animationCommand = {
+            this.recordAnimationHistory(
+                AnimationAction.DAMPER_CASE_BODY_MOVE,
                 door,
-                action: AnimationAction.DAMPER_CASE_BODY_MOVE,
-                degrees: 0,
-                speed: 1,
-                position: animationResult.position,
-                easing: animationResult.easing,
-                duration: animationResult.duration
-            };
-            const animationMessage = 'damperCaseBody 힌지 반대 방향으로 선형이동 완료';
-            this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
+                animationResult
+            );
         } else {
             console.warn('Damper case body animation returned null, skipping history logging');
         }
 
+        console.log('Animation history after damper case body move:', this.animationHistoryService.getAllHistory());
         return animationResult;
     }
 
@@ -169,24 +197,18 @@ export class DamperServiceOrchestrator {
             }
         });
 
-        // 애니메이션 히스토리 기록
         if (animationResult) {
-            const animationCommand = {
+            this.recordAnimationHistory(
+                AnimationAction.SCREW_LOOSEN,
                 door,
-                action: AnimationAction.SCREW_LOOSEN,
-                degrees: 0,
-                speed: 1,
-                position: animationResult.position,
-                easing: animationResult.easing,
-                duration: animationResult.duration
-            };
-            const animationMessage = '스크류2 오른쪽 방향 선형 이동 완료';
-            this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
-            console.log('Animation history after screw2 linear move:', this.animationHistoryService.getAllHistory());
+                animationResult,
+                '스크류2 오른쪽 방향 선형 이동 완료'
+            );
         } else {
             console.warn('스크류2 선형 이동 애니메이션이 null을 반환했습니다.');
         }
 
+        console.log('Animation history after screw2 move:', this.animationHistoryService.getAllHistory());
         return animationResult;
     }
 
@@ -222,27 +244,15 @@ export class DamperServiceOrchestrator {
 
         const removeResult = await this.manualAssemblyManager.removeAssemblyNode();
 
-        // 애니메이션 히스토리 기록
         if (removeResult) {
-            const removeCommand: AnimationCommand = {
+            this.recordAnimationHistory(
+                AnimationAction.DAMPER_HOLDER_REMOVAL,
                 door,
-                action: AnimationAction.DAMPER_HOLDER_REMOVAL,
-                degrees: 0,
-                speed: 1,
-                targetPosition: removeResult.targetPosition,
-                originalPosition: removeResult.originalPosition,
-                easing: removeResult.easing,
-                duration: removeResult.duration,
-                rotationAngle: removeResult.rotationAngle,
-                rotationAxis: removeResult.rotationAxis,
-                translationDistance: removeResult.translationDistance,
-                extractDirection: removeResult.extractDirection
-            };
-            const removeMessage = '댐퍼 홀더 제거 완료';
-            this.animationHistoryService.addAnimationHistory(removeCommand, removeMessage);
-            console.log('Animation history after damper holder removal:', this.animationHistoryService.getAllHistory());
+                removeResult,
+                '댐퍼 홀더 제거 완료'
+            );
         }
-
+        console.log('Animation history after holder removal:', this.animationHistoryService.getAllHistory());
         console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
         return removeResult;
     }
@@ -254,22 +264,15 @@ export class DamperServiceOrchestrator {
             { duration: 1500 }
         );
 
-        // 애니메이션 히스토리 기록
         if (restoreResult) {
-            const restoreCommand: AnimationCommand = {
+            this.recordAnimationHistory(
+                AnimationAction.DAMPER_COVER_RESTORE,
                 door,
-                action: AnimationAction.DAMPER_COVER_RESTORE,
-                degrees: 0,
-                speed: 1,
-                targetPosition: restoreResult.targetPosition,
-                duration: restoreResult.duration,
-                easing: restoreResult.easing
-            };
-            const restoreMessage = '댐퍼 커버 복구 완료';
-            this.animationHistoryService.addAnimationHistory(restoreCommand, restoreMessage);
-            console.log('Animation history after damper cover restoration:', this.animationHistoryService.getAllHistory());
+                restoreResult,
+                '댐퍼 커버 복구 완료'
+            );
         }
-        console.log('댐퍼 커버 복구 애니메이션 완료!!!');
+        console.log('Animation history after damper cover restore:', this.animationHistoryService.getAllHistory());
         return restoreResult;
     }
 }
