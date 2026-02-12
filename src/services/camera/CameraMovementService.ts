@@ -52,7 +52,6 @@ export class CameraMovementService {
      * 1) 직선 접근 -> 2) 막바지 급격한 하강(Drop) -> 3) 로우 앵글(Low Angle)
      */
     public async moveCameraCinematic(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
-        console.log('moveCameraCinematic called with nodeName:', nodeName);
         const targetNode = this.getNodeByName(nodeName);
         if (!targetNode) {
             console.error('Target node not found:', nodeName);
@@ -88,7 +87,7 @@ export class CameraMovementService {
         // 목적지 계산
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
 
-        // 특정 노드(왼쪽 도어 댐퍼)에 대해 일관된 뷰를 제공하도록 방향 강제
+        // damperCoverBody 노드에 대해 일관된 뷰를 제공하도록 방향 강제
         const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
         if (nodeName === damperCoverBodyNode && !options.direction) {
