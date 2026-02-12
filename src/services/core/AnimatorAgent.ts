@@ -1006,7 +1006,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
               this.animationHistoryService,
               this.damperCaseBodyAnimationService
             );
-            await orchestrator.execute(commandsArray);
+            await orchestrator.execute(commandsArray); // 도어 댐퍼 조절 시퀀스 실행 함수
           } catch (error) {
             console.error('Error executing damper service orchestrator:', error);
           }

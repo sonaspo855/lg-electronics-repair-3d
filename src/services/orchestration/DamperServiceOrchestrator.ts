@@ -34,9 +34,17 @@ export class DamperServiceOrchestrator {
         const animationCommand: AnimationCommand = {
             door,
             action,
-            degrees: 0,
-            speed: 1,
-            ...(result || {}) // 결과 객체의 속성을 명령에 병합
+            degrees: result?.degrees !== undefined ? result.degrees : 0,
+            speed: result?.speed !== undefined ? result.speed : 1,
+            duration: result?.duration !== undefined ? result.duration : 0,
+            easing: result?.easing !== undefined ? result.easing : '',
+            targetPosition: result?.targetPosition || { x: 0, y: 0, z: 0 },
+            originalPosition: result?.originalPosition || { x: 0, y: 0, z: 0 },
+            position: result?.position || { x: 0, y: 0, z: 0 },
+            rotationAngle: result?.rotationAngle !== undefined ? result.rotationAngle : 0,
+            rotationAxis: result?.rotationAxis || 'x',
+            extractDirection: result?.extractDirection || [0, 0, 0],
+            translationDistance: result?.translationDistance !== undefined ? result.translationDistance : 0
         };
 
         const historyMessage = message || this.getDefaultMessage(action);
@@ -75,6 +83,8 @@ export class DamperServiceOrchestrator {
             // 도어 열림 후 댐퍼로 카메라 이동
             await this.moveCamera();
 
+            return;
+
             // 댐퍼 돌출부/홈 결합 애니메이션 실행
             const assemblyResult = await this.assembleDamperCover(commandsArray[0].door);
 
@@ -105,12 +115,16 @@ export class DamperServiceOrchestrator {
 
     private async moveCamera(): Promise<void> {
         console.log('Moving camera to left door damper');
-        await this.cameraMovementService.moveCameraToLeftDoorDamper();
+        const cameraOptions = {
+            duration: 1000,
+            easing: 'power3.inOut'
+        };
+        await this.cameraMovementService.moveCameraToLeftDoorDamper(cameraOptions);
 
         this.recordAnimationHistory(
             AnimationAction.CAMERA_MOVE,
             DoorType.TOP_LEFT,
-            undefined,
+            cameraOptions,
             'Camera moved to damper position'
         );
         console.log('Animation history after camera move:', this.animationHistoryService.getAllHistory());

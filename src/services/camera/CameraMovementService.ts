@@ -37,6 +37,7 @@ export class CameraMovementService {
 
     // Move camera to the left door damper node (for backward compatibility)
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
+        console.log('options000>>> ', options);
         const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
 
         return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
