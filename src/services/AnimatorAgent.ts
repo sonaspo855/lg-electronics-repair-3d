@@ -914,7 +914,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
     try {
       AnimatorAgent.executionCounter++;
-      const totalExecutions = AnimatorAgent.executionCounter;
+      // const totalExecutions = AnimatorAgent.executionCounter;
 
       // Check if commands are damper commands (need simultaneous execution)
       const commandsArray = Array.isArray(commands) ? commands : [commands];
@@ -997,7 +997,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
         console.log('Damper animation wait completed');
 
-        // Move camera to the left door damper node after damper animation
+        // 도어 열림 후 댐퍼로 카메라 이동
         if (this.cameraMovementService) {
           await this.cameraMovementService.moveCameraToLeftDoorDamper();
 
