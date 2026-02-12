@@ -17,7 +17,9 @@ export const AnimationAction = {
     SCREW_LOOSEN: 'screw_loosen',
     SCREW_TIGHTEN: 'screw_tighten',
     DAMPER_COVER_BODY: 'damper_cover_body',
-    DAMPER_CASE_BODY_MOVE: 'damper_case_body_move'
+    DAMPER_COVER_RESTORE: 'damper_cover_restore',
+    DAMPER_CASE_BODY_MOVE: 'damper_case_body_move',
+    DAMPER_HOLDER_REMOVAL: 'damper_holder_removal'
 } as const;
 
 export type AnimationAction = typeof AnimationAction[keyof typeof AnimationAction];

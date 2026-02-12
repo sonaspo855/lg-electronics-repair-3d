@@ -122,8 +122,11 @@ export class AnimationHistoryService {
             [AnimationAction.SET_SPEED]: 'Set Speed',
             [AnimationAction.CAMERA_MOVE]: 'Camera Move',
             [AnimationAction.SCREW_LOOSEN]: 'Screw Loosen',
+            [AnimationAction.SCREW_TIGHTEN]: 'Screw Tighten',
             [AnimationAction.DAMPER_COVER_BODY]: 'Damper Cover Body',
-            [AnimationAction.DAMPER_CASE_BODY_MOVE]: 'Damper Case Body Move'
+            [AnimationAction.DAMPER_COVER_RESTORE]: 'Damper Cover Restore',
+            [AnimationAction.DAMPER_CASE_BODY_MOVE]: 'Damper Case Body Move',
+            [AnimationAction.DAMPER_HOLDER_REMOVAL]: 'Damper Holder Removal'
         };
 
         return `${actionNames[command.action]} ${doorNames[command.door]}`;

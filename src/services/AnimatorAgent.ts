@@ -158,6 +158,7 @@ export const AnimationAction = {
   SCREW_LOOSEN: 'screw_loosen',
   SCREW_TIGHTEN: 'screw_tighten',
   DAMPER_COVER_BODY: 'damper_cover_body',
+  DAMPER_COVER_RESTORE: 'damper_cover_restore',
   DAMPER_CASE_BODY_MOVE: 'damper_case_body_move',
   DAMPER_HOLDER_REMOVAL: 'damper_holder_removal'
 } as const;
@@ -1016,8 +1017,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
           }
 
           // 댐퍼 돌출부/홈 결합 애니메이션 실행
+          let assemblyResult: any = null;
           try {
-            const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
+            assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
             console.log('Damper cover assembly completed');
 
             // 댐퍼 커버 조립 히스토리 기록
@@ -1217,7 +1219,35 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
             console.error('댐퍼 홀더 제거 애니메이션 실행 중 에러:', error);
           }
 
-          // coverNode 노드의 본래 위치로 복구하는 애니메이션
+          // coverNode 댐퍼 커버 노드의 원래 복구 애니메이션
+          if (assemblyResult && assemblyResult.originalPosition) {
+            try {
+              console.log('댐퍼 커버 복구 애니메이션 시작!!!');
+              const restoreResult = await this.manualAssemblyManager.restoreDamperCover(
+                assemblyResult.originalPosition,
+                { duration: 1500 }
+              );
+
+              // 애니메이션 히스토리 기록
+              if (restoreResult && this.animationHistoryService) {
+                const restoreCommand: AnimationCommand = {
+                  door: commandsArray[0].door,
+                  action: AnimationAction.DAMPER_COVER_RESTORE,
+                  degrees: 0,
+                  speed: 1,
+                  targetPosition: restoreResult.targetPosition,
+                  duration: restoreResult.duration,
+                  easing: restoreResult.easing
+                };
+                const restoreMessage = '댐퍼 커버 복구 완료';
+                this.animationHistoryService.addAnimationHistory(restoreCommand, restoreMessage);
+                console.log('666_Animation history after damper cover restoration:', this.animationHistoryService.getAllHistory());
+              }
+              console.log('댐퍼 커버 복구 애니메이션 완료!!!');
+            } catch (error) {
+              console.error('댐퍼 커버 복구 애니메이션 실행 중 에러:', error);
+            }
+          }
 
 
 

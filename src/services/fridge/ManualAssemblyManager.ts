@@ -162,6 +162,23 @@ export class ManualAssemblyManager {
     }
 
     /**
+     * 댐퍼 커버를 본래 위치로 복구
+     */
+    public async restoreDamperCover(
+        originalPosition: { x: number; y: number; z: number },
+        options?: {
+            duration?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        targetPosition: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        return await this.damperCoverAssemblyService.restoreDamperCover(originalPosition, options);
+    }
+
+    /**
      * assemblyNode를 3단계 애니메이션으로 제거합니다.
      */
     public async removeAssemblyNode(): Promise<{

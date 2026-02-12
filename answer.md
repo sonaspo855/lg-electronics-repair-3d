@@ -1,124 +1,137 @@
-# DamperCoverAssemblyService.ts assembleDamperCover 함수 틸팅 효과 구현
+댐퍼 커버를 본래 위치로 복구하는 애니메이션 기능을 구현하였습니다. 이를 위해 `DamperCoverAssemblyService`와 `ManualAssemblyManager`에 관련 메서드를 추가하고, `AnimatorAgent.ts`에서 해당 기능을 호출하도록 수정하였습니다.
 
-## 수정된 코드 위치
-`src/services/fridge/DamperCoverAssemblyService.ts` - `assembleDamperCover` 함수 (라인 159-183)
+구현 방식은 `assembleDamperCover` 실행 시 반환된 `originalPosition` 좌표를 활용하여 GSAP 선형 이동 애니메이션을 실행하는 방식을 사용했습니다.
 
-## 주요 변경 사항
+수정된 주요 코드 부분은 다음과 같습니다.
 
-### 기존 코드 (단순 선형 이동)
+### 1. `DamperCoverAssemblyService.ts` 수정
+댐퍼 커버를 지정된 위치로 이동시키는 `restoreDamperCover` 메서드를 추가했습니다.
+
 ```typescript
-// GSAP 선형 이동 애니메이션
-const duration = options?.duration;
+// src/services/fridge/DamperCoverAssemblyService.ts
 
-if (!duration) {
-    return null;
-}
-
-const easing = 'power2.inOut';
-
-await new Promise<void>((resolve) => {
-    gsap.to(coverNode.position, {
-        x: targetLocalPos.x,
-        y: targetLocalPos.y,
-        z: targetLocalPos.z,
-        duration: duration / 1000,
-        ease: easing,
-        onComplete: () => {
-            console.log('커버 노드 이동 완료');
-            if (options?.onComplete) options.onComplete();
-            resolve();
+    /**
+     * 댐퍼 커버를 원래 위치로 복구 (조립용 역방향 선형 이동)
+     */
+    public async restoreDamperCover(
+        originalPosition: { x: number; y: number; z: number },
+        options?: {
+            duration?: number;
+            onComplete?: () => void;
         }
-    });
-});
-```
+    ): Promise<{
+        targetPosition: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        if (!this.sceneRoot) {
+            console.error('Scene root not initialized.');
+            return null;
+        }
 
-### 수정된 코드 (틸팅 효과 포함 3단계 애니메이션)
-```typescript
-// GSAP Timeline을 사용한 틸팅 효과 포함 애니메이션
-// 돌출부 쪽을 힌지로 삼아 반대쪽(먼 쪽)을 들어 올리는 효과
-const duration = options?.duration;
+        const coverNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!) as THREE.Mesh;
 
-if (!duration) {
-    return null;
-}
+        if (!coverNode) {
+            console.error('Target node not found for restoration:', {
+                coverName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')
+            });
+            return null;
+        }
 
-const easing = 'power2.inOut';
-const durationSec = duration / 1000;
+        const duration = options?.duration || 1500;
+        const easing = 'power2.inOut';
 
-// 힌지(돌출부)와 반대쪽(먼 쪽)의 거리 계산
-const coverBox = getPreciseBoundingBox(coverNode);
-const coverSize = new THREE.Vector3();
-coverBox.getSize(coverSize);
-const coverCenter = new THREE.Vector3();
-coverBox.getCenter(coverCenter);
+        await new Promise<void>((resolve) => {
+            gsap.to(coverNode.position, {
+                x: originalPosition.x,
+                y: originalPosition.y,
+                z: originalPosition.z,
+                duration: duration / 1000,
+                ease: easing,
+                onComplete: () => {
+                    console.log('커버 노드 복구 완료');
+                    if (options?.onComplete) options.onComplete();
+                    resolve();
+                }
+            });
+        });
 
-// 돌출부(플러그)와 커버 중심 사이의 벡터 계산
-const plugToCoverCenter = new THREE.Vector3().subVectors(coverCenter, bestPlug.position);
-const hingeToFarDistance = plugToCoverCenter.length();
-
-// 틸팅 회전축 계산 (플러그와 홈을 연결하는 선에 수직인 방향)
-const plugToHole = new THREE.Vector3().subVectors(bestHole.position, bestPlug.position).normalize();
-const worldUp = new THREE.Vector3(0, 1, 0);
-const tiltAxis = new THREE.Vector3().crossVectors(plugToHole, worldUp).normalize();
-
-// 틸팅 각도 계산 (거리에 비례)
-const tiltAngle = Math.min(Math.PI / 6, hingeToFarDistance * 2); // 최대 30도
-
-// GSAP Timeline 생성
-const tl = gsap.timeline({
-    onComplete: () => {
-        console.log('커버 노드 틸팅 이동 완료');
-        if (options?.onComplete) options.onComplete();
+        return {
+            targetPosition: originalPosition,
+            duration,
+            easing
+        };
     }
-});
-
-// 1단계: 돌출부 쪽을 힌지로 삼아 반대쪽을 들어 올리는 틸팅 애니메이션
-tl.to(coverNode.rotation, {
-    x: coverNode.rotation.x + tiltAxis.x * tiltAngle,
-    y: coverNode.rotation.y + tiltAxis.y * tiltAngle,
-    z: coverNode.rotation.z + tiltAxis.z * tiltAngle,
-    duration: durationSec * 0.4,
-    ease: 'power2.out'
-});
-
-// 2단계: 틸팅 상태에서 선형 이동 (돌출부가 홈으로 향함)
-tl.to(coverNode.position, {
-    x: targetLocalPos.x,
-    y: targetLocalPos.y,
-    z: targetLocalPos.z,
-    duration: durationSec * 0.6,
-    ease: easing
-}, "<"); // 회전과 동시에 시작하여 자연스러운 틸팅 이동
-
-// 3단계: 최종 위치에서 회전 복원 (정렬)
-tl.to(coverNode.rotation, {
-    x: coverNode.rotation.x,
-    y: coverNode.rotation.y,
-    z: coverNode.rotation.z,
-    duration: durationSec * 0.3,
-    ease: 'power2.in'
-});
-
-await new Promise<void>((resolve) => {
-    tl.eventCallback('onComplete', () => resolve());
-});
 ```
 
-## 구현된 틸팅 효과 설명
+### 2. `ManualAssemblyManager.ts` 수정
+서비스의 기능을 외부에서 호출할 수 있도록 래퍼 메서드를 추가했습니다.
 
-### 1단계: 틸팅 시작 (40% 시간)
-- 돌출부(플러그) 쪽을 힌지로 삼아 반대쪽(먼 쪽)을 들어 올리는 회전 애니메이션
-- `tiltAxis`를 계산하여 적절한 회전축 설정
-- `tiltAngle`은 힌지에서 먼 쪽까지의 거리에 비례하여 최대 30도로 제한
+```typescript
+// src/services/fridge/ManualAssemblyManager.ts
 
-### 2단계: 틸팅 상태 이동 (60% 시간)
-- 틸팅된 상태에서 선형 이동 수행
-- `"<"` 파라미터로 회전과 동시에 시작하여 자연스러운 틸팅 이동 효과
-- 돌출부가 홈으로 향하면서 반대쪽이 들려있는 상태 유지
+    /**
+     * 댐퍼 커버를 본래 위치로 복구
+     */
+    public async restoreDamperCover(
+        originalPosition: { x: number; y: number; z: number },
+        options?: {
+            duration?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        targetPosition: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        return await this.damperCoverAssemblyService.restoreDamperCover(originalPosition, options);
+    }
+```
 
-### 3단계: 회전 복원 (30% 시간)
-- 최종 위치에 도달한 후 회전 복원
-- 정확한 정렬을 위해 원래 회전값으로 복귀
+### 3. `AnimatorAgent.ts` 수정
+`assemblyResult`를 하위 블록에서 사용할 수 있도록 선언 위치를 변경하고, 요청하신 위치에 복구 애니메이션 실행 및 히스토리 기록 코드를 추가했습니다.
 
-## 참고 문서
-- `assembly-node-removal-3-stage-animation-plan.md` - 3단계 애니메이션 구현 계획 참조
+```typescript
+// src/services/AnimatorAgent.ts
+
+          // 댐퍼 돌출부/홈 결합 애니메이션 실행
+          let assemblyResult: any = null; // 선언 위치 변경
+          try {
+            assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
+            // ... (히스토리 기록 로직)
+          } catch (error) { ... }
+
+          // ... (스크류 분리, 케이스 이동, 홀더 제거 등 중간 과정)
+
+          // coverNode 노드의 본래 위치로 복구하는 애니메이션
+          if (assemblyResult && assemblyResult.originalPosition) {
+            try {
+              console.log('댐퍼 커버 복구 애니메이션 시작!!!');
+              const restoreResult = await this.manualAssemblyManager.restoreDamperCover(
+                assemblyResult.originalPosition,
+                { duration: 1500 }
+              );
+
+              // 애니메이션 히스토리 기록
+              if (restoreResult && this.animationHistoryService) {
+                const restoreCommand: AnimationCommand = {
+                  door: commandsArray[0].door,
+                  action: AnimationAction.DAMPER_COVER_RESTORE,
+                  degrees: 0,
+                  speed: 1,
+                  targetPosition: restoreResult.targetPosition,
+                  duration: restoreResult.duration,
+                  easing: restoreResult.easing
+                };
+                const restoreMessage = '댐퍼 커버 복구 완료';
+                this.animationHistoryService.addAnimationHistory(restoreCommand, restoreMessage);
+                console.log('666_Animation history after damper cover restoration:', this.animationHistoryService.getAllHistory());
+              }
+              console.log('댐퍼 커버 복구 애니메이션 완료!!!');
+            } catch (error) {
+              console.error('댐퍼 커버 복구 애니메이션 실행 중 에러:', error);
+            }
+          }
+```
+
+그 외에도 `AnimationAction` 타입 정의 및 `AnimationHistoryService`의 액션 이름 매핑에 새로운 액션(`DAMPER_COVER_RESTORE`)과 누락되었던 액션들을 추가하여 타입 오류를 해결하였습니다.

@@ -220,6 +220,65 @@ export class DamperCoverAssemblyService {
     }
 
     /**
+     * 댐퍼 커버를 원래 위치로 복구 (조립용 역방향 선형 이동)
+     */
+    public async restoreDamperCover(
+        originalPosition: { x: number; y: number; z: number },
+        options?: {
+            duration?: number;
+            onComplete?: () => void;
+        }
+    ): Promise<{
+        targetPosition: { x: number; y: number; z: number };
+        duration: number;
+        easing: string;
+    } | null> {
+        if (!this.sceneRoot) {
+            console.error('Scene root not initialized.');
+            return null;
+        }
+
+        const damperCaseBodyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
+        if (!damperCaseBodyNodeName) {
+            console.error('댐퍼 케이스 바디 노드 이름을 찾을 수 없습니다.');
+            return null;
+        }
+
+        const damperCaseBodyNode = this.sceneRoot.getObjectByName(damperCaseBodyNodeName);
+
+        if (!damperCaseBodyNode) {
+            console.error('Target node not found for restoration:', {
+                coverName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')
+            });
+            return null;
+        }
+
+        const duration = options?.duration || 1500;
+        const easing = 'power2.inOut';
+
+        await new Promise<void>((resolve) => {
+            gsap.to(damperCaseBodyNode.position, {
+                x: originalPosition.x,
+                y: originalPosition.y,
+                z: originalPosition.z,
+                duration: duration / 1000,
+                ease: easing,
+                onComplete: () => {
+                    console.log('커버 노드 복구 완료');
+                    if (options?.onComplete) options.onComplete();
+                    resolve();
+                }
+            });
+        });
+
+        return {
+            targetPosition: originalPosition,
+            duration,
+            easing
+        };
+    }
+
+    /**
      * 서비스를 정리합니다.
      */
     public dispose(): void {

@@ -54,7 +54,7 @@
                 ]
             },
             "disassembly": {
-                "liftDistance": 0.01,
+                "liftDistance": 2.5,
                 "slideDistance": 0.05,
                 "tiltAngle": 35,
                 "liftDuration": 500,
