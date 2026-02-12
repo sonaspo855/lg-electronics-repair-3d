@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { getClickPointMarker } from './ClickPointMarker';
-import { highlightNode } from './findNodeHeight';
+import { getClickPointMarker } from '../visualization/ClickPointMarker';
+import { highlightNode } from './NodeHeightDetector';
 
 export interface SelectionHandlerOptions {
     scene: THREE.Object3D;

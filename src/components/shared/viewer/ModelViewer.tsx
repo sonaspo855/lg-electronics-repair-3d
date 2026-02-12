@@ -3,16 +3,16 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils";
-import { animatorAgent } from "../../../services/AnimatorAgent";
-import { PartAssemblyService } from "../../../services/fridge/PartAssemblyService";
-import { getManualAssemblyManager } from "../../../services/fridge/ManualAssemblyManager";
-import { resetClickPointMarker } from "../../../shared/utils/ClickPointMarker";
-import { selectedNodeHeight } from "../../../shared/utils/findNodeHeight";
+import { animatorAgent } from "../../../services/core/AnimatorAgent";
+import { PartAssemblyService } from "../../../services/assembly/PartAssemblyService";
+import { getManualAssemblyManager } from "../../../services/assembly/ManualAssemblyManager";
+import { resetClickPointMarker } from "../../../services/visualization/ClickPointMarker";
+import { selectedNodeHeight } from "../../../services/detection/NodeHeightDetector";
 
-import { SelectionHandler } from "../../../shared/utils/SelectionHandler";
+import { SelectionHandler } from "../../../services/detection/SelectionHandler";
 import "./ModelViewer.css";
-import { getDamperAssemblyService } from '../../../services/fridge/DamperAssemblyService';
-import { getDamperCaseBodyAnimationService } from '../../../services/fridge/DamperCaseBodyAnimationService';
+import { getDamperAssemblyService } from '../../../services/assembly/DamperAssemblyService';
+import { getDamperCaseBodyAnimationService } from '../../../services/animation/DamperCaseBodyAnimationService';
 import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 // import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
 
@@ -32,7 +32,7 @@ const LEFT_DOOR_LOWER_SHAFT_NAME = "AEH36821925_Hinge_Assembly,Center_183656_SHA
 import {
   LEFT_DOOR_DAMPER_COVER_BODY_NODE,
   LEFT_DOOR_DAMPER_ASSEMBLY_NODE
-} from '../../../shared/utils/fridgeConstants';
+} from '../../../shared/constants/fridgeConstants';
 
 
 type DoorState = {

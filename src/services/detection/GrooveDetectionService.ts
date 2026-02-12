@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { NormalBasedHighlight } from './NormalBasedHighlight';
-import { getHoleCenterManager } from './HoleCenterManager';
+
+import { NormalBasedHighlightService } from '../visualization/NormalBasedHighlightService';
+import { getHoleCenterManager } from '../data/HoleCenterManager';
 
 /**
  * 홈 탐지 서비스
@@ -9,7 +10,7 @@ import { getHoleCenterManager } from './HoleCenterManager';
 export class GrooveDetectionService {
     private sceneRoot: THREE.Object3D | null = null;
     private cameraControls: any = null;
-    private normalBasedHighlight: NormalBasedHighlight = new NormalBasedHighlight();
+    private normalBasedHighlight: NormalBasedHighlightService = new NormalBasedHighlightService();
     private holeCenterManager = getHoleCenterManager();
 
     /**
@@ -63,7 +64,7 @@ export class GrooveDetectionService {
         );
 
         // 4. 홈 탐지 및 중심점 계산
-        const holeAnalyses = NormalBasedHighlight.clusterFaces(
+        const holeAnalyses = NormalBasedHighlightService.clusterFaces(
             highlightedFaces,
             0.02
         );

@@ -1,137 +1,43 @@
-댐퍼 커버를 본래 위치로 복구하는 애니메이션 기능을 구현하였습니다. 이를 위해 `DamperCoverAssemblyService`와 `ManualAssemblyManager`에 관련 메서드를 추가하고, `AnimatorAgent.ts`에서 해당 기능을 호출하도록 수정하였습니다.
+# Services 및 Utils 폴더 구조 개선 결과
 
-구현 방식은 `assembleDamperCover` 실행 시 반환된 `originalPosition` 좌표를 활용하여 GSAP 선형 이동 애니메이션을 실행하는 방식을 사용했습니다.
+제시해주신 실행 계획에 따라 Services와 Utils의 폴더 구조를 분석하고, 가독성, 유지보수성, 확장성을 고려하여 다음과 같이 재구성 및 개선 작업을 완료했습니다.
 
-수정된 주요 코드 부분은 다음과 같습니다.
+## 1. 주요 변경 사항 요약
 
-### 1. `DamperCoverAssemblyService.ts` 수정
-댐퍼 커버를 지정된 위치로 이동시키는 `restoreDamperCover` 메서드를 추가했습니다.
+### 1-1. `services` 폴더 도메인별 재구성
+- **core**: 핵심 에이전트 및 히스토리 서비스 (`AnimatorAgent`, `AnimationHistoryService`)
+- **camera**: 카메라 이동 관련 서비스 (`CameraMovementService`)
+- **assembly**: 조립/분해 비즈니스 로직 (`PartAssemblyService`, `ManualAssemblyManager`, `DamperAssemblyService`, `DamperCoverAssemblyService`)
+- **animation**: 세부 부품 애니메이션 서비스 (`DamperAnimationService`, `DamperCaseBodyAnimationService`, `ScrewAnimationService`, `ScrewLinearMoveAnimationService`)
+- **detection**: 탐지 및 핸들링 로직 (`GrooveDetectionService`, `SnapDetectionService`, `SelectionHandler`, `NodeHeightDetector`)
+- **visualization**: 시각화 및 하이라이트 서비스 (`NormalBasedHighlightService`, `AssemblyPathVisualizer`, `StencilOutlineHighlight`, `ClickPointMarker`, `DebugObjectManager`)
+- **data**: 데이터 로딩 및 상태 관리 (`MetadataLoader`, `NodeNameManager`, `NodeNameLoader`, `HoleCenterManager`, `AssemblyStateManager`)
 
-```typescript
-// src/services/fridge/DamperCoverAssemblyService.ts
+### 1-2. `shared` 폴더 역할 명확화
+- **constants**: 상수 정의 이동 (`fridgeConstants.ts`)
+- **utils**: 순수 유틸리티 함수만 유지 (`commonUtils.ts`, `animationUtils.ts`, `coordinateUtils.ts`, `isFastener.ts` 등)
 
-    /**
-     * 댐퍼 커버를 원래 위치로 복구 (조립용 역방향 선형 이동)
-     */
-    public async restoreDamperCover(
-        originalPosition: { x: number; y: number; z: number },
-        options?: {
-            duration?: number;
-            onComplete?: () => void;
-        }
-    ): Promise<{
-        targetPosition: { x: number; y: number; z: number };
-        duration: number;
-        easing: string;
-    } | null> {
-        if (!this.sceneRoot) {
-            console.error('Scene root not initialized.');
-            return null;
-        }
+### 1-3. 클래스 및 파일명 개선
+- `SnapDetectionUtils` → `SnapDetectionService` (서비스 성격 명확화)
+- `NormalBasedHighlight` → `NormalBasedHighlightService` (서비스 성격 명확화)
+- `findNodeHeight.ts` → `NodeHeightDetector.ts` (역할 기반 명명)
+- `CoordinateTransformUtils` → `CoordinateUtils` (파일명 `coordinateUtils.ts`와 일치 및 간결화)
 
-        const coverNode = this.sceneRoot.getObjectByName(this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')!) as THREE.Mesh;
+## 2. 세부 작업 내용
 
-        if (!coverNode) {
-            console.error('Target node not found for restoration:', {
-                coverName: this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody')
-            });
-            return null;
-        }
+### 2-1. 파일 이동 및 이름 변경
+- `src/shared/utils/`에 혼재되어 있던 서비스 클래스들을 `src/services/` 산하의 적절한 도메인 폴더로 이동했습니다.
+- `src/services/fridge/` 내의 파일들을 기능별로 세분화된 하위 폴더(`camera`, `assembly`, `animation`)로 분산 배치하고 기존 빈 폴더는 삭제했습니다.
+- `fridgeConstants.ts`를 전역 상수를 위한 `src/shared/constants/` 폴더로 이동했습니다.
 
-        const duration = options?.duration || 1500;
-        const easing = 'power2.inOut';
+### 2-2. Import 경로 및 코드 수정
+- 구조 변경에 따라 영향을 받는 모든 파일(`ModelViewer.tsx`, `ManualEditorPage.tsx`, `NodeHierarchy.tsx` 및 모든 서비스 파일들)의 `import` 경로를 최신화했습니다.
+- 파일명 변경에 맞춰 클래스 이름을 업데이트하고, 해당 클래스를 참조하는 모든 코드를 수정했습니다.
+- 상대 경로와 절대 경로(`@/`)가 혼용된 부분을 체크하여 올바르게 연결되도록 조치했습니다.
 
-        await new Promise<void>((resolve) => {
-            gsap.to(coverNode.position, {
-                x: originalPosition.x,
-                y: originalPosition.y,
-                z: originalPosition.z,
-                duration: duration / 1000,
-                ease: easing,
-                onComplete: () => {
-                    console.log('커버 노드 복구 완료');
-                    if (options?.onComplete) options.onComplete();
-                    resolve();
-                }
-            });
-        });
+## 3. 기대 효과
+- **가독성**: 폴더 구조만으로 각 파일의 역할(Service vs Utils)과 도메인을 쉽게 파악할 수 있습니다.
+- **유지보수성**: 관련된 기능들이 응집력 있게 그룹화되어 있어 수정 범위가 명확해집니다.
+- **확장성**: 새로운 기능 추가 시 명확한 배치 기준이 마련되어 구조적 일관성을 유지할 수 있습니다.
 
-        return {
-            targetPosition: originalPosition,
-            duration,
-            easing
-        };
-    }
-```
-
-### 2. `ManualAssemblyManager.ts` 수정
-서비스의 기능을 외부에서 호출할 수 있도록 래퍼 메서드를 추가했습니다.
-
-```typescript
-// src/services/fridge/ManualAssemblyManager.ts
-
-    /**
-     * 댐퍼 커버를 본래 위치로 복구
-     */
-    public async restoreDamperCover(
-        originalPosition: { x: number; y: number; z: number },
-        options?: {
-            duration?: number;
-            onComplete?: () => void;
-        }
-    ): Promise<{
-        targetPosition: { x: number; y: number; z: number };
-        duration: number;
-        easing: string;
-    } | null> {
-        return await this.damperCoverAssemblyService.restoreDamperCover(originalPosition, options);
-    }
-```
-
-### 3. `AnimatorAgent.ts` 수정
-`assemblyResult`를 하위 블록에서 사용할 수 있도록 선언 위치를 변경하고, 요청하신 위치에 복구 애니메이션 실행 및 히스토리 기록 코드를 추가했습니다.
-
-```typescript
-// src/services/AnimatorAgent.ts
-
-          // 댐퍼 돌출부/홈 결합 애니메이션 실행
-          let assemblyResult: any = null; // 선언 위치 변경
-          try {
-            assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
-            // ... (히스토리 기록 로직)
-          } catch (error) { ... }
-
-          // ... (스크류 분리, 케이스 이동, 홀더 제거 등 중간 과정)
-
-          // coverNode 노드의 본래 위치로 복구하는 애니메이션
-          if (assemblyResult && assemblyResult.originalPosition) {
-            try {
-              console.log('댐퍼 커버 복구 애니메이션 시작!!!');
-              const restoreResult = await this.manualAssemblyManager.restoreDamperCover(
-                assemblyResult.originalPosition,
-                { duration: 1500 }
-              );
-
-              // 애니메이션 히스토리 기록
-              if (restoreResult && this.animationHistoryService) {
-                const restoreCommand: AnimationCommand = {
-                  door: commandsArray[0].door,
-                  action: AnimationAction.DAMPER_COVER_RESTORE,
-                  degrees: 0,
-                  speed: 1,
-                  targetPosition: restoreResult.targetPosition,
-                  duration: restoreResult.duration,
-                  easing: restoreResult.easing
-                };
-                const restoreMessage = '댐퍼 커버 복구 완료';
-                this.animationHistoryService.addAnimationHistory(restoreCommand, restoreMessage);
-                console.log('666_Animation history after damper cover restoration:', this.animationHistoryService.getAllHistory());
-              }
-              console.log('댐퍼 커버 복구 애니메이션 완료!!!');
-            } catch (error) {
-              console.error('댐퍼 커버 복구 애니메이션 실행 중 에러:', error);
-            }
-          }
-```
-
-그 외에도 `AnimationAction` 타입 정의 및 `AnimationHistoryService`의 액션 이름 매핑에 새로운 액션(`DAMPER_COVER_RESTORE`)과 누락되었던 액션들을 추가하여 타입 오류를 해결하였습니다.
+모든 수정 사항이 정상적으로 반영되었으며, 이제 더욱 체계적인 구조에서 개발을 진행하실 수 있습니다.

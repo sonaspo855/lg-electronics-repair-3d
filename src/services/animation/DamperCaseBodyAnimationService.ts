@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
-import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
-import { LinearMovementAnimationConfig } from '@/shared/utils/MetadataLoader';
+import { getMetadataLoader } from '@/services/data/MetadataLoader';
+import { getNodeNameManager } from '@/services/data/NodeNameManager';
+import { LinearMovementAnimationConfig } from '@/services/data/MetadataLoader';
 import gsap from 'gsap';
 
 /**

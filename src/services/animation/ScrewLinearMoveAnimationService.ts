@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
-import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
+import { getMetadataLoader } from '@/services/data/MetadataLoader';
+import { getNodeNameManager } from '@/services/data/NodeNameManager';
 // import { visualizeScrewHeadCenter } from '@/shared/utils/commonUtils';
 import gsap from 'gsap';
 

@@ -4,7 +4,7 @@ import * as THREE from 'three';
  * 좌표계 변환 유틸리티 클래스
  * Three.js의 월드 좌표계와 로컬 좌표계 간 변환을 담당
  */
-export class CoordinateTransformUtils {
+export class CoordinateUtils {
     /**
      * 월드 좌표를 특정 부모의 로컬 좌표로 변환
      * 
@@ -14,7 +14,7 @@ export class CoordinateTransformUtils {
      * 
      * @example
      * const worldPos = new THREE.Vector3(10, 5, 3);
-     * const localPos = CoordinateTransformUtils.worldToLocal(worldPos, parentNode);
+     * const localPos = CoordinateUtils.worldToLocal(worldPos, parentNode);
      */
     static worldToLocal(
         worldPosition: THREE.Vector3,
@@ -41,7 +41,7 @@ export class CoordinateTransformUtils {
      * 
      * @example
      * const localPos = new THREE.Vector3(5, 5, 5);
-     * const worldPos = CoordinateTransformUtils.localToWorld(localPos, object);
+     * const worldPos = CoordinateUtils.localToWorld(localPos, object);
      */
     static localToWorld(
         localPosition: THREE.Vector3,
@@ -59,7 +59,7 @@ export class CoordinateTransformUtils {
      * @returns 월드 중심점
      * 
      * @example
-     * const center = CoordinateTransformUtils.getWorldCenter(targetNode);
+     * const center = CoordinateUtils.getWorldCenter(targetNode);
      */
     static getWorldCenter(object: THREE.Object3D): THREE.Vector3 {
         const bbox = this.getPreciseBoundingBox(object);
@@ -77,7 +77,7 @@ export class CoordinateTransformUtils {
      * @returns source의 부모 기준 로컬 좌표
      * 
      * @example
-     * const offset = CoordinateTransformUtils.getLocalOffset(coverBody, assembly);
+     * const offset = CoordinateUtils.getLocalOffset(coverBody, assembly);
      * coverBody.position.copy(offset);
      */
     static getLocalOffset(
@@ -134,7 +134,7 @@ export class CoordinateTransformUtils {
             const pos = new THREE.Vector3();
             targetNode.getWorldPosition(pos);
             box.setFromCenterAndSize(pos, new THREE.Vector3(0.01, 0.01, 0.01));
-            console.warn(`[CoordinateTransformUtils] No mesh found for ${targetNode.name}, using world position.`);
+            console.warn(`[CoordinateUtils] No mesh found for ${targetNode.name}, using world position.`);
         }
 
         return box;
@@ -148,7 +148,7 @@ export class CoordinateTransformUtils {
      * @returns 거리
      * 
      * @example
-     * const distance = CoordinateTransformUtils.getWorldDistance(coverBody, assembly);
+     * const distance = CoordinateUtils.getWorldDistance(coverBody, assembly);
      */
     static getWorldDistance(
         obj1: THREE.Object3D,
@@ -166,7 +166,7 @@ export class CoordinateTransformUtils {
      * @returns 크기 벡터 (width, height, depth)
      * 
      * @example
-     * const size = CoordinateTransformUtils.getBoundingBoxSize(targetNode);
+     * const size = CoordinateUtils.getBoundingBoxSize(targetNode);
      * console.log(`Width: ${size.x}, Height: ${size.y}, Depth: ${size.z}`);
      */
     static getBoundingBoxSize(object: THREE.Object3D): THREE.Vector3 {

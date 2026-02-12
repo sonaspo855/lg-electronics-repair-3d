@@ -3,15 +3,15 @@ import type { Object3D } from "three";
 import * as THREE from "three";
 // import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { ModelViewer } from "@/components/shared/viewer";
-import { animatorAgent, type LLMResponse, } from "@/services/AnimatorAgent";
-import { AnimationHistoryService } from "@/services/AnimationHistoryService";
+import { animatorAgent, type LLMResponse, } from "@/services/core/AnimatorAgent";
+import { AnimationHistoryService } from "@/services/core/AnimationHistoryService";
 import { ManualEditorSidebar } from "@/components/pages/manual-editor";
 import { AnimationHistoryPanel, type AnimationHistoryItem } from "@/components/pages/manual-editor";
 
 import {
   ManualAssemblyManager,
   getManualAssemblyManager
-} from "@/services/fridge/ManualAssemblyManager";
+} from "@/services/assembly/ManualAssemblyManager";
 import { initializeMetadata } from "@/shared/utils/commonUtils";
 import "./ManualEditorPage.css";
 

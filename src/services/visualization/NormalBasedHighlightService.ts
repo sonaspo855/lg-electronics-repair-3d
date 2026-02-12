@@ -13,7 +13,7 @@ export interface FaceInfo {
  * 법선 벡터(Normal Vector) 기반 필터링을 사용하여 하이라이트하는 컴포넌트
  * 카메라를 향하는 면이나 특정 방향의 면만 선택하여 하이라이트 효과를 적용합니다
  */
-export class NormalBasedHighlight {
+export class NormalBasedHighlightService {
     private sceneRoot: THREE.Object3D | null = null;
     private activeHighlights: THREE.Object3D[] = [];
 
@@ -486,7 +486,7 @@ export class NormalBasedHighlight {
             this.sceneRoot.add(highlightMesh);
             this.activeHighlights.push(highlightMesh);
 
-            console.log('[NormalBasedHighlight] 법선 기반 하이라이트 완료:', {
+            console.log('[NormalBasedHighlightService] 법선 기반 하이라이트 완료:', {
                 faceCount: faceIndices.length / 3,
                 dotThreshold: 0.1
             });
@@ -623,7 +623,7 @@ export class NormalBasedHighlight {
         // [추가] 각 클러스터 내부의 구멍(Hole) 탐지 로직 적용
         const finalResults: any[] = [];
         results.forEach((cluster, index) => {
-            const holes = NormalBasedHighlight.detectHolesInCluster(cluster.faces);
+            const holes = NormalBasedHighlightService.detectHolesInCluster(cluster.faces);
 
             if (holes.length > 0) {
                 holes.forEach((hole, hIdx) => {
@@ -830,7 +830,7 @@ export class NormalBasedHighlight {
                     child.getWorldQuaternion(worldQuat);
 
                     const processFace = (idx1: number, idx2: number, idx3: number) => {
-                        const avgNormal = NormalBasedHighlight.calculateAverageNormal(normals, idx1, idx2, idx3, worldQuat);
+                        const avgNormal = NormalBasedHighlightService.calculateAverageNormal(normals, idx1, idx2, idx3, worldQuat);
 
                         // 법선 필터링 (절대값이 아닌 방향까지 고려하려면 Math.abs 제거 가능하지만, 
                         // 홈의 바닥면이 뒤집혀 있을 수도 있으므로 일단 유지하되 tolerance를 엄격하게 적용 가능)
@@ -866,7 +866,7 @@ export class NormalBasedHighlight {
             if (filteredFaces.length === 0) return [];
 
             // 6. 클러스터링 및 피벗 정보 생성 (공통 로직 사용)
-            return NormalBasedHighlight.clusterFaces(filteredFaces, clusterThreshold);
+            return NormalBasedHighlightService.clusterFaces(filteredFaces, clusterThreshold);
         } catch (error) {
             console.error('다중 가상 피벗 계산 실패:', error);
             return [];
@@ -893,7 +893,7 @@ export class NormalBasedHighlight {
     } | null {
         try {
             // 다중 피벗 분석 함수를 호출하여 가장 유의미한(정점이 가장 많은) 피벗 하나를 반환
-            const analyses = NormalBasedHighlight.calculateMultipleVirtualPivotsByNormalAnalysis(
+            const analyses = NormalBasedHighlightService.calculateMultipleVirtualPivotsByNormalAnalysis(
                 targetNode,
                 normalFilter,
                 normalTolerance,

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
-import { getMetadataLoader } from '../../shared/utils/MetadataLoader';
-import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
-import { getAssemblyPathVisualizer } from '../../shared/utils/AssemblyPathVisualizer';
-import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
+import { getNodeNameManager } from '../data/NodeNameManager';
+import { getMetadataLoader } from '../data/MetadataLoader';
+import { NormalBasedHighlightService } from '../visualization/NormalBasedHighlightService';
+import { getAssemblyPathVisualizer } from '../visualization/AssemblyPathVisualizer';
+import { getGrooveDetectionService } from '../detection/GrooveDetectionService';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
@@ -98,7 +98,7 @@ export class DamperCoverAssemblyService {
         const grooveParams = config.grooveDetection;
 
         // 결합 돌출부(Plug) 탐지
-        const plugAnalyses = NormalBasedHighlight.calculatePlugByEdgeAnalysis(
+        const plugAnalyses = NormalBasedHighlightService.calculatePlugByEdgeAnalysis(
             coverNode,
             grooveParams.plugSearchDirection ?? new THREE.Vector3(0, 1, 0),
             grooveParams.edgeAngleThreshold ?? 60,

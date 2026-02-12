@@ -1,6 +1,6 @@
 import gsap from 'gsap';
-import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
-import { LEFT_DOOR_NODES } from '../../shared/utils/fridgeConstants';
+import { getNodeNameManager } from '../data/NodeNameManager';
+import { LEFT_DOOR_NODES } from '../../shared/constants/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 

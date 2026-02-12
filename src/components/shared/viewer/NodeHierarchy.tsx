@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import * as THREE from 'three';
-import { animatorAgent } from "@/services/AnimatorAgent";
+import { animatorAgent } from "@/services/core/AnimatorAgent";
 import { isFastenerNode } from '@/shared/utils/isFastener';
 
 // Types

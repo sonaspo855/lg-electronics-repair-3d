@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { CoordinateTransformUtils } from '../../shared/utils/CoordinateTransformUtils';
-import { SnapDetectionUtils } from '../../shared/utils/SnapDetectionUtils';
+import { CoordinateUtils } from '../../shared/utils/coordinateUtils';
+import { SnapDetectionService } from '../detection/SnapDetectionService';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
@@ -78,7 +78,7 @@ export class PartAssemblyService {
         }
 
         // 1. 대상 노드(홈)의 월드 좌표 중심점 계산
-        const targetWorldCenter = CoordinateTransformUtils.getWorldCenter(targetNode);
+        const targetWorldCenter = CoordinateUtils.getWorldCenter(targetNode);
 
         // 2. 슬롯 오프셋 적용 (홈 입구 위치 조정)
         if (options.slotOffset) {
@@ -88,7 +88,7 @@ export class PartAssemblyService {
 
         // 3. 월드 좌표를 소스 노드의 부모 기준 로컬 좌표로 변환
         const targetLocalPos = sourceNode.parent
-            ? CoordinateTransformUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
+            ? CoordinateUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
             : targetWorldCenter;
 
         // 3. GSAP Timeline 생성 및 실행
@@ -150,7 +150,7 @@ export class PartAssemblyService {
         if (!sourceNode || !targetNode) return;
 
         // 타겟 위치 계산 (기존 로직 활용)
-        const targetWorldCenter = CoordinateTransformUtils.getWorldCenter(targetNode);
+        const targetWorldCenter = CoordinateUtils.getWorldCenter(targetNode);
 
         // 슬롯 오프셋 적용 (홈 입구 위치 조정)
         if (options.slotOffset) {
@@ -159,7 +159,7 @@ export class PartAssemblyService {
         }
 
         const targetLocalPos = sourceNode.parent
-            ? CoordinateTransformUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
+            ? CoordinateUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
             : targetWorldCenter;
 
         // 타임라인 생성 및 즉시 정지(paused: true)
@@ -254,7 +254,7 @@ export class PartAssemblyService {
 
         // 3. source의 부모 기준 로컬 좌표로 변환
         const targetLocalPos = sourceNode.parent
-            ? CoordinateTransformUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
+            ? CoordinateUtils.worldToLocal(targetWorldCenter, sourceNode.parent)
             : targetWorldCenter;
         console.log('[Assembly] 타겟 로컬 좌표:', targetLocalPos);
 

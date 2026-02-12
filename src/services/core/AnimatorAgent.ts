@@ -37,14 +37,14 @@ class OllamaClient {
   }
 }
 
-import { DamperCaseBodyAnimationService } from './fridge/DamperCaseBodyAnimationService';
-import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from './fridge/DamperAnimationService';
-import { CameraMovementService } from './fridge/CameraMovementService';
+import { DamperCaseBodyAnimationService } from '../animation/DamperCaseBodyAnimationService';
+import { getFridgeDamperAnimationCommands, isFridgeDamperCommand, areFridgeDamperCommands } from '../animation/DamperAnimationService';
+import { CameraMovementService } from '../camera/CameraMovementService';
 import { AnimationHistoryService } from './AnimationHistoryService';
-import { getManualAssemblyManager } from './fridge/ManualAssemblyManager';
-// import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/utils/fridgeConstants';
-import { getNodeNameManager } from '@/shared/utils/NodeNameManager';
-import { getMetadataLoader } from '@/shared/utils/MetadataLoader';
+import { getManualAssemblyManager } from '../assembly/ManualAssemblyManager';
+// import { LEFT_DOOR_SCREW1_CUSTOMIZED_NODE, LEFT_DOOR_SCREW2_CUSTOMIZED_NODE } from '../../shared/constants/fridgeConstants';
+import { getNodeNameManager } from '@/services/data/NodeNameManager';
+import { getMetadataLoader } from '@/services/data/MetadataLoader';
 import { extractMetadataKey } from '@/shared/utils/commonUtils';
 
 // Door types and their identifiers

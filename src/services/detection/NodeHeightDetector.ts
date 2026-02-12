@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { invalidate } from '@react-three/fiber';
-import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from './commonUtils';
-import { getNodeNameManager } from './NodeNameManager';
+import { getPreciseBoundingBox, debugFocusCamera, createHighlightMaterial } from '../../shared/utils/commonUtils';
+import { getNodeNameManager } from '../data/NodeNameManager';
 
 /**
  * 노드 하이라이트 상태 타입

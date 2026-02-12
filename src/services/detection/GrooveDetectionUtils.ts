@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getPreciseBoundingBox } from './commonUtils';
+import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
  * 홈(Groove) 영역 식별 유틸리티

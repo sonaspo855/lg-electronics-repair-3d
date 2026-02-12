@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import { NormalBasedHighlight } from '../../shared/utils/NormalBasedHighlight';
-import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
+// import { NormalBasedHighlightServiceService } from '../visualization/NormalBasedHighlightServiceService';
+import { NormalBasedHighlightService } from '../visualization/NormalBasedHighlightService';
+
+import { getNodeNameManager } from '../data/NodeNameManager';
 
 /**
  * 댐퍼 조립 서비스 (조립 기능은 ManualAssemblyManager로 이동됨)
@@ -16,13 +18,13 @@ let damperAssemblyServiceInstance: DamperAssemblyService | null = null;
  */
 export class DamperAssemblyService {
     private sceneRoot: THREE.Object3D | null = null;
-    private normalHighlight: NormalBasedHighlight | null = null;
+    private normalHighlight: NormalBasedHighlightService | null = null;
 
     public initialize(sceneRoot: THREE.Object3D): void {
         this.sceneRoot = sceneRoot;
 
         // 하이라이트 컴포넌트 초기화
-        this.normalHighlight = new NormalBasedHighlight();
+        this.normalHighlight = new NormalBasedHighlightService();
         this.normalHighlight.initialize(sceneRoot);
 
         // 메타데이터 미리 로드

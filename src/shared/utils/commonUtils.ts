@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { invalidate } from '@react-three/fiber';
-import { getNodeNameLoader } from './NodeNameLoader';
-import { getMetadataLoader } from './MetadataLoader';
-import { getAssemblyPathVisualizer } from './AssemblyPathVisualizer';
+import { getNodeNameLoader } from '../../services/data/NodeNameLoader';
+import { getMetadataLoader } from '../../services/data/MetadataLoader';
+import { getAssemblyPathVisualizer } from '../../services/visualization/AssemblyPathVisualizer';
 
 /**
  * Three.js 객체의 정밀 바운딩 박스를 계산하는 함수

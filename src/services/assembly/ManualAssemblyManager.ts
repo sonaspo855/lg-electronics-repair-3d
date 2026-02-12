@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { PartAssemblyService } from './PartAssemblyService';
-import { getNodeNameManager } from '../../shared/utils/NodeNameManager';
-import { getNodeNameLoader } from '../../shared/utils/NodeNameLoader';
+import { getNodeNameManager } from '../data/NodeNameManager';
+import { getNodeNameLoader } from '../data/NodeNameLoader';
 import { getDamperAssemblyService } from './DamperAssemblyService';
 import { getDamperCoverAssemblyService } from './DamperCoverAssemblyService';
-import { getGrooveDetectionService } from '../../shared/utils/GrooveDetectionService';
-import { getAssemblyStateManager } from '../../shared/utils/AssemblyStateManager';
-import { getHoleCenterManager, type HoleCenterInfo } from '../../shared/utils/HoleCenterManager';
-import { getScrewAnimationService } from './ScrewAnimationService';
-import { getScrewLinearMoveAnimationService } from './ScrewLinearMoveAnimationService';
-import { animateScrewLinearMoveReverse } from './ScrewLinearMoveAnimationService';
+import { getGrooveDetectionService } from '../detection/GrooveDetectionService';
+import { getAssemblyStateManager } from '../data/AssemblyStateManager';
+import { getHoleCenterManager, type HoleCenterInfo } from '../data/HoleCenterManager';
+import { getScrewAnimationService } from '../animation/ScrewAnimationService';
+import { getScrewLinearMoveAnimationService } from '../animation/ScrewLinearMoveAnimationService';
+import { animateScrewLinearMoveReverse } from '../animation/ScrewLinearMoveAnimationService';
 import { extractMetadataKey } from '../../shared/utils/commonUtils';
-import { AnimationHistoryService } from '../AnimationHistoryService';
-import { AnimationAction } from '../AnimatorAgent';
+import { AnimationHistoryService } from '../core/AnimationHistoryService';
+import { AnimationAction } from '../core/AnimatorAgent';
 
 /**
  * 수동 조립 관리자

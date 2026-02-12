@@ -16,7 +16,7 @@ export interface SnapZoneConfig {
  * 스냅 감지 및 적용 유틸리티 클래스
  * 부품 조립 시 자석처럼 끌어당기는 효과 구현
  */
-export class SnapDetectionUtils {
+export class SnapDetectionService {
     /**
      * 기본 스냅 존 설정
      */
@@ -36,7 +36,7 @@ export class SnapDetectionUtils {
      * @returns 스냅 존 내에 있으면 true
      * 
      * @example
-     * if (SnapDetectionUtils.isInSnapZone(currentPos, targetPos, 0.2)) {
+     * if (SnapDetectionService.isInSnapZone(currentPos, targetPos, 0.2)) {
      *     console.log('스냅 존 진입!');
      * }
      */
@@ -57,7 +57,7 @@ export class SnapDetectionUtils {
      * @returns 스냅 강도 (0~1)
      * 
      * @example
-     * const strength = SnapDetectionUtils.calculateSnapStrength(0.05, 0.15);
+     * const strength = SnapDetectionService.calculateSnapStrength(0.05, 0.15);
      * // strength = 0.67 (가까우므로 강한 끌림)
      */
     static calculateSnapStrength(
@@ -77,7 +77,7 @@ export class SnapDetectionUtils {
      * @returns Promise (애니메이션 완료 시 resolve)
      * 
      * @example
-     * await SnapDetectionUtils.applySnapEffect(coverBody, targetPos, {
+     * await SnapDetectionService.applySnapEffect(coverBody, targetPos, {
      *     duration: 0.5,
      *     easing: 'elastic.out(1, 0.5)'
      * });
@@ -119,7 +119,7 @@ export class SnapDetectionUtils {
      * @example
      * // 애니메이션 루프 내에서 호출
      * const distance = object.position.distanceTo(targetPos);
-     * SnapDetectionUtils.applyGradualSnap(object, targetPos, distance, 0.5);
+     * SnapDetectionService.applyGradualSnap(object, targetPos, distance, 0.5);
      */
     static applyGradualSnap(
         object: THREE.Object3D,
@@ -150,7 +150,7 @@ export class SnapDetectionUtils {
      * @returns 생성된 헬퍼 객체
      * 
      * @example
-     * const helper = SnapDetectionUtils.visualizeSnapZone(scene, targetPos, 0.15);
+     * const helper = SnapDetectionService.visualizeSnapZone(scene, targetPos, 0.15);
      * // 나중에 제거: scene.remove(helper);
      */
     static visualizeSnapZone(
@@ -186,7 +186,7 @@ export class SnapDetectionUtils {
      * @param scene Three.js 씬
      * 
      * @example
-     * SnapDetectionUtils.removeSnapZoneHelper(scene);
+     * SnapDetectionService.removeSnapZoneHelper(scene);
      */
     static removeSnapZoneHelper(scene: THREE.Scene): void {
         const nodeNameManager = getNodeNameManager();
@@ -215,7 +215,7 @@ export class SnapDetectionUtils {
      * 
      * @example
      * const targets = [pos1, pos2, pos3];
-     * const nearest = SnapDetectionUtils.findNearestSnapTarget(currentPos, targets, 0.2);
+     * const nearest = SnapDetectionService.findNearestSnapTarget(currentPos, targets, 0.2);
      * if (nearest) {
      *     console.log('가장 가까운 타겟:', nearest);
      * }
