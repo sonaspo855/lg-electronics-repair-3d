@@ -2,11 +2,12 @@ import { AssemblyOffsetMetadata } from './MetadataTypes';
 
 /**
  * 메타데이터 레포지토리 클래스
- * JSON 파일을 로딩하고 원본 데이터를 캐싱합니다.
+ * JSON 파일을 로딩하고 원본 데이터를 캐싱
  */
 export class MetadataRepository {
     private static instance: MetadataRepository | null = null;
     private metadata: AssemblyOffsetMetadata | null = null;
+    private filePath: string = '/metadata/assembly-offsets.json';
 
     private constructor() { }
 
@@ -18,16 +19,16 @@ export class MetadataRepository {
     }
 
     /**
-     * 메타데이터 파일을 로딩합니다.
+     * 메타데이터 파일을 로딩
      */
-    public async loadMetadata(filePath: string = '/metadata/assembly-offsets.json'): Promise<AssemblyOffsetMetadata> {
+    public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
         if (this.metadata) {
             return this.metadata;
         }
 
         try {
             const cacheBuster = `?t=${Date.now()}`;
-            const response = await fetch(filePath + cacheBuster);
+            const response = await fetch(this.filePath + cacheBuster);
             if (!response.ok) {
                 throw new Error(`Failed to load metadata: ${response.statusText}`);
             }

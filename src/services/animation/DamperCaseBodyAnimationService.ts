@@ -6,7 +6,7 @@ import gsap from 'gsap';
 
 /**
  * 댐퍼 케이스 바디 애니메이션 서비스 클래스
- * 댐퍼 케이스 바디의 선형 이동 애니메이션을 관리합니다.
+ * 댐퍼 케이스 바디의 선형 이동 애니메이션을 관리
  */
 export class DamperCaseBodyAnimationService {
     private static instance: DamperCaseBodyAnimationService | null = null;
@@ -17,7 +17,7 @@ export class DamperCaseBodyAnimationService {
     private constructor() { }
 
     /**
-     * Scene Root를 설정합니다.
+     * Scene Root를 설정
      * @param sceneRoot Three.js Scene Root 객체
      */
     public setSceneRoot(sceneRoot: THREE.Object3D): void {
@@ -25,7 +25,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 싱글톤 인스턴스를 반환합니다.
+     * 싱글톤 인스턴스를 반환
      */
     public static getInstance(): DamperCaseBodyAnimationService {
         if (!DamperCaseBodyAnimationService.instance) {
@@ -35,7 +35,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 댐퍼 케이스 바디 선형 이동 애니메이션을 실행합니다.
+     * 댐퍼 케이스 바디 선형 이동 애니메이션을 실행
      * @param options 애니메이션 옵션
      * @returns 애니메이션 정보 (위치, duration, easing) 또는 null
      */
@@ -105,7 +105,7 @@ export class DamperCaseBodyAnimationService {
                 animationConfig.offset?.z || 0
             );
 
-            // 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 구합니다.
+            // 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 계산
             damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
             targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
             // console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
@@ -114,7 +114,7 @@ export class DamperCaseBodyAnimationService {
             const localTargetPosition = targetPosition.clone();
             const parent = damperCaseBodyNode.parent;
             if (parent) {
-                // 부모의 world matrix가 업데이트 되었는지 확인 후 역행렬을 이용해 로컬로 변환합니다.
+                // 부모의 world matrix가 업데이트 되었는지 확인 후 역행렬을 이용해 로컬로 변환
                 parent.updateMatrixWorld();
                 parent.worldToLocal(localTargetPosition);
                 // console.log('월드 타겟 좌표:', targetPosition);
@@ -165,7 +165,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 댐퍼 케이스 바디 노드 이름을 가져옵니다.
+     * 댐퍼 케이스 바디 노드 이름을 가져오기
      * @returns 노드 이름 또는 null
      */
     public getDamperCaseBodyNodeName(): string | null {
@@ -173,7 +173,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 애니메이션 설정을 가져옵니다.
+     * 애니메이션 설정을 가져오기
      * @returns 애니메이션 설정 또는 null
      */
     public getAnimationConfig(): LinearMovementAnimationConfig | null {
@@ -183,7 +183,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 애니메이션 스테이지 정보를 가져옵니다.
+     * 애니메이션 스테이지 정보를 가져오기
      * @returns 스테이지 배열 또는 null
      */
     public getAnimationStages(): Array<{
@@ -196,7 +196,7 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 애니메이션 디버그 정보를 출력합니다.
+     * 애니메이션 디버그 정보를 출력
      */
     public debugAnimationInfo(): void {
         console.log('=== 댐퍼 케이스 바디 애니메이션 디버그 정보 ===');

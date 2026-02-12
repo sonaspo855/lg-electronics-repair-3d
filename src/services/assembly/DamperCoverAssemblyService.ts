@@ -83,7 +83,7 @@ export class DamperCoverAssemblyService {
 
         if (!this.metadataLoader.isLoaded()) {
             try {
-                await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+                await this.metadataLoader.loadMetadata();
             } catch (error) {
                 console.error('Metadata loading failed:', error);
                 throw new Error('Failed to load metadata');

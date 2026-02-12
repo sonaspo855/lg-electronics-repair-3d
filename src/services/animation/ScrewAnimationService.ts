@@ -37,7 +37,7 @@ export interface ScrewAnimationMetadata {
 
 /**
  * Screw 회전 애니메이션 서비스
- * Screw를 돌려서 빼는 애니메이션을 담당합니다.
+ * Screw를 돌려서 빼는 애니메이션을 담당한다.
  */
 export class ScrewAnimationService {
     private sceneRoot: THREE.Object3D | null = null;
@@ -47,7 +47,7 @@ export class ScrewAnimationService {
     private nodeNameManager = getNodeNameManager();
 
     /**
-     * 서비스를 초기화합니다.
+     * 서비스 초기화
      * @param sceneRoot 씬 루트 객체
      */
     public initialize(sceneRoot: THREE.Object3D): void {
@@ -58,12 +58,12 @@ export class ScrewAnimationService {
     }
 
     /**
-     * 메타데이터를 로드합니다.
+     * 메타데이터를 로드
      */
     private async loadMetadata(): Promise<void> {
         if (!this.metadataLoader.isLoaded()) {
             try {
-                await this.metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+                await this.metadataLoader.loadMetadata();
             } catch (error) {
                 console.error('Metadata loading failed:', error);
                 throw new Error('Failed to load metadata');
@@ -72,7 +72,7 @@ export class ScrewAnimationService {
     }
 
     /**
-     * Screw 노드인지 확인합니다.
+     * Screw 노드인지 확인
      * @param nodeName 노드 이름
      * @returns Screw 노드이면 true
      */
@@ -85,7 +85,7 @@ export class ScrewAnimationService {
      * 메타데이터가 있으면 메타데이터를 우선 사용
      * @param nodeName 대상 노드 이름
      * @param metadataKey 메타데이터 키 (예: 'screw1Customized')
-     * @param options 애니메이션 옵션 (메타데이터가 있을 경우 옵션은 덮어씌워짐)
+     * @param options 애니메이션 옵션
      * @returns Promise (애니메이션 완료 시 resolve, 실제 사용된 설정값 반환)
      */
     public async animateScrewRotation(
@@ -148,7 +148,7 @@ export class ScrewAnimationService {
         );
         // console.log('translationDistance>> ', translationDistance);  // 10, 50
 
-        // 실제 사용된 설정값 (반환용)
+        // 실제 사용된 설정값 추출
         const usedConfig: ScrewAnimationMetadata = {
             rotationAxis: config.rotationAxis!,
             rotationAngle: config.rotationAngle!,
@@ -241,7 +241,7 @@ export class ScrewAnimationService {
     }
 
     /**
-     * Screw 회전+이동 역방향 애니메이션을 실행 (조립용)
+     * Screw 회전+이동 역방향 애니메이션을 실행
      * @param nodePath 노드 경로
      * @param metadataKey 메타데이터 키
      * @param options 애니메이션 옵션
@@ -298,7 +298,7 @@ export class ScrewAnimationService {
         // 역방향 벡터 계산 (extractDirection의 음수)
         const reverseDirection = new THREE.Vector3(...config.extractDirection!).negate();
 
-        // 실제 사용된 설정값 (반환용)
+        // 실제 사용된 설정값
         const usedConfig: ScrewAnimationMetadata = {
             rotationAxis: config.rotationAxis!,
             rotationAngle: config.rotationAngle!,
