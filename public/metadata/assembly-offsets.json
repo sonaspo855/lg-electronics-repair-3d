@@ -140,5 +140,12 @@
             "duration": 1000,
             "easing": "power2.inOut"
         }
+    },
+    "cameraSettings": {
+        "damperService": {
+            "duration": 1000,
+            "easing": "power3.inOut",
+            "distance": 0.4
+        }
     }
 }
