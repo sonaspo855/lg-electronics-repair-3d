@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { CameraMovementService } from '../camera/CameraMovementService';
 import { AnimationHistoryService } from '../core/AnimationHistoryService';
 import { DamperCaseBodyAnimationService } from '../animation/DamperCaseBodyAnimationService';
@@ -120,11 +121,20 @@ export class DamperServiceOrchestrator {
         console.log('Moving camera to left door damper');
         const cameraSettings = this.metadataLoader.getCameraSettings('damperService');
 
-        const cameraOptions = {
+        const cameraOptions: any = {
             duration: cameraSettings?.duration,
             easing: cameraSettings?.easing,
             distance: cameraSettings?.distance
         };
+
+        // direction 설정이 있으면 Vector3로 변환
+        if (cameraSettings?.direction) {
+            cameraOptions.direction = new THREE.Vector3(
+                cameraSettings.direction.x,
+                cameraSettings.direction.y,
+                cameraSettings.direction.z
+            ).normalize();
+        }
 
         await this.cameraMovementService.moveCameraToLeftDoorDamper(cameraOptions);
 

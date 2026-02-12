@@ -36,10 +36,8 @@ export class CameraMovementService {
         this.sceneRoot = sceneRoot;
     }
 
-    // Move camera to the left door damper node (for backward compatibility)
+    // 카메라를 
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
-        const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();  // 노드를 정면에서 바라봄
-        console.log('options.direction>>> ', options.direction);
         return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
             duration: options.duration,
             direction: options.direction,
@@ -54,6 +52,7 @@ export class CameraMovementService {
      * 1) 직선 접근 -> 2) 막바지 급격한 하강(Drop) -> 3) 로우 앵글(Low Angle)
      */
     public async moveCameraCinematic(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
+        console.log('moveCameraCinematic called with nodeName:', nodeName);
         const targetNode = this.getNodeByName(nodeName);
         if (!targetNode) {
             console.error('Target node not found:', nodeName);

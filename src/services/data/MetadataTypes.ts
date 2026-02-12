@@ -24,6 +24,11 @@ export interface AssemblyOffsetMetadata {
             easing: string;
             distance?: number;
             zoomRatio?: number;
+            direction?: {
+                x: number;
+                y: number;
+                z: number;
+            };
         };
     };
 }
