@@ -997,262 +997,24 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
         console.log('Damper animation wait completed');
 
-        // 도어 열림 후 댐퍼로 카메라 이동
-        if (this.cameraMovementService) {
-          await this.cameraMovementService.moveCameraToLeftDoorDamper();
-
-          // 카메라 이동 히스토리 기록
-          const cameraMoveCommand: AnimationCommand = {
-            door: commandsArray[0].door,
-            action: AnimationAction.CAMERA_MOVE,
-            degrees: 0,
-            speed: 1
-          };
-          const cameraMessage = 'Camera moved to damper position';
-          if (this.animationHistoryService) {
-            this.animationHistoryService.addAnimationHistory(cameraMoveCommand, cameraMessage);
-            console.log('111_Animation history after camera move:', this.animationHistoryService.getAllHistory());
-          } else {
-            console.warn('Animation history service not available');
-          }
-
-          // 댐퍼 돌출부/홈 결합 애니메이션 실행
-          let assemblyResult: any = null;
+        // 냉장고 도어 댐퍼 조절 애니메이션 호출 코드
+        if (this.cameraMovementService && this.animationHistoryService && this.damperCaseBodyAnimationService) {
           try {
-            assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
-            console.log('Damper cover assembly completed');
-
-            // 댐퍼 커버 조립 히스토리 기록
-            if (assemblyResult && this.animationHistoryService) {
-              // console.log('assemblyResult>>> ', assemblyResult);
-              const assemblyCommand: AnimationCommand = {
-                door: commandsArray[0].door,
-                action: AnimationAction.DAMPER_COVER_BODY,
-                degrees: 0,
-                speed: 1,
-                targetPosition: assemblyResult.targetPosition,
-                originalPosition: assemblyResult.originalPosition,
-                easing: assemblyResult.easing,
-                duration: assemblyResult.duration,
-                translationDistance: assemblyResult.translationDistance,
-                extractDirection: assemblyResult.extractDirection
-              };
-              const assemblyMessage = '댐퍼 커버 조립 완료';
-              this.animationHistoryService.addAnimationHistory(assemblyCommand, assemblyMessage);
-              console.log('222_Animation history after damper cover assembly:', this.animationHistoryService.getAllHistory());
-            } else if (!assemblyResult) {
-              console.warn('Damper cover assembly returned null, skipping history logging');
-            } else {
-              console.warn('Animation history service not available');
-            }
-
+            const { DamperServiceOrchestrator } = await import('../orchestration/DamperServiceOrchestrator');
+            const orchestrator = new DamperServiceOrchestrator(
+              this.cameraMovementService,
+              this.animationHistoryService,
+              this.damperCaseBodyAnimationService
+            );
+            await orchestrator.execute(commandsArray);
           } catch (error) {
-            console.error('Error during damper cover assembly:', error);
+            console.error('Error executing damper service orchestrator:', error);
           }
-
-          // 스크류 분리 애니매이션 실행
-          try {
-            // 메타데이터 로더 초기화 (전역에서 이미 로드됨)
-            const metadataLoader = getMetadataLoader();
-
-            // 왼쪽 스크류 1 분리
-            if (screw1NodeName) {
-              console.log(screw1NodeName, ' Screw1를 돌려서 빼는 애니메이션을 실행!');
-
-              // 메타데이터 키 추출
-              const metadataKey1 = extractMetadataKey(screw1NodePath);
-              const config1 = metadataLoader.getScrewAnimationConfig(metadataKey1);
-
-              await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
-              console.log('Left screw 1 loosened');
-              if (this.animationHistoryService) {
-              }
-            }
-
-            // 왼쪽 스크류 2 분리
-            if (screw2NodeName) {
-              const metadataKey2 = extractMetadataKey(screw2NodePath);
-              const config2 = metadataLoader.getScrewAnimationConfig(metadataKey2);
-
-              await this.manualAssemblyManager.loosenScrew(screw2NodePath, config2 || {});
-              console.log('Left screw 2 loosened');
-              if (this.animationHistoryService) {
-              }
-            }
-          } catch (error) {
-            console.error('Error during screw loosening:', error);
-          }
-
-          // damperCaseBody 힌지 반대 방향으로 선형이동 실행
-          if (this.damperCaseBodyAnimationService) {
-            try {
-              console.log('damperCaseBody 힌지 반대 방향으로 선형이동 시작!!!');
-
-              // 애니메이션 실행
-              const animationResult = await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
-                duration: 1000,
-                easing: 'power2.inOut',
-                onComplete: () => {
-                  console.log('damperCaseBody 힌지 반대 방향으로 선형이동 완료!!!');
-                }
-              });
-
-              // 애니메이션 히스토리 기록
-              if (animationResult && this.animationHistoryService) {
-                const animationCommand = {
-                  door: commandsArray[0].door,
-                  action: AnimationAction.DAMPER_CASE_BODY_MOVE,
-                  degrees: 0,
-                  speed: 1,
-                  position: animationResult.position,
-                  easing: animationResult.easing,
-                  duration: animationResult.duration
-                };
-                const animationMessage = 'damperCaseBody 힌지 반대 방향으로 선형이동 완료';
-                this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
-                // console.log('333_Animation history after damper case body linear move:', this.animationHistoryService.getAllHistory());
-              } else if (!animationResult) {
-                console.warn('Damper case body animation returned null, skipping history logging');
-              } else {
-                console.warn('Animation history service not available');
-              }
-
-            } catch (error) {
-              console.error('damperCaseBody 힌지 반대 방향으로 선형이동 실행 중 에러:', error);
-            }
-          } else {
-            console.log('damperCaseBody 힌지 반대 방향으로 선형이동 서비스가 초기화되지 않음');
-          }
-
-          // 분리된 왼쪽 스크류2 노드의 위치에서 damperCaseBody 방향으로 선형이동
-          try {
-            console.log('스크류2 damperCaseBody 방향 선형 이동 시작!!!');
-
-            const animationResult = await this.manualAssemblyManager.moveScrewLinearToDamperCaseBody(screw2NodePath, {
-              duration: 1000,
-              easing: 'power2.inOut',
-              onComplete: () => {
-                console.log('스크류2 damperCaseBody 방향 선형 이동 완료!!!');
-              }
-            });
-
-            // 애니메이션 히스토리 기록
-            if (animationResult && this.animationHistoryService) {
-              const animationCommand = {
-                door: commandsArray[0].door,
-                action: AnimationAction.SCREW_LOOSEN,
-                degrees: 0,
-                speed: 1,
-                position: animationResult.position,
-                easing: animationResult.easing,
-                duration: animationResult.duration
-              };
-              const animationMessage = '스크류2 오른쪽 방향 선형 이동 완료';
-              this.animationHistoryService.addAnimationHistory(animationCommand, animationMessage);
-              console.log('444_Animation history after screw2 linear move:', this.animationHistoryService.getAllHistory());
-            } else if (!animationResult) {
-              console.warn('스크류2 선형 이동 애니메이션이 null을 반환했습니다.');
-            } else {
-              console.warn('Animation history service not available');
-            }
-
-          } catch (error) {
-            console.error('스크류2 오른쪽 방향 선형 이동 실행 중 에러:', error);
-          }
-
-          // 스크류 노드(1,2)를 다시 조이는 코드
-          try {
-            console.log('스크류 조립 애니메이션 시작!!!');
-
-            // 왼쪽 스크류 1 조립 (회전+이동 역방향)
-            if (screw1NodeName) {
-              const metadataKey1 = extractMetadataKey(screw1NodePath);
-              const config1 = getMetadataLoader().getScrewAnimationConfig(metadataKey1);
-              await this.manualAssemblyManager.tightenScrew(screw1NodePath, config1 || {});
-              console.log('Left screw 1 tightened');
-              // 스크류 1 조립 히스토리 기록 (ManualAssemblyManager.tightenScrew 내부에서 이미 기록됨)
-            }
-
-            // 왼쪽 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
-            if (screw2NodeName) {
-              const metadataKey2 = extractMetadataKey(screw2NodePath);
-              const config2 = getMetadataLoader().getScrewAnimationConfig(metadataKey2);
-              await this.manualAssemblyManager.tightenScrew(screw2NodePath, config2 || {});
-              console.log('Left screw 2 tightened');
-              // 스크류 2 조립 히스토리 기록 (ManualAssemblyManager.tightenScrew 내부에서 이미 기록됨)
-            }
-
-            console.log('스크류 조립 애니메이션 완료!!!');
-          } catch (error) {
-            console.error('Error during screw tightening:', error);
-          }
-
-          // 댐퍼를 고정했던 홀더를 제거
-          try {
-            console.log('댐퍼 홀더 제거 애니메이션 시작!!!');
-
-            const removeResult = await this.manualAssemblyManager.removeAssemblyNode();
-
-            // 애니메이션 히스토리 기록
-            if (removeResult && this.animationHistoryService) {
-              const removeCommand: AnimationCommand = {
-                door: commandsArray[0].door,
-                action: AnimationAction.DAMPER_HOLDER_REMOVAL,
-                degrees: 0,
-                speed: 1,
-                targetPosition: removeResult.targetPosition,
-                originalPosition: removeResult.originalPosition,
-                easing: removeResult.easing,
-                duration: removeResult.duration,
-                rotationAngle: removeResult.rotationAngle,
-                rotationAxis: removeResult.rotationAxis,
-                translationDistance: removeResult.translationDistance,
-                extractDirection: removeResult.extractDirection
-              };
-              const removeMessage = '댐퍼 홀더 제거 완료';
-              this.animationHistoryService.addAnimationHistory(removeCommand, removeMessage);
-              console.log('555_Animation history after damper holder removal:', this.animationHistoryService.getAllHistory());
-            }
-
-            console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
-          } catch (error) {
-            console.error('댐퍼 홀더 제거 애니메이션 실행 중 에러:', error);
-          }
-
-          // coverNode 댐퍼 커버 노드의 원래 복구 애니메이션
-          if (assemblyResult && assemblyResult.originalPosition) {
-            try {
-              console.log('댐퍼 커버 복구 애니메이션 시작!!!');
-              const restoreResult = await this.manualAssemblyManager.restoreDamperCover(
-                assemblyResult.originalPosition,
-                { duration: 1500 }
-              );
-
-              // 애니메이션 히스토리 기록
-              if (restoreResult && this.animationHistoryService) {
-                const restoreCommand: AnimationCommand = {
-                  door: commandsArray[0].door,
-                  action: AnimationAction.DAMPER_COVER_RESTORE,
-                  degrees: 0,
-                  speed: 1,
-                  targetPosition: restoreResult.targetPosition,
-                  duration: restoreResult.duration,
-                  easing: restoreResult.easing
-                };
-                const restoreMessage = '댐퍼 커버 복구 완료';
-                this.animationHistoryService.addAnimationHistory(restoreCommand, restoreMessage);
-                console.log('666_Animation history after damper cover restoration:', this.animationHistoryService.getAllHistory());
-              }
-              console.log('댐퍼 커버 복구 애니메이션 완료!!!');
-            } catch (error) {
-              console.error('댐퍼 커버 복구 애니메이션 실행 중 에러:', error);
-            }
-          }
-
-
-
         } else {
-          console.log('CameraMovementService is not initialized');
+          console.log('Required services not initialized for damper service');
+          if (!this.cameraMovementService) console.log('CameraMovementService not initialized');
+          if (!this.animationHistoryService) console.log('AnimationHistoryService not initialized');
+          if (!this.damperCaseBodyAnimationService) console.log('DamperCaseBodyAnimationService not initialized');
         }
 
         return {
@@ -1555,23 +1317,22 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
     return {
       type: 'info',
       message: `I'm Sabby, your Animator Agent! I can help you control the refrigerator doors. Here's what I can do:
+                Door Types:
+                - Top Left/Right (Refrigerator doors)
+                - Bottom Left/Right (Freezer doors)
 
-Door Types:
-- Top Left/Right (Refrigerator doors)
-- Bottom Left/Right (Freezer doors)
+                Commands:
+                - "Open the top left door" - Start a conversation
+                - "Close the freezer door" - Close specific doors
+                - "Close all doors" - Close all doors at once
+                - "Open left door 45 degrees in 2 seconds" - Complete command
 
-Commands:
-- "Open the top left door" - Start a conversation
-- "Close the freezer door" - Close specific doors
-- "Close all doors" - Close all doors at once
-- "Open left door 45 degrees in 2 seconds" - Complete command
+                Tips:
+                - You can specify degrees (1-180)
+                - Speed can be in seconds or words like "fast", "slow"
+                - I'll guide you through each step if needed
 
-Tips:
-- You can specify degrees (1-180)
-- Speed can be in seconds or words like "fast", "slow"
-- I'll guide you through each step if needed
-
-Try saying: "Open the top left door" or "Close all doors" to get started!`,
+                Try saying: "Open the top left door" or "Close all doors" to get started!`,
       awaitingInput: true
     };
   }
@@ -1600,13 +1361,12 @@ Try saying: "Open the top left door" or "Close all doors" to get started!`,
       return {
         type: 'info',
         message: `Current Door Status:
+        - Top Left (Refrigerator): ${leftState.isOpen ? 'OPEN' : 'CLOSED'}${leftState.isOpen ? ` (${leftState.degrees.toFixed(0)} deg)` : ''}
+        - Top Right (Refrigerator): ${rightState.isOpen ? 'OPEN' : 'CLOSED'}${rightState.isOpen ? ` (${rightState.degrees.toFixed(0)} deg)` : ''}
+        - Bottom Left (Freezer): ${lowerLeftState.isOpen ? 'OPEN' : 'CLOSED'}${lowerLeftState.isOpen ? ` (${lowerLeftState.degrees.toFixed(0)} deg)` : ''}
+        - Bottom Right (Freezer): ${lowerRightState.isOpen ? 'OPEN' : 'CLOSED'}${lowerRightState.isOpen ? ` (${lowerRightState.degrees.toFixed(0)} deg)` : ''}
 
-- Top Left (Refrigerator): ${leftState.isOpen ? 'OPEN' : 'CLOSED'}${leftState.isOpen ? ` (${leftState.degrees.toFixed(0)} deg)` : ''}
-- Top Right (Refrigerator): ${rightState.isOpen ? 'OPEN' : 'CLOSED'}${rightState.isOpen ? ` (${rightState.degrees.toFixed(0)} deg)` : ''}
-- Bottom Left (Freezer): ${lowerLeftState.isOpen ? 'OPEN' : 'CLOSED'}${lowerLeftState.isOpen ? ` (${lowerLeftState.degrees.toFixed(0)} deg)` : ''}
-- Bottom Right (Freezer): ${lowerRightState.isOpen ? 'OPEN' : 'CLOSED'}${lowerRightState.isOpen ? ` (${lowerRightState.degrees.toFixed(0)} deg)` : ''}
-
-What would you like to do next?`,
+        What would you like to do next?`,
         awaitingInput: true
       };
     } catch (error) {
