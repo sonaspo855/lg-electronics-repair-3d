@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { getMetadataRepository } from './MetadataRepository';
 import { getNodeNameLoader } from './NodeNameLoader';
-import { 
-    AssemblyConfig, 
-    ScrewAnimationConfig, 
-    LinearMovementAnimationConfig 
+import {
+    AssemblyConfig,
+    ScrewAnimationConfig,
+    LinearMovementAnimationConfig
 } from './MetadataTypes';
 
 /**
  * 메타데이터 서비스 클래스
- * 데이터를 가공하고 비즈니스 로직을 처리합니다.
+ * 데이터를 가공하고 비즈니스 로직을 처리
  */
 export class MetadataService {
     private static instance: MetadataService | null = null;
@@ -30,7 +30,7 @@ export class MetadataService {
     }
 
     /**
-     * 특정 어셈블리 설정을 반환합니다.
+     * 특정 어셈블리 설정을 반환
      */
     public getAssemblyConfig(assemblyName: string): AssemblyConfig | null {
         if (this.assemblyCache.has(assemblyName)) {
@@ -48,7 +48,7 @@ export class MetadataService {
     }
 
     /**
-     * 노드 참조를 해결합니다.
+     * 노드 참조를 해결
      */
     private resolveNodeReference(nodeValue: string): string {
         if (nodeValue.startsWith('ref:')) {
@@ -61,7 +61,7 @@ export class MetadataService {
     }
 
     /**
-     * 어셈블리 설정을 로드하고 Three.js 객체로 변환합니다.
+     * 어셈블리 설정을 로드하고 Three.js 객체로 변환
      */
     public async loadAssemblyConfig(assemblyName: string): Promise<AssemblyConfig | null> {
         await this.initialize();
@@ -129,7 +129,16 @@ export class MetadataService {
 
     public getCameraSettings(key: string) {
         const metadata = this.repository.getRawMetadata();
-        return metadata?.cameraSettings?.[key] || null;
+        if (!metadata) {
+            console.warn('[MetadataService] 메타데이터가 로드되지 않은 상태에서 getCameraSettings 호출됨');
+            return null;
+        }
+        const settings = metadata.cameraSettings?.[key];
+        if (!settings) {
+            console.warn(`[MetadataService] '${key}' 키에 해당하는 카메라 설정을 찾을 수 없음`);
+            return null;
+        }
+        return settings;
     }
 
     public getInsertionOffset(assemblyName: string): THREE.Vector3 | null {

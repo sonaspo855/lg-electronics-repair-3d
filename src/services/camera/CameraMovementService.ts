@@ -11,6 +11,7 @@ import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 export interface CameraMoveOptions {
     duration?: number;           // milliseconds
     zoomRatio?: number;          // Custom zoom ratio
+    distance?: number;           // Explicit distance from target
     direction?: THREE.Vector3;   // Custom camera direction
     easing?: string;             // GSAP easing name (default: 'power3.inOut')
     onProgress?: (progress: number) => void;
@@ -80,7 +81,11 @@ export class CameraMovementService {
         // 거리 계산
         const fovRad = (camera.fov * Math.PI) / 180;
         const maxDim = Math.max(size.x, size.y, size.z);
-        const zoomDistance = (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
+        
+        // options.distance가 있으면 우선 사용, 없으면 zoomRatio 기반 계산
+        const zoomDistance = options.distance !== undefined 
+            ? options.distance 
+            : (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
         // 목적지 계산
         let direction = options.direction || new THREE.Vector3(0, -1, 0);

@@ -1,4 +1,4 @@
-import { MetadataService, getMetadataService } from './MetadataService';
+import { getMetadataService } from './MetadataService';
 import {
     AssemblyOffsetMetadata,
     AssemblyConfig,
@@ -13,6 +13,7 @@ import * as THREE from 'three';
 export class MetadataLoader {
     private static instance: MetadataLoader | null = null;
     private service = getMetadataService();
+    // private filePath: string = '/metadata/assembly-offsets.json';
 
     private constructor() { }
 
@@ -23,11 +24,10 @@ export class MetadataLoader {
         return MetadataLoader.instance;
     }
 
-    public async loadMetadata(filePath?: string): Promise<AssemblyOffsetMetadata> {
+    public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
         await this.service.initialize();
-        // Repository에서 직접 가져오는 로직은 생략하고 Service를 통해 간접 관리 권장
-        // 하위 호환성을 위해 타입 캐스팅 사용
-        return (this as any).metadata;
+        // MetadataService 내부의 repository에서 데이터를 가져옴
+        return (this.service as any).repository.getRawMetadata() as AssemblyOffsetMetadata;
     }
 
     public getAssemblyConfig(assemblyName: string): AssemblyConfig | null {
@@ -63,6 +63,7 @@ export class MetadataLoader {
     }
 
     public getCameraSettings(key: string) {
+        console.log('key1111>> ', key);
         return this.service.getCameraSettings(key);
     }
 

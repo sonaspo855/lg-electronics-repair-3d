@@ -80,6 +80,9 @@ export class DamperServiceOrchestrator {
         const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
 
         try {
+            // 메타데이터 선행 로드 보장
+            await this.metadataLoader.loadMetadata();
+
             // 도어 열림 후 댐퍼로 카메라 이동
             await this.moveCamera();
 
@@ -115,10 +118,17 @@ export class DamperServiceOrchestrator {
 
     private async moveCamera(): Promise<void> {
         console.log('Moving camera to left door damper');
+
+        // assembly-offsets.json에서 카메라 설정 가져오기
+        const cameraSettings = this.metadataLoader.getCameraSettings('damperService');
+        console.log('Camera settings:', cameraSettings);
+
         const cameraOptions = {
-            duration: 1000,
-            easing: 'power3.inOut'
+            duration: cameraSettings?.duration || 1000,
+            easing: cameraSettings?.easing || 'power3.inOut',
+            distance: cameraSettings?.distance || 400
         };
+
         await this.cameraMovementService.moveCameraToLeftDoorDamper(cameraOptions);
 
         this.recordAnimationHistory(
