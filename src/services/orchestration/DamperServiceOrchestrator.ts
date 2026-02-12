@@ -118,15 +118,12 @@ export class DamperServiceOrchestrator {
 
     private async moveCamera(): Promise<void> {
         console.log('Moving camera to left door damper');
-
-        // assembly-offsets.json에서 카메라 설정 가져오기
         const cameraSettings = this.metadataLoader.getCameraSettings('damperService');
-        console.log('Camera settings:', cameraSettings);
 
         const cameraOptions = {
-            duration: cameraSettings?.duration || 1000,
-            easing: cameraSettings?.easing || 'power3.inOut',
-            distance: cameraSettings?.distance || 400
+            duration: cameraSettings?.duration,
+            easing: cameraSettings?.easing,
+            distance: cameraSettings?.distance
         };
 
         await this.cameraMovementService.moveCameraToLeftDoorDamper(cameraOptions);

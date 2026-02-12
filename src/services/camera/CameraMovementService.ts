@@ -38,14 +38,13 @@ export class CameraMovementService {
 
     // Move camera to the left door damper node (for backward compatibility)
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
-        console.log('options000>>> ', options);
-        const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();
-
+        const upwardDirection = new THREE.Vector3(0, -1, 0).normalize();  // 노드를 정면에서 바라봄
+        console.log('options.direction>>> ', options.direction);
         return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
-            duration: options.duration || 1000,
-            direction: options.direction || upwardDirection,
-            zoomRatio: options.zoomRatio || 3,
-            easing: options.easing || 'power3.inOut',
+            duration: options.duration,
+            direction: options.direction,
+            zoomRatio: options.zoomRatio,
+            easing: options.easing,
             ...options
         });
     }
@@ -81,10 +80,10 @@ export class CameraMovementService {
         // 거리 계산
         const fovRad = (camera.fov * Math.PI) / 180;
         const maxDim = Math.max(size.x, size.y, size.z);
-        
+
         // options.distance가 있으면 우선 사용, 없으면 zoomRatio 기반 계산
-        const zoomDistance = options.distance !== undefined 
-            ? options.distance 
+        const zoomDistance = options.distance !== undefined
+            ? options.distance
             : (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
 
         // 목적지 계산
