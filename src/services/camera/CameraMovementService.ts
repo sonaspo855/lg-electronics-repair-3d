@@ -3,9 +3,9 @@ import { getNodeNameManager } from '../data/NodeNameManager';
 import { LEFT_DOOR_NODES } from '../../shared/constants/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
-import { 
-    calculateCameraTargetPosition, 
-    CinematicSequence 
+import {
+    calculateCameraTargetPosition,
+    CinematicSequence
 } from '../../shared/utils/animationUtils';
 
 // ============================================================================
@@ -40,7 +40,7 @@ export class CameraMovementService {
         this.sceneRoot = sceneRoot;
     }
 
-    // 카메라를 
+    // 카메라를 댐퍼 위치로 이동
     public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
         return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
             duration: options.duration,
@@ -118,7 +118,7 @@ export class CameraMovementService {
         // 7. 시네마틱 시퀀스 빌드 및 실행
         const sequence = new CinematicSequence();
         sequence.setCamera(camera, this.cameraControls)
-                .setTarget(targetCenter);
+            .setTarget(targetCenter);
 
         // Damping 비활성화 (애니메이션 중 부드러운 전환을 위해)
         const originalDamping = this.cameraControls.enableDamping;
