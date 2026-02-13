@@ -23,12 +23,9 @@ export interface AnimationOptions {
 export interface CameraTargetOptions {
     zoomRatio?: number;
     direction?: THREE.Vector3;
+    distance?: number;
+    fov?: number;
 }
-
-
-
-
-
 
 // ============================================================================
 // 시네마틱 시퀀스 빌더 (GSAP Timeline 활용)
@@ -44,7 +41,9 @@ export interface CameraTargetOptions {
 export class CinematicSequence {
     private timeline: gsap.core.Timeline;
     private camera: THREE.PerspectiveCamera | null = null;
+    private controls: any = null;
     private targetCenter: THREE.Vector3 = new THREE.Vector3();
+    private startTarget: THREE.Vector3 = new THREE.Vector3();
 
     constructor() {
         this.timeline = gsap.timeline({
@@ -56,13 +55,22 @@ export class CinematicSequence {
     }
 
     /**
-     * 카메라 설정 (lookAt 대상 포함)
+     * 카메라 및 컨트롤 설정
      */
-    setCamera(camera: THREE.PerspectiveCamera, target?: THREE.Vector3): this {
+    setCamera(camera: THREE.PerspectiveCamera, controls?: any): this {
         this.camera = camera;
-        if (target) {
-            this.targetCenter.copy(target);
+        this.controls = controls;
+        if (controls && controls.target) {
+            this.startTarget.copy(controls.target);
         }
+        return this;
+    }
+
+    /**
+     * 타겟 중심점 설정
+     */
+    setTarget(target: THREE.Vector3): this {
+        this.targetCenter.copy(target);
         return this;
     }
 
@@ -74,6 +82,7 @@ export class CinematicSequence {
         target?: THREE.Vector3;
         duration?: number;
         easing?: string;
+        onUpdate?: (progress: number) => void;
     }): this {
         if (!this.camera) {
             console.warn('CinematicSequence: 카메라가 설정되지 않았습니다');
@@ -83,6 +92,7 @@ export class CinematicSequence {
         const duration = (params.duration || 1500) / 1000;
         const easing = params.easing || 'power3.inOut';
         const target = params.target || this.targetCenter;
+        const startTarget = this.controls ? this.controls.target.clone() : target.clone();
 
         this.timeline.to(this.camera.position, {
             x: params.position.x,
@@ -91,9 +101,16 @@ export class CinematicSequence {
             duration,
             ease: easing,
             onUpdate: () => {
-                this.camera!.lookAt(target);
+                const progress = this.timeline.progress();
+                if (this.controls) {
+                    this.controls.target.lerpVectors(startTarget, target, progress);
+                    this.controls.update();
+                } else {
+                    this.camera!.lookAt(target);
+                }
+                params.onUpdate?.(progress);
             }
-        }, '<'); // '<' = 이전 애니메이션과 동시 시작
+        }, '<');
 
         return this;
     }
@@ -105,8 +122,15 @@ export class CinematicSequence {
         start: THREE.Vector3;
         control: THREE.Vector3;
         end: THREE.Vector3;
+        upTransition?: {
+            startUp: THREE.Vector3;
+            endUp: THREE.Vector3;
+            nodeY: THREE.Vector3;
+            targetCenter: THREE.Vector3;
+        };
         duration?: number;
         easing?: string;
+        onUpdate?: (progress: number) => void;
     }): this {
         if (!this.camera) {
             console.warn('CinematicSequence: 카메라가 설정되지 않았습니다');
@@ -114,23 +138,38 @@ export class CinematicSequence {
         }
 
         const duration = (params.duration || 2500) / 1000;
-
-        // 2차 베지에 곡선 생성
-        const curve = new THREE.QuadraticBezierCurve3(
-            params.start,
-            params.control,
-            params.end
-        );
+        const curve = new THREE.QuadraticBezierCurve3(params.start, params.control, params.end);
+        const startTarget = this.controls ? this.controls.target.clone() : this.targetCenter.clone();
 
         this.timeline.to({}, {
             duration,
             ease: params.easing || 'power1.inOut',
-            onUpdate: function () {
-                // 현재 진행률 (0~1)
-                const progress = this.progress();
+            onUpdate: () => {
+                // @ts-ignore - GSAP callback context
+                const progress = this.timeline.progress();
                 const point = curve.getPoint(progress);
                 this.camera!.position.copy(point);
-                this.camera!.lookAt(this.targetCenter);
+
+                // UP 벡터 보간 처리 (로우 앵글 효과 등)
+                if (params.upTransition) {
+                    const { nodeY, targetCenter, startUp, endUp } = params.upTransition;
+                    const lookDir = new THREE.Vector3().subVectors(targetCenter, this.camera!.position).normalize();
+                    let calculatedUp = new THREE.Vector3().crossVectors(nodeY, lookDir).normalize();
+                    if (calculatedUp.y < 0) calculatedUp.negate();
+
+                    const easeTransition = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+                    const finalUp = startUp.clone().lerp(calculatedUp, easeTransition);
+                    this.camera!.up.copy(finalUp);
+                }
+
+                if (this.controls) {
+                    this.controls.target.lerpVectors(startTarget, this.targetCenter, progress);
+                    this.controls.update();
+                } else {
+                    this.camera!.lookAt(this.targetCenter);
+                }
+                
+                params.onUpdate?.(progress);
             }
         });
 
@@ -141,14 +180,11 @@ export class CinematicSequence {
      * 줌 인/아웃 효과 추가
      */
     addZoom(params: {
-        zoomRatio: number;  // 줌 비율 (1 = 기본, 2 = 확대)
+        zoomRatio: number;
         duration?: number;
         easing?: string;
     }): this {
-        if (!this.camera) {
-            console.warn('CinematicSequence: 카메라가 설정되지 않았습니다');
-            return this;
-        }
+        if (!this.camera) return this;
 
         const currentPos = this.camera.position.clone();
         const direction = currentPos.clone().sub(this.targetCenter).normalize();
@@ -156,56 +192,47 @@ export class CinematicSequence {
         const targetDistance = currentDistance / params.zoomRatio;
         const targetPos = this.targetCenter.clone().add(direction.multiplyScalar(targetDistance));
 
-        const duration = (params.duration || 1000) / 1000;
-
-        this.timeline.to(this.camera.position, {
-            x: targetPos.x,
-            y: targetPos.y,
-            z: targetPos.z,
-            duration,
-            ease: params.easing || 'power2.inOut',
-            onUpdate: () => {
-                this.camera!.lookAt(this.targetCenter);
-            }
-        }, '<');
-
-        return this;
+        return this.addCameraMove({
+            position: targetPos,
+            duration: params.duration,
+            easing: params.easing
+        });
     }
 
     /**
-     * 하이라이트 효과 추가
+     * 하이라이트 효과 추가 (Emissive 중심)
      */
     addHighlight(params: {
         node: THREE.Object3D;
         color?: number;
         duration?: number;
+        intensity?: number;
     }): this {
         const duration = (params.duration || 500) / 1000;
-        const color = params.color || 0xffff00;
+        const color = new THREE.Color(params.color || 0xffff00);
+        const intensity = params.intensity || 0.8;
 
-        // Mesh 재질 애니메이션
         params.node.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-                const originalMaterial = child.material;
-
-                this.timeline.to((child.material as THREE.MeshStandardMaterial).color, {
-                    r: ((color >> 16) & 255) / 255,
-                    g: ((color >> 8) & 255) / 255,
-                    b: (color & 255) / 255,
-                    duration,
-                    ease: 'power1.out'
-                }, 0);
-
-                // emissive 효과 추가
-                if ('emissive' in child.material) {
-                    this.timeline.to((child.material as THREE.MeshStandardMaterial).emissive, {
-                        r: ((color >> 16) & 255) / 255,
-                        g: ((color >> 8) & 255) / 255,
-                        b: (color & 255) / 255,
-                        duration,
-                        ease: 'power1.out'
-                    }, 0);
-                }
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                
+                materials.forEach(mat => {
+                    if ('emissive' in mat) {
+                        const m = mat as any;
+                        this.timeline.to(m.emissive, {
+                            r: color.r,
+                            g: color.g,
+                            b: color.b,
+                            duration,
+                            ease: 'power1.out'
+                        }, '<');
+                        this.timeline.to(m, {
+                            emissiveIntensity: intensity,
+                            duration,
+                            ease: 'power1.out'
+                        }, '<');
+                    }
+                });
             }
         });
 
@@ -270,58 +297,38 @@ export class CinematicSequence {
 
 /**
  * 바운딩 박스를 기반으로 카메라 타겟 위치 계산
- * 용도: 바운딩 박스 기반 카메라 타겟 위치 계산 (장축 인지 자동 뷰포트 정렬)
- * 장점: 대상 객체의 크기와 형상에 따라 최적의 카메라 위치를 자동 계산
- * 재사용 시나리오: 부품 선택시 카메라 포커싱, 자동 뷰포트 정렬
  */
 export const calculateCameraTargetPosition = (
     camera: THREE.PerspectiveCamera,
     targetBox: THREE.Box3,
     options: CameraTargetOptions = {}
-): THREE.Vector3 => {
+): { position: THREE.Vector3; target: THREE.Vector3; distance: number } => {
     const center = new THREE.Vector3();
     targetBox.getCenter(center);
 
-    const diagonal = targetBox.min.distanceTo(targetBox.max);
-    const fov = camera.fov * (Math.PI / 180);
-
-    let cameraDistance = Math.abs(diagonal / 2 / Math.tan(fov / 2));
-
-    // 줌 비율 조절 (객체 크기에 따라 동적 조정)
-    let zoomRatio = options.zoomRatio || 1.5;
-    if (diagonal < 5) {
-        zoomRatio = options.zoomRatio || 2.0;
-    } else if (diagonal > 20) {
-        zoomRatio = options.zoomRatio || 1.2;
-    }
-    cameraDistance *= zoomRatio;
-
-    // 방향 결정 (장축 인지 기반 자동 뷰포트 정렬)
     const size = new THREE.Vector3();
     targetBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
 
-    let direction = options.direction;
+    const fov = (options.fov || camera.fov) * (Math.PI / 180);
+    
+    // options.distance가 있으면 우선 사용, 없으면 zoomRatio 기반 계산
+    let cameraDistance = options.distance !== undefined
+        ? options.distance
+        : (maxDim / 2) / Math.tan(fov / 2) * (options.zoomRatio || 1.5);
 
-    if (!direction) {
-        const maxDimension = Math.max(size.x, size.y, size.z);
-
-        if (maxDimension === size.x) {
-            direction = new THREE.Vector3(1, 0.2, 0.5).normalize(); // X축 장축 → 우측 상단에서 보기
-        } else if (maxDimension === size.z) {
-            direction = new THREE.Vector3(0.5, 0.2, 1).normalize(); // Z축 장축 → 전면 상단에서 보기
-        } else {
-            direction = new THREE.Vector3(0.5, 1, 0.5).normalize(); // Y축 장축 → 위에서 보기
-        }
-    } else {
-        direction = new THREE.Vector3(direction.x, direction.y || 0.2, direction.z).normalize(); // Y축 기본값 0.2로 설정 (약간 아래에서 보기)
-    }
+    // 방향 결정
+    let direction = options.direction ? options.direction.clone().normalize() : new THREE.Vector3(0.5, 0.5, 1).normalize();
 
     const targetPosition = center.clone().add(direction.multiplyScalar(cameraDistance));
-    // Y축 위치 조정: 대상의 중심보다 약간 높게 위치시켜 더 자연스러운 시점 제공
-    targetPosition.y = center.y + (size.y * 0.1);
 
-    return targetPosition;
+    return {
+        position: targetPosition,
+        target: center,
+        distance: cameraDistance
+    };
 };
+
 
 // ============================================================================
 /**

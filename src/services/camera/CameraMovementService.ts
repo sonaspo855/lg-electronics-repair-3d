@@ -3,6 +3,10 @@ import { getNodeNameManager } from '../data/NodeNameManager';
 import { LEFT_DOOR_NODES } from '../../shared/constants/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
+import { 
+    calculateCameraTargetPosition, 
+    CinematicSequence 
+} from '../../shared/utils/animationUtils';
 
 // ============================================================================
 // Camera movement options
@@ -64,185 +68,122 @@ export class CameraMovementService {
             return;
         }
 
-        // 타겟 바운딩 박스 및 중심점 계산
+        // 1. 타겟 바운딩 박스 및 중심점 계산
         const targetBox = getPreciseBoundingBox(targetNode);
         const targetCenter = new THREE.Vector3();
         targetBox.getCenter(targetCenter);
         const size = new THREE.Vector3();
         targetBox.getSize(size);
-
-        // 시작 위치
-        const startPos = camera.position.clone();
-        const startTarget = this.cameraControls.target.clone();
-
-        // 거리 계산
-        const fovRad = (camera.fov * Math.PI) / 180;
         const maxDim = Math.max(size.x, size.y, size.z);
 
-        // options.distance가 있으면 우선 사용, 없으면 zoomRatio 기반 계산
-        const zoomDistance = options.distance !== undefined
-            ? options.distance
-            : (maxDim / 2) / Math.tan(fovRad / 2) * (options.zoomRatio || 1.2);
-
-        // 목적지 계산
+        // 2. 목적지 방향 결정
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
-
-        // damperCoverBody 노드에 대해 일관된 뷰를 제공하도록 방향 강제
         const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
         if (nodeName === damperCoverBodyNode && !options.direction) {
             direction = new THREE.Vector3(0.5, -1, 0.5).normalize();
         }
 
-        const endPos = targetCenter.clone().add(direction.clone().multiplyScalar(zoomDistance));
+        // 3. 목적지 및 거리 계산
+        const { position: endPos, distance: zoomDistance } = calculateCameraTargetPosition(camera, targetBox, {
+            zoomRatio: options.zoomRatio || 1.2,
+            distance: options.distance,
+            direction: direction
+        });
 
-        // 거리 체크 (너무 가까우면 직선 이동)
-        const distSq = startPos.distanceToSquared(endPos);
-        if (distSq < 0.0001) {
+        // 4. 시작 위치 및 상태 저장
+        const startPos = camera.position.clone();
+        const startTarget = this.cameraControls.target.clone();
+
+        // 거리 체크 (너무 가까우면 즉시 이동)
+        if (startPos.distanceToSquared(endPos) < 0.0001) {
             camera.position.copy(endPos);
             this.cameraControls.target.copy(targetCenter);
             this.cameraControls.update();
             return;
         }
 
-        // 제어점 계산 (L자형 곡선)
+        // 5. 제어점 계산 (L자형 곡선)
         const controlPos = new THREE.Vector3(
             (startPos.x + endPos.x) / 2,
             Math.max(startPos.y, endPos.y) + Math.max(size.y, maxDim) * 0.3,
             (startPos.z + endPos.z) / 2
         );
 
-        // 베지에 곡선 생성
-        const cinematicCurve = new THREE.QuadraticBezierCurve3(
-            startPos.clone(),
-            controlPos,
-            endPos.clone()
-        );
-
-        // 노드의 월드 회전 (UP 벡터 계산용)
+        // 6. 노드의 월드 회전 (UP 벡터 계산용)
         const nodeQuat = new THREE.Quaternion();
         targetNode.getWorldQuaternion(nodeQuat);
         const nodeY = new THREE.Vector3(0, 1, 0).applyQuaternion(nodeQuat);
 
-        // Damping 비활성화
+        // 7. 시네마틱 시퀀스 빌드 및 실행
+        const sequence = new CinematicSequence();
+        sequence.setCamera(camera, this.cameraControls)
+                .setTarget(targetCenter);
+
+        // Damping 비활성화 (애니메이션 중 부드러운 전환을 위해)
         const originalDamping = this.cameraControls.enableDamping;
         const originalSmoothTime = this.cameraControls.smoothTime;
         this.cameraControls.enableDamping = false;
         this.cameraControls.smoothTime = 0;
 
-        // UP 벡터 리셋
+        // 카메라 UP 벡터 초기화
         camera.up.set(0, 1, 0);
 
-        // GSAP 애니메이션 실행
-        const duration = (options.duration || 2500) / 1000;
-        const easing = options.easing || 'power3.inOut';
+        const upTransition = (options.direction && Math.abs(options.direction.y) > 0.8) ? {
+            startUp: new THREE.Vector3(0, 1, 0),
+            endUp: new THREE.Vector3(0, 1, 0), // 내부에서 계산됨
+            nodeY: nodeY,
+            targetCenter: targetCenter
+        } : undefined;
 
-        await new Promise<void>((resolve) => {
-            const animObj = { progress: 0 };
+        await sequence.addBezierPath({
+            start: startPos,
+            control: controlPos,
+            end: endPos,
+            upTransition: upTransition,
+            duration: options.duration || 2500,
+            easing: options.easing || 'power3.inOut',
+            onUpdate: options.onProgress
+        }).play();
 
-            gsap.to(animObj, {
-                progress: 1,
-                duration,
-                ease: easing,
-                onUpdate: () => {
-                    const smoothProgress = animObj.progress;
+        // 8. 후처리 (Damping 복구 및 하이라이트)
+        this.cameraControls.enableDamping = originalDamping;
+        this.cameraControls.smoothTime = originalSmoothTime;
 
-                    // 곡선에서 위치 가져오기
-                    const point = cinematicCurve.getPoint(smoothProgress);
-                    camera.position.copy(point);
+        this.applyLeftDoorHighlights();
+    }
 
-                    // UP 벡터 점진적 전환 (로우 앵글 효과)
-                    if (options.direction && Math.abs(options.direction.y) > 0.8) {
-                        const lookDir = new THREE.Vector3()
-                            .subVectors(targetCenter, camera.position)
-                            .normalize();
+    /**
+     * 왼쪽 문 부품들에 하이라이트 적용 (애니메이션 완료 후 비즈니스 로직)
+     */
+    private applyLeftDoorHighlights(): void {
+        const nodeColors = [
+            0x325311, // 녹색 (Cover Body)
+            0xff3333, // 빨간색 (Damper Assembly)
+            0x3333ff, // 파란색 (Screw 1)
+            0xffff33  // 노란색 (Screw 2)
+        ];
 
-                        // 노드Y × 시선방향 (Cross Product)
-                        let calculatedUp = new THREE.Vector3()
-                            .crossVectors(nodeY, lookDir)
-                            .normalize();
+        LEFT_DOOR_NODES.forEach((nodeName, index) => {
+            if (index > 1) return; // 0, 1번 인덱스만 적용 (CoverBody, Assembly)
 
-                        // 아래를 향하면 반전
-                        if (calculatedUp.y < 0) {
-                            calculatedUp.negate();
-                        }
-
-                        // 점진적 UP 전환 (Cubic ease-out)
-                        const easeTransition = 1 - Math.pow(1 - smoothProgress, 3);
-                        const finalUp = new THREE.Vector3(0, 1, 0).lerp(calculatedUp, easeTransition);
-                        camera.up.copy(finalUp);
-                    } else {
-                        camera.up.set(0, 1, 0);
-                    }
-
-                    // 타겟 lerp
-                    this.cameraControls.target.lerpVectors(startTarget, targetCenter, smoothProgress);
-                    this.cameraControls.update();
-
-                    options.onProgress?.(smoothProgress);
-                },
-                onComplete: () => {
-                    // 1. 카메라 및 컨트롤 최종 상태 확정
-                    if (options.direction && Math.abs(options.direction.y) > 0.8) {
-                        const lookDir = new THREE.Vector3()
-                            .subVectors(targetCenter, camera.position)
-                            .normalize();
-
-                        let calculatedUp = new THREE.Vector3()
-                            .crossVectors(nodeY, lookDir)
-                            .normalize();
-
-                        if (calculatedUp.y < 0) {
-                            calculatedUp.negate();
-                        }
-
-                        camera.up.copy(calculatedUp);
-                        this.cameraControls.target.copy(targetCenter);
-                        this.cameraControls.update();
-                    }
-
-                    // Damping 복원
-                    this.cameraControls.enableDamping = originalDamping;
-                    this.cameraControls.smoothTime = originalSmoothTime;
-
-
-                    // 카메라 이동 완료 후 노드 하이라이트 (Emissive 방식)
-                    const nodeColors = [
-                        0x325311, // 녹색 (Cover Body) - 발광 효과를 위해 채도를 높인 값 권장
-                        0xff3333, // 빨간색 (Damper Assembly)
-                        0x3333ff, // 파란색 (Screw 1)
-                        0xffff33  // 노란색 (Screw 2)
-                    ];
-
-                    LEFT_DOOR_NODES.forEach((nodeName, index) => {
-                        if (index > 1) return; // 0번째, 1번째 인덱스만 색상 적용
-
-                        const node = this.getNodeByName(nodeName);
-                        if (node) {
-                            // 노드 내부의 모든 Mesh를 탐색하여 재질 수정
-                            node.traverse((child) => {
-                                if (child instanceof THREE.Mesh) {
-                                    // 1. 재질이 배열인 경우와 단일 객체인 경우 모두 대응
-                                    if (Array.isArray(child.material)) {
-                                        child.material = child.material.map(mat => {
-                                            // 재질을 복제하여 다른 노드와 연결을 끊음
-                                            const newMat = mat.clone();
-                                            this.applyEmissive(newMat, nodeColors[index]);
-                                            return newMat;
-                                        });
-                                    } else {
-                                        // 단일 재질 복제 및 적용
-                                        child.material = child.material.clone();
-                                        this.applyEmissive(child.material, nodeColors[index]);
-                                    }
-                                }
+            const node = this.getNodeByName(nodeName);
+            if (node) {
+                node.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        if (Array.isArray(child.material)) {
+                            child.material = child.material.map(m => {
+                                const newM = m.clone();
+                                this.applyEmissive(newM, nodeColors[index]);
+                                return newM;
                             });
+                        } else {
+                            child.material = child.material.clone();
+                            this.applyEmissive(child.material, nodeColors[index]);
                         }
-                    });
-
-                    resolve();
-                }
-            });
+                    }
+                });
+            }
         });
     }
 
