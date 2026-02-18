@@ -168,7 +168,7 @@ export class CinematicSequence {
                 } else {
                     this.camera!.lookAt(this.targetCenter);
                 }
-                
+
                 params.onUpdate?.(progress);
             }
         });
@@ -215,7 +215,7 @@ export class CinematicSequence {
         params.node.traverse((child) => {
             if (child instanceof THREE.Mesh) {
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
-                
+
                 materials.forEach(mat => {
                     if ('emissive' in mat) {
                         const m = mat as any;
@@ -302,7 +302,7 @@ export const calculateCameraTargetPosition = (
     camera: THREE.PerspectiveCamera,
     targetBox: THREE.Box3,
     options: CameraTargetOptions = {}
-): { position: THREE.Vector3; target: THREE.Vector3; distance: number } => {
+): { position: THREE.Vector3 } => {
     const center = new THREE.Vector3();
     targetBox.getCenter(center);
 
@@ -311,7 +311,7 @@ export const calculateCameraTargetPosition = (
     const maxDim = Math.max(size.x, size.y, size.z);
 
     const fov = (options.fov || camera.fov) * (Math.PI / 180);
-    
+
     // options.distance가 있으면 우선 사용, 없으면 zoomRatio 기반 계산
     let cameraDistance = options.distance !== undefined
         ? options.distance
@@ -324,8 +324,6 @@ export const calculateCameraTargetPosition = (
 
     return {
         position: targetPosition,
-        target: center,
-        distance: cameraDistance
     };
 };
 

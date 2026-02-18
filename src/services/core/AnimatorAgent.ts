@@ -918,7 +918,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
       // Check if commands are damper commands (need simultaneous execution)
       const commandsArray = Array.isArray(commands) ? commands : [commands];
-      console.log('commandsArray>> ', JSON.stringify(commandsArray.map(c => ({ door: c.door, action: c.action, degrees: c.degrees }))));
+      // console.log('commandsArray>> ', JSON.stringify(commandsArray.map(c => ({ door: c.door, action: c.action, degrees: c.degrees }))));
       const isDamperCommands = await areFridgeDamperCommands(commandsArray);
 
       if (isDamperCommands) {

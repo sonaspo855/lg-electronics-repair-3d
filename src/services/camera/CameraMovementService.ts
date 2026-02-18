@@ -1,4 +1,3 @@
-import gsap from 'gsap';
 import { getNodeNameManager } from '../data/NodeNameManager';
 import { LEFT_DOOR_NODES } from '../../shared/constants/fridgeConstants';
 import * as THREE from 'three';
@@ -85,7 +84,7 @@ export class CameraMovementService {
         }
 
         // 3. 목적지 및 거리 계산
-        const { position: endPos, distance: zoomDistance } = calculateCameraTargetPosition(camera, targetBox, {
+        const { position: endPos } = calculateCameraTargetPosition(camera, targetBox, {
             zoomRatio: options.zoomRatio || 1.2,
             distance: options.distance,
             direction: direction
@@ -93,7 +92,7 @@ export class CameraMovementService {
 
         // 4. 시작 위치 및 상태 저장
         const startPos = camera.position.clone();
-        const startTarget = this.cameraControls.target.clone();
+        // const startTarget = this.cameraControls.target.clone();
 
         // 거리 체크 (너무 가까우면 즉시 이동)
         if (startPos.distanceToSquared(endPos) < 0.0001) {
