@@ -212,7 +212,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * Screw를 돌려서 빼는 애니메이션을 실행합니다.
+     * Screw를 돌려서 빼는 애니메이션을 실행
      * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
      * @param options 애니메이션 옵션
      */
@@ -228,7 +228,7 @@ export class ManualAssemblyManager {
             onComplete?: () => void;
         }
     ): Promise<void> {
-        // 경로이면 실제 노드 이름으로 변환
+        // 경로를 이용하여 노드 이름 반환
         const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
 
         if (!actualNodeName) {
@@ -247,7 +247,7 @@ export class ManualAssemblyManager {
         const metadataKey = extractMetadataKey(screwNodePath);
         const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
 
-        // console.log('usedConfig000>> ', usedConfig);
+        console.log('usedConfig000>> ', usedConfig);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {
@@ -265,7 +265,7 @@ export class ManualAssemblyManager {
                 },
                 screwMessage
             );
-            console.log('33_Animation history after screw loosening:', this.animationHistoryService.getAllHistory());
+            console.log('스크류 분리 히스토리:', this.animationHistoryService.getAllHistory());
         }
     }
 

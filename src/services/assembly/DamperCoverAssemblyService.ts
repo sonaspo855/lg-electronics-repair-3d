@@ -8,8 +8,7 @@ import { getGrooveDetectionService } from '../detection/GrooveDetectionService';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
- * 댐퍼 커버 조립 서비스
- * 댐퍼 커버 조립 로직을 담당
+ * damperCoverBody 노드와 damperCover 노드 결합 로직
  */
 export class DamperCoverAssemblyService {
     private sceneRoot: THREE.Object3D | null = null;
@@ -31,7 +30,7 @@ export class DamperCoverAssemblyService {
     private metadataLoader = getMetadataLoader();
 
     /**
-     * 댐퍼 커버 조립 서비스를 초기화
+     * damperCoverBody 노드와 damperCover 노드 결합 서비스 초기화
      * @param sceneRoot 씬 루트 객체
      */
     public initialize(sceneRoot: THREE.Object3D): void {
@@ -43,7 +42,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 댐퍼 돌출부/홈 결합
+     * damperCoverBody 노드와 damperCover 돌출부/홈 결합
      */
     public async assembleDamperCover(options?: {
         duration?: number;
@@ -161,14 +160,13 @@ export class DamperCoverAssemblyService {
             coverNode.getWorldPosition(currentWorldPos);
             const targetWorldPos = currentWorldPos.clone().add(worldMoveVector);
 
-            // 부모 좌표계로 변환 (로컬 position 업데이트를 위해)
+            // 부모 좌표계로 변환
             // targetLocalPos: 이동될 목표 위치의 좌표
             const targetLocalPos = coverNode.parent
                 ? coverNode.parent.worldToLocal(targetWorldPos.clone())
                 : targetWorldPos;
 
             // GSAP 선형 이동 애니메이션
-            // const duration = options?.duration ? options.duration / 1000 : 1.5;
             const duration = options?.duration;
 
             if (!duration) {
@@ -192,7 +190,6 @@ export class DamperCoverAssemblyService {
                 });
             });
 
-            // 좌표 정보 반환
             // targetLocalPos: 이동될 목표 위치의 좌표
             const targetPosition = {
                 x: targetLocalPos.x,
@@ -217,7 +214,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 댐퍼 커버를 원래 위치로 복구 (조립용 역방향 선형 이동)
+     * damperCoverBody 노드를 원래 위치로 복구하는 함수
      */
     public async restoreDamperCover(
         originalPosition: { x: number; y: number; z: number },
@@ -276,7 +273,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 서비스를 정리합니다.
+     * 동작 서비스를 정리
      */
     public dispose(): void {
         this.assemblyPathVisualizer.dispose();
@@ -285,7 +282,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 탐지된 돌출부(Plug) 정보를 반환합니다.
+     * damperCoverBody 노드의 탐지된 돌출부(Plug) 정보를 반환
      * @returns 탐지된 돌출부 정보 배열
      */
     public getDetectedPlugs(): Array<{
@@ -298,7 +295,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 탐지된 돌출부 중 너무 가까운 것들을 필터링하여 하나로 합친다.
+     * damperCoverBody 노드의 탐지된 돌출부 중 너무 가까운 것들을 필터링하여 하나로 합침
      * @param plugs 탐지된 돌출부 배열
      * @param threshold 거리 임계값
      */
@@ -350,7 +347,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * assemblyNode를 3단계 애니메이션으로 제거합니다.
+     * assemblyNode 노드 분리 및 사라짐 효과 애니메이션 함수
      * 1단계: 힌지(돌출부/홈)를 축으로 한 틸팅 및 리프트
      * 2단계: 홈에서 빠져나오는 방향으로 슬라이드
      * 3단계: 페이드 아웃 및 제거
@@ -558,7 +555,7 @@ export class DamperCoverAssemblyService {
 let damperCoverAssemblyServiceInstance: DamperCoverAssemblyService | null = null;
 
 /**
- * 댐퍼 커버 조립 서비스 인스턴스를 반환합니다.
+ * damperCoverBody 노드와 damperCover 노드 결합 서비스 인스턴스 반환
  * @returns DamperCoverAssemblyService 인스턴스
  */
 export function getDamperCoverAssemblyService(): DamperCoverAssemblyService {

@@ -1,20 +1,15 @@
 import * as THREE from 'three';
-// import { NormalBasedHighlightServiceService } from '../visualization/NormalBasedHighlightServiceService';
 import { NormalBasedHighlightService } from '../visualization/NormalBasedHighlightService';
 
 import { getNodeNameManager } from '../data/NodeNameManager';
 
-/**
- * 댐퍼 조립 서비스 (조립 기능은 ManualAssemblyManager로 이동됨)
- * 이 파일은 디버깅용 노드 구조 출력 기능만 유지
- */
 
 // 싱글톤 인스턴스 (전역에서 사용 가능)
 let damperAssemblyServiceInstance: DamperAssemblyService | null = null;
 
 /**
- * 댐퍼 조립 서비스 클래스
- * 조립/분해 기능은 ManualAssemblyManager.ts로 이동됨
+ * damperCoverBody 노드와 damperCover 노드를 결합하는 서비스
+ * 조립/분해 기능은 ManualAssemblyManager.ts 참고
  */
 export class DamperAssemblyService {
     private sceneRoot: THREE.Object3D | null = null;
@@ -33,7 +28,7 @@ export class DamperAssemblyService {
     }
 
     /**
-     * 적용된 모든 하이라이트를 제거합니다.
+     * 적용된 모든 하이라이트를 제거
      */
     public clearHighlights(): void {
         this.normalHighlight?.clearHighlights();
@@ -46,19 +41,17 @@ export class DamperAssemblyService {
         this.sceneRoot = null;
     }
 
-    // ==================== 디버깅용 메서드들 ====================
-
     /**
-     * 노드의 모든 자식 노드 이름을 콘솔에 출력합니다.
+     * [디버깅 함수] - 노드의 모든 자식 노드 이름을 콘솔에 출력
      */
     private printNodeNames(node: THREE.Object3D | null | undefined, prefix: string = ''): void {
         if (!node) return;
-        console.log('prefix>> ' + prefix + node.name);
+        // console.log('prefix>> ' + prefix + node.name);
         node.children.forEach(child => this.printNodeNames(child, prefix + '  '));
     }
 
     /**
-     * [디버깅] Damper Assembly와 Cover의 노드 구조를 콘솔에 출력합니다.
+     * [디버깅 함수] - Damper Assembly와 Cover의 노드 구조를 콘솔에 출력
      */
     public debugPrintDamperStructure(): void {
         if (!this.sceneRoot) {

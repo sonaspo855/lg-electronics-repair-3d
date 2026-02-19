@@ -90,10 +90,10 @@ export class DamperServiceOrchestrator {
             // 댐퍼 돌출부/홈 결합 애니메이션 실행
             const assemblyResult = await this.assembleDamperCover(commandsArray[0].door);
 
-            return;
-
             // 스크류 분리 애니매이션 실행
             await this.loosenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
+
+            return;
 
             // damperCaseBody 힌지 반대 방향으로 선형이동 실행
             await this.moveDamperCaseBody(commandsArray[0].door);
@@ -144,7 +144,7 @@ export class DamperServiceOrchestrator {
             cameraOptions,
             'Camera moved to damper position'
         );
-        console.log('Animation history after camera move:', this.animationHistoryService.getAllHistory());
+        console.log('댐퍼 카메라 이동 히스토리:', this.animationHistoryService.getAllHistory());
     }
 
     private async assembleDamperCover(door: DoorType): Promise<any> {
@@ -162,7 +162,7 @@ export class DamperServiceOrchestrator {
         } else {
             console.warn('Damper cover assembly returned null, skipping history logging');
         }
-        console.log('Animation history after damper cover assembly:', this.animationHistoryService.getAllHistory());
+        console.log('댐퍼 노드 결합 히스토리:', this.animationHistoryService.getAllHistory());
         return assemblyResult;
     }
 
@@ -172,23 +172,22 @@ export class DamperServiceOrchestrator {
         screw1NodePath: string,
         screw2NodePath: string
     ): Promise<void> {
-        console.log('Loosening screws');
+        // console.log('loosenScrews!!!');
 
-        // 왼쪽 스크류 1 분리
+        // 스크류 1 분리
         if (screw1NodeName) {
-            console.log(`${screw1NodeName} Screw1를 돌려서 빼는 애니메이션을 실행!`);
             const metadataKey1 = extractMetadataKey(screw1NodePath);
             const config1 = this.metadataLoader.getScrewAnimationConfig(metadataKey1);
             await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
-            console.log('Left screw 1 loosened');
+            console.log('스크류1 분리 완료!!!');
         }
 
-        // 왼쪽 스크류 2 분리
+        // 스크류 2 분리
         if (screw2NodeName) {
             const metadataKey2 = extractMetadataKey(screw2NodePath);
             const config2 = this.metadataLoader.getScrewAnimationConfig(metadataKey2);
             await this.manualAssemblyManager.loosenScrew(screw2NodePath, config2 || {});
-            console.log('Left screw 2 loosened');
+            console.log('스크류2 분리 완료!!!');
         }
     }
 
