@@ -262,15 +262,15 @@ export class ManualAssemblyManager {
                     rotationAxis: usedConfig.rotationAxis,
                     extractDirection: usedConfig.extractDirection,
                     translationDistance: usedConfig.extractDistance,
+                    originalPosition: usedConfig.originalPosition ? {
+                        x: usedConfig.originalPosition.x,
+                        y: usedConfig.originalPosition.y,
+                        z: usedConfig.originalPosition.z
+                    } : undefined,
                     targetPosition: usedConfig.finalPosition ? {
                         x: usedConfig.finalPosition.x,
                         y: usedConfig.finalPosition.y,
                         z: usedConfig.finalPosition.z
-                    } : undefined,
-                    position: usedConfig.originalPosition ? {
-                        x: usedConfig.originalPosition.x,
-                        y: usedConfig.originalPosition.y,
-                        z: usedConfig.originalPosition.z
                     } : undefined,
                     degrees: usedConfig.degrees
                 },
