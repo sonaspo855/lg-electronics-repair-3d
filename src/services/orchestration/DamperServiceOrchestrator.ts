@@ -210,7 +210,7 @@ export class DamperServiceOrchestrator {
             console.warn('Damper case body animation returned null, skipping history logging');
         }
 
-        console.log('Animation history after damper case body move:', this.animationHistoryService.getAllHistory());
+        console.log('damperCaseBody 힌지 반대 방향으로 선형이동 히스토리:', this.animationHistoryService.getAllHistory());
         return animationResult;
     }
 

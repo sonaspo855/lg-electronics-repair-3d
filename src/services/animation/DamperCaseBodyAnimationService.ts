@@ -42,7 +42,7 @@ export class DamperCaseBodyAnimationService {
     public async animateDamperCaseBodyLinearMove(options: {
         onComplete?: () => void;
     } = {}): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
     } | null> {
@@ -66,7 +66,6 @@ export class DamperCaseBodyAnimationService {
                 console.error('댐퍼 케이스 바디 애니메이션 설정을 찾을 수 없습니다.');
                 return null;
             }
-            // console.log('animationConfig000>> ', animationConfig);
 
             // 애니메이션 옵션 병합
             const metaOptions = {
@@ -110,7 +109,7 @@ export class DamperCaseBodyAnimationService {
 
             // GSAP를 사용한 선형 이동 애니메이션
             return new Promise<{
-                position: { x: number; y: number; z: number };
+                targetPosition: { x: number; y: number; z: number };
                 duration: number;
                 easing: string;
             } | null>((resolve) => {
@@ -125,14 +124,14 @@ export class DamperCaseBodyAnimationService {
                             metaOptions.onComplete();
                         }
 
-                        const position = {
+                        const targetPosition = {
                             x: localTargetPosition.x,
                             y: localTargetPosition.y,
                             z: localTargetPosition.z
                         };
 
                         const result = {
-                            position,
+                            targetPosition,
                             duration: metaOptions.duration,
                             easing: metaOptions.easing
                         };
