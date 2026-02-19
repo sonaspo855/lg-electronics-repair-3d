@@ -142,8 +142,6 @@ export class ScrewAnimationService {
             throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
         }
 
-        console.log('options.extractDistance>>> ', options.extractDistance);
-
         const translationDistanceCm = calculateTranslationDistance(
             options,
             metadata,
@@ -188,12 +186,11 @@ export class ScrewAnimationService {
                     },
                     onComplete: () => {
                         this.isAnimating = false;
-                        console.log(`${screwNodeName} 회전 완료`);
                         // 최종 좌표 업데이트
                         usedConfig.finalPosition = screwNodeObj.position.clone();
                         usedConfig.finalRotation = screwNodeObj.rotation.clone();
-                        console.log('최종 위치:', usedConfig.finalPosition);
-                        console.log('최종 회전:', usedConfig.finalRotation);
+                        // console.log('최종 위치:', usedConfig.finalPosition);
+                        // console.log('최종 회전:', usedConfig.finalRotation);
 
                         // 사용자 콜백 실행
                         config.onComplete?.();

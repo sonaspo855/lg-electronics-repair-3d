@@ -63,7 +63,6 @@ export class MetadataLoader {
     }
 
     public getCameraSettings(key: string) {
-        console.log('key1111>> ', key);
         return this.service.getCameraSettings(key);
     }
 

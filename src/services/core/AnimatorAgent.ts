@@ -1030,7 +1030,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
         const singleResponseVerbPromise = this.resolveActionVerb(this.lastUserInput, command.action, singleLocale);
         let singleCommandCompleted = false;
         const singleCommandCompletion = () => {
-          console.log('handleCompletion111');
+          // console.log('handleCompletion!!!');
           if (singleCommandCompleted) return;
           singleCommandCompleted = true;
           void singleResponseVerbPromise.then((responseVerb) => {
