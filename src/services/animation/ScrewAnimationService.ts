@@ -3,7 +3,7 @@ import gsap from 'gsap';
 import { isFastenerNodeName } from '@/shared/utils/isFastener';
 import { getMetadataLoader } from '@/services/data/MetadataLoader';
 import { getNodeNameManager } from '../data/NodeNameManager';
-import { calculateTranslationDistance } from '../../shared/utils/screwAnimationUtils';
+import { calculateTranslationDistance } from '../assembly/PartAssemblyService';
 import { createAnimationTimeline } from '../../shared/utils/animationUtils';
 
 /**
