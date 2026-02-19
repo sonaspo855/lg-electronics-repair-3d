@@ -147,11 +147,10 @@ export class DamperCoverAssemblyService {
             const direction = worldMoveVector.clone().normalize();
             const extractDirection: [number, number, number] = [direction.x, direction.y, direction.z];
 
-            // 선형 이동 거리를 줄임 (오프셋 추가)
-            // 현재 위치에서 목표 위치로 향하는 직선 경로상에서 일정 거리만큼 덜 이동하게 함
-            const offsetDistance = 0.0005;
+            // 메타데이터에서 데이터 가져오기
+            const distanceReduction = config?.insertion?.distanceReduction ?? 0.0005;  // 선형이동될 거리 줄이기
             const totalDistance = worldMoveVector.length();
-            const reducedDistance = Math.max(0, totalDistance - offsetDistance);
+            const reducedDistance = Math.max(0, totalDistance - distanceReduction);
 
             if (totalDistance > 0) {
                 worldMoveVector.normalize().multiplyScalar(reducedDistance);

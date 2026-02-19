@@ -30,6 +30,7 @@
                     "y": 0,
                     "z": 0
                 },
+                "distanceReduction": 0.0005,
                 "depth": 0.8,
                 "rotationOffset": {
                     "x": 0,

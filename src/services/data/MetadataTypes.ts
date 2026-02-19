@@ -98,6 +98,7 @@ export interface AssemblyConfig {
     };
     insertion: {
         offset: THREE.Vector3;
+        distanceReduction?: number;  // 선형 이동 거리 감소분
         depth: number;
         rotationOffset: THREE.Euler;
     };
