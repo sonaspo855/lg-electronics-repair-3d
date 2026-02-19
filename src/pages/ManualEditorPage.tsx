@@ -630,7 +630,6 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
 
     try {
       await manualAssemblyManager.assembleDamperCover({
-        duration: 1500,
         onComplete: () => {
           setIsAssemblyPlaying(false);
         }

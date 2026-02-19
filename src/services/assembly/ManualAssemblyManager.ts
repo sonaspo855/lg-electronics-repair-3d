@@ -443,7 +443,7 @@ export async function disassembleDamperCover(
 
 export async function runDamperAssembly(duration: number = 1500): Promise<void> {
     const manager = getManualAssemblyManager();
-    await manager.assembleDamperCover({ duration });
+    await manager.assembleDamperCover();
 }
 
 /**
