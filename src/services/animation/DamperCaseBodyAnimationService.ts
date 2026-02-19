@@ -47,7 +47,6 @@ export class DamperCaseBodyAnimationService {
         easing: string;
     } | null> {
         try {
-            // console.log('animateDamperCaseBodyLinearMove options>>> ', options);
             if (!this.sceneRoot) {
                 console.error('Scene Root가 설정되지 않았습니다. setSceneRoot()를 먼저 호출해주세요.');
                 return null;
@@ -70,16 +69,11 @@ export class DamperCaseBodyAnimationService {
             // console.log('animationConfig000>> ', animationConfig);
 
             // 애니메이션 옵션 병합
-            const mergedOptions = {
+            const metaOptions = {
                 duration: animationConfig.duration,
                 easing: animationConfig.easing,
                 onComplete: options.onComplete
             };
-
-            // 애니메이션 실행
-            // console.log('댐퍼 케이스 바디 선형 이동 애니메이션 시작');
-            // console.log('애니메이션 설정:', animationConfig);
-            // console.log('병합된 옵션:', mergedOptions);
 
             // 노드 찾기
             const damperCaseBodyNode = this.sceneRoot.getObjectByName(damperCaseBodyNodeName);
@@ -93,7 +87,7 @@ export class DamperCaseBodyAnimationService {
             damperCaseBodyNode.getWorldPosition(damperCaseBodyCurrentPosition);
             // console.log('damperCaseBody 현재 위치:', damperCaseBodyCurrentPosition);
 
-            // 타겟 위치 계산 (로컬 오프셋 기반)
+            // 이동될 타겟 위치 계산 (로컬 오프셋 기반)
             let targetPosition: THREE.Vector3;
 
             // 오프셋 적용
@@ -103,20 +97,15 @@ export class DamperCaseBodyAnimationService {
                 animationConfig.offset?.z || 0
             );
 
-            // 댐퍼 케이스 바디의 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 계산
             damperCaseBodyNode.updateMatrixWorld(); // 최신 행렬 상태 보장
-            targetPosition = damperCaseBodyNode.localToWorld(offset.clone());
-            // console.log('댐퍼 케이스 바디 로컬 기준 변환된 월드 타겟 위치:', targetPosition);
-
-            // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
-            const localTargetPosition = targetPosition.clone();
+            targetPosition = damperCaseBodyNode.localToWorld(offset.clone());  // 로컬 좌표계를 기준으로 오프셋이 적용된 '월드 좌표'를 계산
+            const localTargetPosition = targetPosition.clone();  // 월드 타겟 좌표를 부모의 로컬 좌표계로 변환
             const parent = damperCaseBodyNode.parent;
+
             if (parent) {
                 // 부모의 world matrix가 업데이트 되었는지 확인 후 역행렬을 이용해 로컬로 변환
                 parent.updateMatrixWorld();
                 parent.worldToLocal(localTargetPosition);
-                // console.log('월드 타겟 좌표:', targetPosition);
-                // console.log('변환된 로컬 타겟 좌표:', localTargetPosition);
             }
 
             // GSAP를 사용한 선형 이동 애니메이션
@@ -129,14 +118,11 @@ export class DamperCaseBodyAnimationService {
                     x: localTargetPosition.x,
                     y: localTargetPosition.y,
                     z: localTargetPosition.z,
-                    duration: mergedOptions.duration / 1000, // ms를 초로 변환
-                    ease: mergedOptions.easing,
+                    duration: metaOptions.duration / 1000, // ms를 초로 변환
+                    ease: metaOptions.easing,
                     onComplete: () => {
-                        console.log('댐퍼 케이스 바디 선형 이동 애니메이션 완료');
-
-                        // 애니메이션 완료 콜백 실행
-                        if (mergedOptions.onComplete) {
-                            mergedOptions.onComplete();
+                        if (metaOptions.onComplete) {  // 애니메이션 완료 콜백 호출
+                            metaOptions.onComplete();
                         }
 
                         const position = {
@@ -147,8 +133,8 @@ export class DamperCaseBodyAnimationService {
 
                         const result = {
                             position,
-                            duration: mergedOptions.duration,
-                            easing: mergedOptions.easing
+                            duration: metaOptions.duration,
+                            easing: metaOptions.easing
                         };
 
                         resolve(result);

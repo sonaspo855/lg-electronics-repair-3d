@@ -61,7 +61,7 @@
             "extractDistance": 10,
             "duration": 1500,
             "easing": "power2.inOut",
-            "description1": "rotationAxis: 스크류가 회전 축, rotationAngle: 스크류가 회전 각도, extractDirection: 스크류 빠져나오는 방향 백터, extractDistance: 스크류가 이동하는 거리 (cm 단위), duration: 애니메이션 총 시간(밀리초), finalPosition: 애니메이션 완료 후 스크류의 최종 위치, finalRotation: 애니메이션 완료 후 스크류 최종 회전값"
+            "description": "rotationAxis: 스크류가 회전 축, rotationAngle: 스크류가 회전 각도, extractDirection: 스크류 빠져나오는 방향 백터, extractDistance: 스크류가 이동하는 거리 (cm 단위), duration: 애니메이션 총 시간(밀리초), finalPosition: 애니메이션 완료 후 스크류의 최종 위치, finalRotation: 애니메이션 완료 후 스크류 최종 회전값"
         },
         "screw2Customized": {
             "rotationAxis": "z",
@@ -86,8 +86,9 @@
                 "y": 0,
                 "z": 0
             },
-            "duration": 1000,
-            "easing": "power2.inOut"
+            "duration": 3500,
+            "easing": "power2.inOut",
+            "description": "노드의 로컬 좌표계를 기준으로 x축 방향으로 1.5 만큼 이동"
         }
     },
     "screwLinearMovements": {
