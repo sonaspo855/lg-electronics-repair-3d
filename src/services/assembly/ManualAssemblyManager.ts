@@ -147,7 +147,6 @@ export class ManualAssemblyManager {
      */
     public async assembleDamperCover(
         options?: {
-            duration?: number;
             onComplete?: () => void;
         }
     ): Promise<{

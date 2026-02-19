@@ -45,7 +45,6 @@ export class DamperCoverAssemblyService {
      * damperCoverBody 노드와 damperCover 돌출부/홈 결합
      */
     public async assembleDamperCover(options?: {
-        duration?: number;
         onComplete?: () => void;
     }): Promise<{
         targetPosition: { x: number; y: number; z: number };
@@ -167,7 +166,7 @@ export class DamperCoverAssemblyService {
                 : targetWorldPos;
 
             // GSAP 선형 이동 애니메이션
-            const duration = options?.duration;
+            const duration = grooveParams.duration;
 
             if (!duration) {
                 return null;

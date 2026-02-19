@@ -95,21 +95,13 @@ export interface AssemblyConfig {
         plugClusteringDistance?: number;
         holeClusteringDistance?: number;
         maxVerticesThreshold?: number;
+        duration: number;
     };
     insertion: {
         offset: THREE.Vector3;
         distanceReduction?: number;  // 선형 이동 거리 감소분
         depth: number;
         rotationOffset: THREE.Euler;
-    };
-    animation: {
-        duration: number;
-        easing: string;
-        stages: Array<{
-            name: string;
-            progress: number;
-            description: string;
-        }>;
     };
     disassembly?: {
         liftDistance: number;

@@ -22,7 +22,8 @@
                 "edgeAngleThreshold": 80,
                 "plugClusteringDistance": 0.015,
                 "holeClusteringDistance": 0.015,
-                "maxVerticesThreshold": 10000
+                "maxVerticesThreshold": 10000,
+                "duration": 3500
             },
             "insertion": {
                 "offset": {
@@ -37,22 +38,6 @@
                     "y": 0,
                     "z": 0
                 }
-            },
-            "animation": {
-                "duration": 1500,
-                "easing": "power2.inOut",
-                "stages": [
-                    {
-                        "name": "approach",
-                        "progress": 0.7,
-                        "description": "홈 근처까지 접근"
-                    },
-                    {
-                        "name": "insert",
-                        "progress": 1.0,
-                        "description": "홈에 삽입"
-                    }
-                ]
             },
             "disassembly": {
                 "liftDistance": 2.5,

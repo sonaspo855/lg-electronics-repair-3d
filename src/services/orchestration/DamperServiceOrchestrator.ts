@@ -93,10 +93,10 @@ export class DamperServiceOrchestrator {
             // 스크류 분리 애니매이션 실행
             await this.loosenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
 
-            return;
-
             // damperCaseBody 힌지 반대 방향으로 선형이동 실행
             await this.moveDamperCaseBody(commandsArray[0].door);
+
+            return;
 
             // 분리된 왼쪽 스크류2 노드의 위치에서 damperCaseBody 방향으로 선형이동
             await this.moveScrew2(screw2NodePath, commandsArray[0].door);
@@ -149,7 +149,7 @@ export class DamperServiceOrchestrator {
 
     private async assembleDamperCover(door: DoorType): Promise<any> {
         // console.log('assembleDamperCover!!!');
-        const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 3500 });
+        const assemblyResult = await this.manualAssemblyManager.assembleDamperCover();
         console.log('댐퍼 노드 결합 완료!!!');
 
         if (assemblyResult) {
@@ -192,7 +192,7 @@ export class DamperServiceOrchestrator {
     }
 
     private async moveDamperCaseBody(door: DoorType): Promise<any> {
-        console.log('Moving damper case body');
+        // console.log('moveDamperCaseBody!!!');
 
         const animationResult = await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
             duration: 1000,
