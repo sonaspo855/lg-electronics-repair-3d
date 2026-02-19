@@ -261,7 +261,18 @@ export class ManualAssemblyManager {
                     rotationAngle: usedConfig.rotationAngle,
                     rotationAxis: usedConfig.rotationAxis,
                     extractDirection: usedConfig.extractDirection,
-                    translationDistance: usedConfig.extractDistance
+                    translationDistance: usedConfig.extractDistance,
+                    targetPosition: usedConfig.finalPosition ? {
+                        x: usedConfig.finalPosition.x,
+                        y: usedConfig.finalPosition.y,
+                        z: usedConfig.finalPosition.z
+                    } : undefined,
+                    position: usedConfig.originalPosition ? {
+                        x: usedConfig.originalPosition.x,
+                        y: usedConfig.originalPosition.y,
+                        z: usedConfig.originalPosition.z
+                    } : undefined,
+                    degrees: usedConfig.degrees
                 },
                 screwMessage
             );
@@ -339,7 +350,8 @@ export class ManualAssemblyManager {
                         x: usedConfig.finalPosition.x,
                         y: usedConfig.finalPosition.y,
                         z: usedConfig.finalPosition.z
-                    } : undefined
+                    } : undefined,
+                    degrees: usedConfig.degrees
                 },
                 screwMessage
             );

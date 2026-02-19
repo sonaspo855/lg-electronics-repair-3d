@@ -33,6 +33,9 @@ export interface ScrewAnimationMetadata {
     easing: string;
     finalPosition?: THREE.Vector3;
     finalRotation?: THREE.Euler;
+    originalPosition?: THREE.Vector3;  // 스크류의 본래 위치 좌표
+    degrees?: number;                   // 회전 각도 (rotationAngle과 동일)
+    speed?: number;                     // 애니메이션 속도
 }
 
 /**
@@ -148,6 +151,9 @@ export class ScrewAnimationService {
         );
         // console.log('translationDistance>> ', translationDistance);  // 10, 50
 
+        // 스크류의 본래 위치 좌표 저장 (애니메이션 시작 전)
+        const originalPosition = screwNodeObj.position.clone();
+
         // 실제 사용된 설정값 추출
         const usedConfig: ScrewAnimationMetadata = {
             rotationAxis: config.rotationAxis!,
@@ -157,7 +163,9 @@ export class ScrewAnimationService {
             duration: config.duration!,
             easing: config.easing!,
             finalPosition: screwNodeObj.position.clone(),
-            finalRotation: screwNodeObj.rotation.clone()
+            finalRotation: screwNodeObj.rotation.clone(),
+            originalPosition: originalPosition,           // 스크류의 본래 위치 좌표
+            degrees: config.rotationAngle!,               // 회전 각도
         };
 
         // Promise 내부에서 애니메이션 생성 및 실행
@@ -298,6 +306,9 @@ export class ScrewAnimationService {
         // 역방향 벡터 계산 (extractDirection의 음수)
         const reverseDirection = new THREE.Vector3(...config.extractDirection!).negate();
 
+        // 스크류의 본래 위치 좌표 저장 (애니메이션 시작 전)
+        const originalPosition = screwNodeObj.position.clone();
+
         // 실제 사용된 설정값
         const usedConfig: ScrewAnimationMetadata = {
             rotationAxis: config.rotationAxis!,
@@ -307,7 +318,9 @@ export class ScrewAnimationService {
             duration: config.duration!,
             easing: config.easing!,
             finalPosition: screwNodeObj.position.clone(),
-            finalRotation: screwNodeObj.rotation.clone()
+            finalRotation: screwNodeObj.rotation.clone(),
+            originalPosition: originalPosition,           // 스크류의 본래 위치 좌표
+            degrees: config.rotationAngle!,               // 회전 각도
         };
 
         // Promise 내부에서 애니메이션 생성 및 실행
@@ -333,8 +346,8 @@ export class ScrewAnimationService {
                         // 최종 좌표 업데이트
                         usedConfig.finalPosition = screwNodeObj.position.clone();
                         usedConfig.finalRotation = screwNodeObj.rotation.clone();
-                        console.log('최종 위치:', usedConfig.finalPosition);
-                        console.log('최종 회전:', usedConfig.finalRotation);
+                        // console.log('최종 위치:', usedConfig.finalPosition);
+                        // console.log('최종 회전:', usedConfig.finalRotation);
 
                         // 사용자 콜백 실행
                         config.onComplete?.();
