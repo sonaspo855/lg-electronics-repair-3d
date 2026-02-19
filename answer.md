@@ -1,72 +1,41 @@
-### CameraMovementService 리팩토링 및 공통화 결과
+### calculateTranslationDistance 함수 이동 및 공통 함수화 내역
 
-`camera-movement-refactor-plan.md` 계획에 따라 `CameraMovementService`의 복잡한 연산 로직을 `animationUtils.ts`로 이관하고 서비스를 슬림화했습니다.
+#### 1. 대상 파일 및 위치
+- **이동 전:** `src/shared/utils/screwAnimationUtils.ts`
+- **이동 후:** `src/services/assembly/PartAssemblyService.ts`
+- **선정 이유:** `PartAssemblyService.ts`는 모든 부품의 조립/분해 로직을 담당하는 핵심 서비스로, 스크류뿐만 아니라 다른 부품들의 이동 거리 계산 로직을 통합 관리하기에 가장 적합한 위치입니다.
 
-#### 주요 수정 사항
+#### 2. 주요 변경 사항
+- `calculateTranslationDistance` 함수를 `PartAssemblyService.ts` 파일 하단으로 이동하여 공통 함수로 내보냈습니다.
+- 스크류에 국한되지 않도록 주석의 `screwPitch`를 `pitch`로 범용화하였습니다.
+- `ScrewAnimationService.ts`에서 해당 함수의 임포트 경로를 새로운 위치로 업데이트하였습니다.
 
-**1. `animationUtils.ts`: `CinematicSequence` 및 타겟 계산 확장**
 ```typescript
-// CinematicSequence에 컨트롤 연동 및 UP 벡터 보간 추가
-export class CinematicSequence {
-    // ...
-    addBezierPath(params: {
-        start: THREE.Vector3;
-        control: THREE.Vector3;
-        end: THREE.Vector3;
-        upTransition?: {
-            startUp: THREE.Vector3;
-            nodeY: THREE.Vector3;
-            targetCenter: THREE.Vector3;
-        };
-        // ...
-    }): this {
-        // 베지에 곡선 이동 및 UP 벡터 Lerp 연산 로직 흡수
+// src/services/assembly/PartAssemblyService.ts 내 공통 함수
+/**
+ * 부품 조립/분해 시 이동 거리를 계산하는 공통 함수
+ * @param options 애니메이션 옵션 (extractDistance는 cm 단위)
+ * @param metadata 메타데이터 (extractDistance는 cm 단위)
+ * @param pitch 나사산/기본 간격 (m)
+ * @param rotationAngle 회전 각도 (도)
+ * @returns 이동 거리 (cm)
+ */
+export function calculateTranslationDistance(
+    options: { extractDistance?: number },
+    metadata: { extractDistance?: number } | null,
+    pitch: number,
+    rotationAngle: number
+): number {
+    if (options.extractDistance !== undefined) {
+        return options.extractDistance;
+    } else if (metadata?.extractDistance !== undefined) {
+        return metadata.extractDistance;
+    } else {
+        // (회전수 * 간격)은 m 단위이므로 100을 곱해 cm로 변환하여 반환
+        return (rotationAngle / 360) * pitch * 100;
     }
 }
-
-// 타겟 위치 및 거리 통합 계산
-export const calculateCameraTargetPosition = (
-    camera: THREE.PerspectiveCamera,
-    targetBox: THREE.Box3,
-    options: CameraTargetOptions = {}
-) => {
-    // 거리, 방향, 최종 목적지(position)를 객체로 반환
-};
 ```
 
-**2. `CameraMovementService.ts`: 서비스 로직 슬림화**
-```typescript
-public async moveCameraCinematic(nodeName: string, options: CameraMoveOptions = {}): Promise<void> {
-    const targetNode = this.getNodeByName(nodeName);
-    // ... 기초 데이터 준비 ...
-
-    // 1. 유틸리티를 통한 타겟 및 목적지 계산
-    const { position: endPos } = calculateCameraTargetPosition(camera, targetBox, {
-        zoomRatio: options.zoomRatio || 1.2,
-        distance: options.distance,
-        direction: direction
-    });
-
-    // 2. 시퀀스 빌더를 이용한 애니메이션 실행 (복잡한 수학 로직 제거)
-    const sequence = new CinematicSequence();
-    await sequence.setCamera(camera, this.cameraControls)
-            .setTarget(targetCenter)
-            .addBezierPath({
-                start: startPos,
-                control: controlPos,
-                end: endPos,
-                upTransition: upTransition,
-                duration: options.duration || 2500,
-                easing: options.easing || 'power3.inOut',
-                onUpdate: options.onProgress
-            }).play();
-
-    // 3. 후처리 비즈니스 로직만 수행
-    this.applyLeftDoorHighlights();
-}
-```
-
-#### 기대 효과
-- **코드 슬림화**: `moveCameraCinematic` 내의 복잡한 베지에 및 UP 벡터 연산이 제거되어 가독성이 높아졌습니다.
-- **재사용성**: `CinematicSequence`가 독립적으로 강화되어, 추후 다른 시나리오에서도 시네마틱한 카메라 워킹을 즉시 재사용할 수 있습니다.
-- **유지보수**: 카메라 이동 알고리즘 수정 시 `animationUtils.ts` 한 곳만 관리하면 됩니다.
+#### 3. 파일 정리
+- 기존에 함수가 정의되어 있던 `src/shared/utils/screwAnimationUtils.ts` 파일의 내용은 삭제되었습니다.
