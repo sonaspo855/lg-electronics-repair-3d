@@ -914,11 +914,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
     try {
       AnimatorAgent.executionCounter++;
-      // const totalExecutions = AnimatorAgent.executionCounter;
 
       // Check if commands are damper commands (need simultaneous execution)
       const commandsArray = Array.isArray(commands) ? commands : [commands];
-      // console.log('commandsArray>> ', JSON.stringify(commandsArray.map(c => ({ door: c.door, action: c.action, degrees: c.degrees }))));
       const isDamperCommands = await areFridgeDamperCommands(commandsArray);
 
       if (isDamperCommands) {
@@ -944,12 +942,12 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
                 : `Completed: ${responseVerb} doors opened for damper service`;
               console.log('responseVerb>> ', responseVerb);
               this.onActionCompleted?.(completionMessage);
-              // Add to animation history
+
               if (this.animationHistoryService) {
                 commandsArray.forEach(command => {
                   this.animationHistoryService?.addAnimationHistory(command, completionMessage);
                 });
-                console.log('000_Animation history after adding damper commands:', this.animationHistoryService.getAllHistory());
+                console.log('Animation history after door open commands:', this.animationHistoryService.getAllHistory());
               } else {
                 console.warn('Animation history service not available');
               }

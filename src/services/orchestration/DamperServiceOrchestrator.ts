@@ -87,12 +87,10 @@ export class DamperServiceOrchestrator {
             // 도어 열림 후 댐퍼로 카메라 이동
             await this.moveCamera();
 
-            return;
-
-
-
             // 댐퍼 돌출부/홈 결합 애니메이션 실행
             const assemblyResult = await this.assembleDamperCover(commandsArray[0].door);
+
+            return;
 
             // 스크류 분리 애니매이션 실행
             await this.loosenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
@@ -150,16 +148,16 @@ export class DamperServiceOrchestrator {
     }
 
     private async assembleDamperCover(door: DoorType): Promise<any> {
-        console.log('Assembling damper cover');
-        const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 1500 });
-        console.log('Damper cover assembly completed');
+        // console.log('assembleDamperCover!!!');
+        const assemblyResult = await this.manualAssemblyManager.assembleDamperCover({ duration: 3500 });
+        console.log('댐퍼 노드 결합 완료!!!');
 
         if (assemblyResult) {
             this.recordAnimationHistory(
                 AnimationAction.DAMPER_COVER_BODY,
                 door,
                 assemblyResult,
-                '댐퍼 커버 조립 완료'
+                '댐퍼 노드 결합 완료'
             );
         } else {
             console.warn('Damper cover assembly returned null, skipping history logging');

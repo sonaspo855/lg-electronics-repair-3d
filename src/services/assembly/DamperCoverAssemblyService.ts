@@ -72,7 +72,7 @@ export class DamperCoverAssemblyService {
             return null;
         }
 
-        // 본래 로컬 위치 저장
+        // 본래 로컬 위치
         const originalPosition = {
             x: coverNode.position.x,
             y: coverNode.position.y,
@@ -97,7 +97,7 @@ export class DamperCoverAssemblyService {
 
         const grooveParams = config.grooveDetection;
 
-        // 결합 돌출부(Plug) 탐지
+        // damperCoverBody 노드의 돌출부 탐지
         const plugAnalyses = NormalBasedHighlightService.calculatePlugByEdgeAnalysis(
             coverNode,
             grooveParams.plugSearchDirection ?? new THREE.Vector3(0, 1, 0),
@@ -112,17 +112,17 @@ export class DamperCoverAssemblyService {
         );
         // console.log('this.detectedPlugs>> ', this.detectedPlugs);
 
-        // 댐퍼 어셈블리 노드에서 홈 탐지 및 하이라이트 실행
+        // damperAssembly 노드에서 홈 탐지 및 하이라이트 실행
         this.detectedHoles = await this.grooveDetectionService.detectAndHighlightGrooves(
             this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly')!
         );
         // console.log('this.detectedHoles>>> ', this.detectedHoles);
 
 
-        // 탐지된 좌표 시각화 (AssemblyPathVisualizer 사용)
+        // 탐지된 좌표 시각화
         // this.assemblyPathVisualizer.visualizeDetectedCoordinates(this.detectedPlugs, this.detectedHoles);
 
-        // 돌출부 좌표부터 가장 가까운 홈 좌표까지 coverNode 선형 이동
+        // damperCoverBody 노드 돌출부 좌표부터 가장 가까운 홈 좌표까지 coverNode 선형 이동
         if (this.detectedPlugs.length > 0 && this.detectedHoles.length > 0) {
             let minDistance = Infinity;
             let bestPlug = this.detectedPlugs[0];
@@ -140,9 +140,7 @@ export class DamperCoverAssemblyService {
                 }
             }
 
-            // console.log(`[조립] 최단 거리 쌍 발견: 거리 ${minDistance.toFixed(5)}`, { bestPlug, bestHole });
-
-            // 월드 이동 벡터 계산 (플러그가 홈 위치로 가야 함)
+            // 월드 이동 벡터 계산 (damperCoverBody 노드가 damperAssembly 노드의 홈 위치로 이동되어야할 거리 계산)
             const worldMoveVector = new THREE.Vector3().subVectors(bestHole.position, bestPlug.position);
 
             // 추출 방향 (이동 방향) 저장
@@ -301,7 +299,7 @@ export class DamperCoverAssemblyService {
     }
 
     /**
-     * 탐지된 돌출부 중 너무 가까운 것들을 필터링하여 하나로 합칩니다.
+     * 탐지된 돌출부 중 너무 가까운 것들을 필터링하여 하나로 합친다.
      * @param plugs 탐지된 돌출부 배열
      * @param threshold 거리 임계값
      */
