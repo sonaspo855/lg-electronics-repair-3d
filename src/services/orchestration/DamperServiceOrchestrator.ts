@@ -195,8 +195,6 @@ export class DamperServiceOrchestrator {
         // console.log('moveDamperCaseBody!!!');
 
         const animationResult = await this.damperCaseBodyAnimationService.animateDamperCaseBodyLinearMove({
-            duration: 1000,
-            easing: 'power2.inOut',
             onComplete: () => {
                 console.log('damperCaseBody 힌지 반대 방향으로 선형이동 완료!!!');
             }

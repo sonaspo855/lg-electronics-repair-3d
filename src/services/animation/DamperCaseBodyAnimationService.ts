@@ -40,8 +40,6 @@ export class DamperCaseBodyAnimationService {
      * @returns 애니메이션 정보 (위치, duration, easing) 또는 null
      */
     public async animateDamperCaseBodyLinearMove(options: {
-        duration?: number;
-        easing?: string;
         onComplete?: () => void;
     } = {}): Promise<{
         position: { x: number; y: number; z: number };
@@ -183,19 +181,6 @@ export class DamperCaseBodyAnimationService {
     }
 
     /**
-     * 애니메이션 스테이지 정보를 가져오기
-     * @returns 스테이지 배열 또는 null
-     */
-    public getAnimationStages(): Array<{
-        name: string;
-        progress: number;
-        description: string;
-    }> | null {
-        const config = this.getAnimationConfig();
-        return config?.stages || null;
-    }
-
-    /**
      * 애니메이션 디버그 정보를 출력
      */
     public debugAnimationInfo(): void {
@@ -207,10 +192,6 @@ export class DamperCaseBodyAnimationService {
         const config = this.getAnimationConfig();
         if (config) {
             console.log('애니메이션 설정:', config);
-            console.log('스테이지 정보:');
-            config.stages.forEach(stage => {
-                console.log(`  - ${stage.name}: ${stage.progress * 100}% - ${stage.description}`);
-            });
         } else {
             console.log('애니메이션 설정 없음');
         }

@@ -42,14 +42,6 @@ export class MetadataLoader {
         return this.service.getInsertionOffset(assemblyName);
     }
 
-    public getAnimationDuration(assemblyName: string): number {
-        return this.service.getAssemblyConfig(assemblyName)?.animation.duration || 1500;
-    }
-
-    public getAnimationEasing(assemblyName: string): string {
-        return this.service.getAssemblyConfig(assemblyName)?.animation.easing || 'power2.inOut';
-    }
-
     public getScrewAnimationConfig(nodeName: string): ScrewAnimationConfig | null {
         return this.service.getScrewAnimationConfig(nodeName);
     }
