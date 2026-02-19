@@ -88,7 +88,6 @@ export class AnimationHistoryService {
                 door: command.door,
                 action: command.action,
                 degrees: command.degrees,
-                speed: command.speed,
                 targetPosition: command.targetPosition,
                 originalPosition: command.originalPosition,
                 position: command.position,

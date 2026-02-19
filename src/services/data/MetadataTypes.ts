@@ -51,6 +51,11 @@ export interface ScrewAnimationConfig {
 export interface LinearMovementAnimationConfig {
     method?: 'screwPositionBased' | 'fallback';
     targetScrewNode?: string;
+    pivot?: {
+        x: number;
+        y: number;
+        z: number;
+    };
     offset?: {
         x: number;
         y: number;

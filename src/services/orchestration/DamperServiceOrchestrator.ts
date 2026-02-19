@@ -36,7 +36,6 @@ export class DamperServiceOrchestrator {
             door,
             action,
             degrees: result?.degrees !== undefined ? result.degrees : 0,
-            speed: result?.speed !== undefined ? result.speed : 1,
             duration: result?.duration !== undefined ? result.duration : 0,
             easing: result?.easing !== undefined ? result.easing : '',
             targetPosition: result?.targetPosition || { x: 0, y: 0, z: 0 },
@@ -96,10 +95,10 @@ export class DamperServiceOrchestrator {
             // damperCaseBody 힌지 반대 방향으로 선형이동 실행
             await this.moveDamperCaseBody(commandsArray[0].door);
 
-            return;
-
             // 분리된 왼쪽 스크류2 노드의 위치에서 damperCaseBody 방향으로 선형이동
             await this.moveScrew2(screw2NodePath, commandsArray[0].door);
+
+            return;
 
             // 스크류 노드(1,2)를 다시 조이는 코드
             await this.tightenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
@@ -215,15 +214,15 @@ export class DamperServiceOrchestrator {
     }
 
     private async moveScrew2(screw2NodePath: string, door: DoorType): Promise<any> {
-        console.log('Moving screw2 to damper case body');
+        // console.log('moveScrew2!!!');
 
         const animationResult = await this.manualAssemblyManager.moveScrewLinearToDamperCaseBody(screw2NodePath, {
-            duration: 1000,
-            easing: 'power2.inOut',
             onComplete: () => {
                 console.log('스크류2 damperCaseBody 방향 선형 이동 완료!!!');
             }
         });
+
+        // console.log('animationResult>>> ', animationResult);
 
         if (animationResult) {
             this.recordAnimationHistory(
@@ -236,7 +235,7 @@ export class DamperServiceOrchestrator {
             console.warn('스크류2 선형 이동 애니메이션이 null을 반환했습니다.');
         }
 
-        console.log('Animation history after screw2 move:', this.animationHistoryService.getAllHistory());
+        console.log('스크류2 오른쪽 방향 선형 이동 히스토리:', this.animationHistoryService.getAllHistory());
         return animationResult;
     }
 

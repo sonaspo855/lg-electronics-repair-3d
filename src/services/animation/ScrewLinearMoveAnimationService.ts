@@ -22,20 +22,16 @@ export class ScrewLinearMoveAnimationService {
     }
 
     /**
-     * 스크류 노드를 damperCaseBody가 이동한 방향(오프셋)과 동일하게 선형 이동시킵니다.
-     * (마치 damperCaseBody를 따라가는 것처럼 이동)
+     * 스크류 노드를 damperCaseBody가 이동한 방향(오프셋)과 동일하게 선형 이동
      * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
-     * @param options 애니메이션 옵션
      */
     public async animateScrewLinearMoveToDamperCaseBody(
         screwNodePath: string,
         options: {
-            duration?: number;
-            easing?: string;
             onComplete?: () => void;
         } = {}
     ): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
     } | null> {
@@ -52,7 +48,7 @@ export class ScrewLinearMoveAnimationService {
                 return null;
             }
 
-            // 스크류 노드 찾기
+            // 노드 이름으로 스크류 노드 찾기
             const screwNode = this.sceneRoot.getObjectByName(screwNodeName);
             if (!screwNode) {
                 console.error(`스크류 노드를 찾을 수 없습니다: ${screwNodeName}`);
@@ -79,11 +75,11 @@ export class ScrewLinearMoveAnimationService {
                 console.error('스크류 선형 이동 설정을 찾을 수 없습니다.');
                 return null;
             }
-
-            // 애니메이션 옵션 병합
-            const mergedOptions = {
-                duration: options.duration ?? screwLinearMoveConfig.duration,
-                easing: options.easing ?? screwLinearMoveConfig.easing,
+            console.log('screwLinearMoveConfig>>> ', screwLinearMoveConfig);
+            // 애니메이션 옵션 설정
+            const metaOptions = {
+                duration: screwLinearMoveConfig.duration,
+                easing: screwLinearMoveConfig.easing,
                 onComplete: options.onComplete
             };
 
@@ -92,21 +88,25 @@ export class ScrewLinearMoveAnimationService {
             const screwCurrentWorldPosition = new THREE.Vector3();
             screwNode.getWorldPosition(screwCurrentWorldPosition);
 
-            // 스크류 선형 이동 오프셋 가져오기
+            // 선형 이동 시킬 오프셋 추출
             const offset = new THREE.Vector3(
                 screwLinearMoveConfig.offset?.x || 0,
                 screwLinearMoveConfig.offset?.y || 0,
                 screwLinearMoveConfig.offset?.z || 0
             );
 
-            // damperCaseBody의 이동 벡터 계산 (Scale, Rotation 반영)
-            // localToWorld는 객체의 월드 매트릭스(회전, 위치, 스케일 포함)를 적용합니다.
-            // (0,0,0)과 (offset)의 월드 좌표 차이를 구하면, 위치(Translation)는 상쇄되고
-            // 순수한 회전/스케일이 적용된 오프셋 벡터(방향 및 크기)만 남게 됩니다.
+            // 노드 좌표계 원점
+            const pivot = new THREE.Vector3(
+                screwLinearMoveConfig.pivot?.x || 0,
+                screwLinearMoveConfig.pivot?.y || 0,
+                screwLinearMoveConfig.pivot?.z || 0
+            );
+
             damperCaseBodyNode.updateMatrixWorld();
-            const startVec = damperCaseBodyNode.localToWorld(new THREE.Vector3(0, 0, 0));
-            const endVec = damperCaseBodyNode.localToWorld(offset.clone());
-            const moveVector = endVec.sub(startVec);
+
+            const startVec = damperCaseBodyNode.localToWorld(pivot);  // damperCaseBody 노드의 로컬 좌표계 원점 (0,0,0)을 월드 좌표로 변환
+            const endVec = damperCaseBodyNode.localToWorld(pivot.clone().add(offset));  //  damperCaseBody 노드의 로컬 좌표계에서 offset만큼 이동한 지점을 월드 좌표
+            const moveVector = endVec.sub(startVec);  // 스크류노드가 이동해야 할 실제 방향과 거리
 
             // 스크류 타겟 위치 계산 (현재 위치 + 이동 벡터)
             const targetWorldPosition = screwCurrentWorldPosition.clone().add(moveVector);
@@ -115,7 +115,7 @@ export class ScrewLinearMoveAnimationService {
             // const screwConfig = this.metadataLoader.getScrewAnimationConfig(metadataKey);
             // const localExtractDir = new THREE.Vector3(...(screwConfig?.extractDirection || [0, 0, 1]));
 
-            // 월드 타겟 좌표를 스크류 부모의 로컬 좌표계로 변환
+            // 월드 타겟 좌표를 스크류 노드 부모의 로컬 좌표계로 변환
             const localTargetPosition = targetWorldPosition.clone();
             const screwParent = screwNode.parent;
             if (screwParent) {
@@ -125,7 +125,7 @@ export class ScrewLinearMoveAnimationService {
 
             // GSAP를 사용한 선형 이동 애니메이션
             return new Promise<{
-                position: { x: number; y: number; z: number };
+                targetPosition: { x: number; y: number; z: number };
                 duration: number;
                 easing: string;
             } | null>((resolve) => {
@@ -133,31 +133,29 @@ export class ScrewLinearMoveAnimationService {
                     x: localTargetPosition.x,
                     y: localTargetPosition.y,
                     z: localTargetPosition.z,
-                    duration: mergedOptions.duration / 1000,
-                    ease: mergedOptions.easing,
+                    duration: metaOptions.duration / 1000,
+                    ease: metaOptions.easing,
                     onComplete: () => {
-                        console.log(`스크류 ${screwNodeName} damperCaseBody 방향으로 선형 이동 완료`);
+                        /* // 스크류 머리 중심 시각화 - 이동된 위치에서 시각화
+                        visualizeScrewHeadCenter(
+                            this.sceneRoot!,
+                            screwNode,
+                            targetWorldPosition,
+                            localExtractDir
+                        ); */
 
-                        // 스크류 머리 중심 시각화 - 이동된 위치에서 시각화
-                        // visualizeScrewHeadCenter(
-                        //     this.sceneRoot!,
-                        //     screwNode,
-                        //     targetWorldPosition,
-                        //     localExtractDir
-                        // );
-
-                        if (mergedOptions.onComplete) {
-                            mergedOptions.onComplete();
+                        if (metaOptions.onComplete) {
+                            metaOptions.onComplete();
                         }
 
                         const result = {
-                            position: {
+                            targetPosition: {
                                 x: localTargetPosition.x,
                                 y: localTargetPosition.y,
                                 z: localTargetPosition.z
                             },
-                            duration: mergedOptions.duration,
-                            easing: mergedOptions.easing
+                            duration: metaOptions.duration,
+                            easing: metaOptions.easing
                         };
 
                         resolve(result);

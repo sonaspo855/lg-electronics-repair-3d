@@ -281,19 +281,16 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * 스크류 노드를 damperCaseBody 노드 방향으로 선형 이동 애니메이션을 실행합니다.
+     * 스크류 노드를 damperCaseBody 노드 방향으로 선형 이동 애니메이션을 실행
      * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
-     * @param options 애니메이션 옵션
      */
     public async moveScrewLinearToDamperCaseBody(
         screwNodePath: string,
         options?: {
-            duration?: number;
-            easing?: string;
             onComplete?: () => void;
         }
     ): Promise<{
-        position: { x: number; y: number; z: number };
+        targetPosition: { x: number; y: number; z: number };
         duration: number;
         easing: string;
     } | null> {
@@ -439,11 +436,6 @@ export async function disassembleDamperCover(
     const manager = getManualAssemblyManager();
     manager.initialize(sceneRoot);
     await manager.disassembleDamperCover(options);
-}
-
-export async function runDamperAssembly(duration: number = 1500): Promise<void> {
-    const manager = getManualAssemblyManager();
-    await manager.assembleDamperCover();
 }
 
 /**

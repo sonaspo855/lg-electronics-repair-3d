@@ -94,6 +94,11 @@
     "screwLinearMovements": {
         "screw1Customized": {
             "method": "screwPositionBased",
+            "pivot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            },
             "offset": {
                 "x": 1,
                 "y": 0,
@@ -109,7 +114,7 @@
                 "y": 0,
                 "z": 0
             },
-            "duration": 1000,
+            "duration": 1500,
             "easing": "power2.inOut"
         }
     },
