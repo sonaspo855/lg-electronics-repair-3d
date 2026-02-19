@@ -12,7 +12,7 @@ import { createAnimationTimeline } from '../../shared/utils/animationUtils';
 export interface ScrewAnimationOptions {
     duration?: number;           // 전체 애니메이션 시간 (ms)
     rotationAngle?: number;      // 회전 각도 (도, 기본값: 720도 = 2바퀴)
-    pullDistance?: number;       // 빼내는 거리 (m, 기본값: 없으면 screwPitch로 계산)
+    pullDistance?: number;       // 빼내는 거리 (cm, 기본값: 없으면 screwPitch로 계산)
     screwPitch?: number;         // 나사산 간격 (m, 기본값: 0.005m = 0.5cm)
     rotationAxis?: 'x' | 'y' | 'z'; // 회전축 (기본값: 'z')
     extractDirection?: [number, number, number]; // 빼내는 방향 (로컬 좌표계, 기본값: [0, 0, 1])
@@ -142,9 +142,13 @@ export class ScrewAnimationService {
             throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
         }
 
-        // pullDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
+        console.log('options.pullDistance>>> ', options.pullDistance);
+        // pullDistance가 있으면 우선 사용 (cm → m 변환), 없으면 메타데이터에서 추출
+        const optionsWithMeterDistance = options.pullDistance !== undefined
+            ? { pullDistance: options.pullDistance / 100 }  // cm를 m로 변환
+            : options;
         const translationDistance = calculateTranslationDistance(
-            options,
+            optionsWithMeterDistance,
             metadata,
             config.screwPitch!,
             config.rotationAngle!
@@ -300,8 +304,10 @@ export class ScrewAnimationService {
             throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
         }
 
-        // pushDistance가 있으면 우선 사용, 없으면 메타데이터에서 추출
-        const translationDistance = options.pullDistance ?? metadata?.extractDistance ?? (config.rotationAngle! / 360) * config.screwPitch!;
+        // pushDistance가 있으면 우선 사용 (cm → m 변환), 없으면 메타데이터에서 추출
+        const translationDistance = options.pullDistance !== undefined
+            ? options.pullDistance / 100  // cm를 m로 변환
+            : (metadata?.extractDistance ?? (config.rotationAngle! / 360) * config.screwPitch!);
 
         // 역방향 벡터 계산 (extractDirection의 음수)
         const reverseDirection = new THREE.Vector3(...config.extractDirection!).negate();
