@@ -1,41 +1,64 @@
-### calculateTranslationDistance 함수 이동 및 공통 함수화 내역
+`assembly-offsets.json` 파일의 각 속성에 대한 설명을 `description` 속성으로 추가했습니다.
 
-#### 1. 대상 파일 및 위치
-- **이동 전:** `src/shared/utils/screwAnimationUtils.ts`
-- **이동 후:** `src/services/assembly/PartAssemblyService.ts`
-- **선정 이유:** `PartAssemblyService.ts`는 모든 부품의 조립/분해 로직을 담당하는 핵심 서비스로, 스크류뿐만 아니라 다른 부품들의 이동 거리 계산 로직을 통합 관리하기에 가장 적합한 위치입니다.
+## 추가된 설명 요약
 
-#### 2. 주요 변경 사항
-- `calculateTranslationDistance` 함수를 `PartAssemblyService.ts` 파일 하단으로 이동하여 공통 함수로 내보냈습니다.
-- 스크류에 국한되지 않도록 주석의 `screwPitch`를 `pitch`로 범용화하였습니다.
-- `ScrewAnimationService.ts`에서 해당 함수의 임포트 경로를 새로운 위치로 업데이트하였습니다.
+### 최상위 레벨
+- `versionDescription`: 메타데이터 파일의 버전 정보
+- `lastUpdatedDescription`: 메타데이터 파일의 마지막 업데이트 일시
 
-```typescript
-// src/services/assembly/PartAssemblyService.ts 내 공통 함수
-/**
- * 부품 조립/분해 시 이동 거리를 계산하는 공통 함수
- * @param options 애니메이션 옵션 (extractDistance는 cm 단위)
- * @param metadata 메타데이터 (extractDistance는 cm 단위)
- * @param pitch 나사산/기본 간격 (m)
- * @param rotationAngle 회전 각도 (도)
- * @returns 이동 거리 (cm)
- */
-export function calculateTranslationDistance(
-    options: { extractDistance?: number },
-    metadata: { extractDistance?: number } | null,
-    pitch: number,
-    rotationAngle: number
-): number {
-    if (options.extractDistance !== undefined) {
-        return options.extractDistance;
-    } else if (metadata?.extractDistance !== undefined) {
-        return metadata.extractDistance;
-    } else {
-        // (회전수 * 간격)은 m 단위이므로 100을 곱해 cm로 변환하여 반환
-        return (rotationAngle / 360) * pitch * 100;
-    }
-}
-```
+### assemblies 섹션
+- `description`: 조립 관련 설정 섹션 설명
+- `damper_cover_assembly.description`: 댐퍼 커버 조립 설정
+- `targetNodeDescription`: 조립 대상 타겟 노드 (홈이 위치한 노드)
+- `partNodeDescription`: 조립할 부품 노드 (돌출부가 위치한 노드)
 
-#### 3. 파일 정리
-- 기존에 함수가 정의되어 있던 `src/shared/utils/screwAnimationUtils.ts` 파일의 내용은 삭제되었습니다.
+### grooveDetection (홈 탐지 설정)
+- `methodDescription`: 홈 탐지 방식 설명
+- `innerBoundRatioDescription`: 홈 내부 경계 비율
+- `normalFilter.*Description`: 법선 벡터 기준 방향 설명
+- `normalToleranceDescription`: 법선 벡터 허용 오차
+- `plugSearchDirection.*Description`: 돌출부 탐색 방향
+- `edgeAngleThresholdDescription`: 엣지 각도 임계값
+- `plugClusteringDistanceDescription`: 돌출부 클러스터링 거리
+- `holeClusteringDistanceDescription`: 홈 클러스터링 거리
+- `maxVerticesThresholdDescription`: 최대 정점 수 임계값
+- `durationDescription`: 애니메이션 지속 시간
+
+### insertion (삽입 설정)
+- `offset.*Description`: 삽입 위치 오프셋 (미터 단위)
+- `distanceReductionDescription`: 거리 축소값
+- `depthDescription`: 삽입 깊이 비율
+- `rotationOffset.*Description`: 회전 오프셋 (라디안)
+
+### disassembly (분해 설정)
+- `liftDistanceDescription`: 들어올리는 거리
+- `slideDistanceDescription`: 미끄러지는 거리
+- `tiltAngleDescription`: 기울이는 각도
+- `liftDurationDescription`: 들어올리기 애니메이션 시간
+- `slideDurationDescription`: 미끄러지기 애니메이션 시간
+- `fadeDurationDescription`: 페이드 아웃 시간
+
+### screwAnimations 섹션
+- `rotationAxisDescription`: 회전 축
+- `rotationAngleDescription`: 회전 각도 (도 단위)
+- `extractDirectionDescription`: 추출 방향 벡터
+- `extractDistanceDescription`: 추출 거리 (mm 단위)
+- `screwPitchDescription`: 스크류 피치
+- `durationDescription`: 애니메이션 지속 시간
+- `easingDescription`: 이징 함수
+
+### damperCaseBodyAnimations 섹션
+- `methodDescription`: 이동 방식
+- `targetScrewNodeDescription`: 기준 스크류 노드
+- `offset.*Description`: 이동 오프셋
+
+### screwLinearMovements 섹션
+- `pivot.*Description`: 피벗 포인트 좌표
+- `offset.*Description`: 이동 오프셋
+
+### cameraSettings 섹션
+- `durationDescription`: 카메라 이동 시간
+- `easingDescription`: 이징 함수
+- `distanceDescription`: 카메라-타겟 거리 (미터)
+- `direction.*Description`: 카메라 방향 벡터
+- `distanceNote`, `directionNote`: 추가 설명 노트

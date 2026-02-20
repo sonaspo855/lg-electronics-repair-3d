@@ -1,1 +1,1 @@
-- screwAnimationUtils.ts 파일의 calculateTranslationDistance 함수는 스크류의 이동거리가 cm 인지, m 인지 파악하여 이동거리를 계산하는 함수이다. 해당 함수를 공통 함수로 사용할 수 있나? 만약 가능하다면 `assenbly` 폴더내 다른 컴포넌트 파일로 이동하고 싶다. 어느 컴포넌트 파일로 이동하면 좋은가?
+- assembly-offsets.json 파일의 각 속성들이 어떤 것을 의미하는지 주석들 추가하고 싶다. 그러나 json에는 주석을 임의로 추가할 수 없기 때문에, description 속성을 추가하고 각 속성에 대한 설명을 추가하고 싶다.
