@@ -1,64 +1,31 @@
-`assembly-offsets.json` 파일의 각 속성에 대한 설명을 `description` 속성으로 추가했습니다.
+### gemini_settings.json 추가 옵션 설정 내용
 
-## 추가된 설명 요약
+Gemini CLI의 기능을 보다 효율적으로 제어하기 위해 다음과 같은 유용한 옵션들을 추가했습니다.
 
-### 최상위 레벨
-- `versionDescription`: 메타데이터 파일의 버전 정보
-- `lastUpdatedDescription`: 메타데이터 파일의 마지막 업데이트 일시
+1. **보안 설정 (Security)**
+   - `environmentVariableRedaction`: true (환경 변수 노출 방지)
+   - `disableYoloMode`: false (기본값, 도구 실행 전 확인 절차 유지)
 
-### assemblies 섹션
-- `description`: 조립 관련 설정 섹션 설명
-- `damper_cover_assembly.description`: 댐퍼 커버 조립 설정
-- `targetNodeDescription`: 조립 대상 타겟 노드 (홈이 위치한 노드)
-- `partNodeDescription`: 조립할 부품 노드 (돌출부가 위치한 노드)
+2. **일반 설정 (General)**
+   - `vimMode`: false (Vim 키바인딩 사용 여부)
 
-### grooveDetection (홈 탐지 설정)
-- `methodDescription`: 홈 탐지 방식 설명
-- `innerBoundRatioDescription`: 홈 내부 경계 비율
-- `normalFilter.*Description`: 법선 벡터 기준 방향 설명
-- `normalToleranceDescription`: 법선 벡터 허용 오차
-- `plugSearchDirection.*Description`: 돌출부 탐색 방향
-- `edgeAngleThresholdDescription`: 엣지 각도 임계값
-- `plugClusteringDistanceDescription`: 돌출부 클러스터링 거리
-- `holeClusteringDistanceDescription`: 홈 클러스터링 거리
-- `maxVerticesThresholdDescription`: 최대 정점 수 임계값
-- `durationDescription`: 애니메이션 지속 시간
+3. **UI 및 시각적 설정 (UI)**
+   - `inlineThinkingMode`: true (모델의 생각 과정을 실시간으로 확인)
+   - `hideBanner`: false (CLI 시작 배너 표시 여부)
+   - `hideTips`: false (도움말 팁 표시 여부)
+   - `footer.hideCWD`: false (하단바에 현재 디렉토리 표시 여부)
 
-### insertion (삽입 설정)
-- `offset.*Description`: 삽입 위치 오프셋 (미터 단위)
-- `distanceReductionDescription`: 거리 축소값
-- `depthDescription`: 삽입 깊이 비율
-- `rotationOffset.*Description`: 회전 오프셋 (라디안)
+4. **도구 설정 (Tools)**
+   - `allowed`: 자동 승인할 도구 목록 (필요시 추가 가능)
+   - `exclude`: 실행을 금지할 도구 목록
 
-### disassembly (분해 설정)
-- `liftDistanceDescription`: 들어올리는 거리
-- `slideDistanceDescription`: 미끄러지는 거리
-- `tiltAngleDescription`: 기울이는 각도
-- `liftDurationDescription`: 들어올리기 애니메이션 시간
-- `slideDurationDescription`: 미끄러지기 애니메이션 시간
-- `fadeDurationDescription`: 페이드 아웃 시간
+5. **실험적 기능 (Experimental)**
+   - `jitContext`: true (Just-In-Time 컨텍스트 관리로 효율적인 리소스 사용)
 
-### screwAnimations 섹션
-- `rotationAxisDescription`: 회전 축
-- `rotationAngleDescription`: 회전 각도 (도 단위)
-- `extractDirectionDescription`: 추출 방향 벡터
-- `extractDistanceDescription`: 추출 거리 (mm 단위)
-- `screwPitchDescription`: 스크류 피치
-- `durationDescription`: 애니메이션 지속 시간
-- `easingDescription`: 이징 함수
+6. **컨텍스트 설정 (Context)**
+   - `fileFiltering`: `.gitignore` 및 `.geminiignore` 파일을 존중하도록 명시적 설정 추가
 
-### damperCaseBodyAnimations 섹션
-- `methodDescription`: 이동 방식
-- `targetScrewNodeDescription`: 기준 스크류 노드
-- `offset.*Description`: 이동 오프셋
+7. **모델 설정 (Model)**
+   - `maxSessionTurns`: 50 (한 세션당 최대 대화 횟수 제한 설정)
 
-### screwLinearMovements 섹션
-- `pivot.*Description`: 피벗 포인트 좌표
-- `offset.*Description`: 이동 오프셋
-
-### cameraSettings 섹션
-- `durationDescription`: 카메라 이동 시간
-- `easingDescription`: 이징 함수
-- `distanceDescription`: 카메라-타겟 거리 (미터)
-- `direction.*Description`: 카메라 방향 벡터
-- `distanceNote`, `directionNote`: 추가 설명 노트
+이 옵션들을 통해 CLI의 동작 방식, 보안 수준, 그리고 시각적인 피드백을 사용자 취향에 맞게 세밀하게 조정할 수 있습니다.

@@ -1,2 +1,2 @@
-- 나의 프로젝트 구조를 탐색하고, README.md 파일의 내용을 수정 및 보완 해줘.
-- README.md 파일내에 각 파일내 사용되어 있는 함수를 파악하고, 해당 함수에 대한 간략 설명을 추가해줘.
+- Gemini cli 을 사용하고 있다. gemini_settings.json 파일은 나의 Gemini cli 설정이다.
+- 추가적으로 제어하면 좋을 옵션들이 있는지 확인하고 gemini_settings.json 파일에 추가해줘.
