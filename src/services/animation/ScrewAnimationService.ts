@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import gsap from 'gsap';
 import { isFastenerNodeName } from '@/shared/utils/isFastener';
 import { getMetadataLoader } from '@/services/data/MetadataLoader';
 import { getNodeNameManager } from '../data/NodeNameManager';

@@ -5,7 +5,6 @@ import { DamperCaseBodyAnimationService } from '../animation/DamperCaseBodyAnima
 import { getManualAssemblyManager } from '../assembly/ManualAssemblyManager';
 import { getNodeNameManager } from '../data/NodeNameManager';
 import { getMetadataLoader } from '../data/MetadataLoader';
-import { extractMetadataKey } from '@/shared/utils/commonUtils';
 import { AnimationCommand, AnimationAction, DoorType } from '../core/AnimatorAgent';
 
 export class DamperServiceOrchestrator {

@@ -310,6 +310,7 @@ export class ManualAssemblyManager {
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
         const usedConfig = await this.screwAnimationService.animateScrewRotationReverse(screwNodePath, metadataKey);
+        console.log('usedConfig>>> ', usedConfig);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {
@@ -324,16 +325,21 @@ export class ManualAssemblyManager {
                     rotationAxis: usedConfig.rotationAxis,
                     extractDirection: usedConfig.extractDirection,
                     translationDistance: usedConfig.extractDistance,
-                    position: usedConfig.finalPosition ? {
+                    targetPosition: usedConfig.finalPosition ? {
                         x: usedConfig.finalPosition.x,
                         y: usedConfig.finalPosition.y,
                         z: usedConfig.finalPosition.z
+                    } : undefined,
+                    originalPosition: usedConfig.originalPosition ? {
+                        x: usedConfig.originalPosition.x,
+                        y: usedConfig.originalPosition.y,
+                        z: usedConfig.originalPosition.z
                     } : undefined,
                     degrees: usedConfig.degrees
                 },
                 screwMessage
             );
-            console.log('Animation history after screw tightening:', this.animationHistoryService.getAllHistory());
+            console.log('스크류1,2 재조립 히스토리: ', this.animationHistoryService.getAllHistory());
         }
     }
 
