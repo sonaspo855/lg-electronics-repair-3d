@@ -127,7 +127,11 @@
             "distance": 0.15,
             "zoomRatio": 1.2,
             "bezierOffset": 0.3,
+            "midpointRatio": 0.5,
             "upThreshold": 0.8,
+            "nearThreshold": 0.0001,
+            "emissiveIntensity": 0.8,
+            "disableDamping": true,
             "direction": {
                 "x": 0,
                 "y": -1,
