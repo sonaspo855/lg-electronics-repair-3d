@@ -989,11 +989,9 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
         // Calculate max speed to determine animation duration
         const maxSpeed = Math.max(...commandsArray.map(cmd => cmd.speed || 1));
-        console.log('Waiting for damper animation completion, max speed:', maxSpeed, 'seconds');
 
         // Wait for the longest animation to complete
         await new Promise(resolve => setTimeout(resolve, maxSpeed * 1000));
-        console.log('Damper animation wait completed');
 
         // 냉장고 도어 댐퍼 조절 애니메이션 호출 코드
         if (this.cameraMovementService && this.animationHistoryService && this.damperCaseBodyAnimationService) {
