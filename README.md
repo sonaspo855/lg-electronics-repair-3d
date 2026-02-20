@@ -105,12 +105,17 @@ lg-electronics-repair-3d/
 │  │  │  ├─ StencilOutlineHighlight.ts # 스텐실 아웃라인 하이라이트
 │  │  │  ├─ ClickPointMarker.ts        # 클릭 지점 마커
 │  │  │  └─ DebugObjectManager.ts      # 디버그 객체 관리자
-│  │  └─ data/                    # 데이터 로딩 및 상태 관리
-│  │     ├─ MetadataLoader.ts          # 메타데이터 로더
-│  │     ├─ NodeNameManager.ts         # 노드 이름 관리자
-│  │     ├─ NodeNameLoader.ts          # 노드 이름 로더
-│  │     ├─ HoleCenterManager.ts       # 홈 중심점 관리자
-│  │     └─ AssemblyStateManager.ts    # 조립 상태 관리자
+│  │  ├─ data/                    # 데이터 로딩 및 상태 관리
+│  │  │  ├─ MetadataLoader.ts          # 메타데이터 로더
+│  │  │  ├─ MetadataRepository.ts      # 메타데이터 레포지토리
+│  │  │  ├─ MetadataService.ts         # 메타데이터 서비스
+│  │  │  ├─ MetadataTypes.ts           # 메타데이터 타입 정의
+│  │  │  ├─ NodeNameManager.ts         # 노드 이름 관리자
+│  │  │  ├─ NodeNameLoader.ts          # 노드 이름 로더
+│  │  │  ├─ HoleCenterManager.ts       # 홈 중심점 관리자
+│  │  │  └─ AssemblyStateManager.ts    # 조립 상태 관리자
+│  │  └─ orchestration/           # 오케스트레이션 서비스
+│  │     └─ DamperServiceOrchestrator.ts # 댐퍼 서비스 오케스트레이터
 │  ├─ shared/                     # UI가 아닌 공용 코드
 │  │  ├─ constants/               # 상수 정의
 │  │  │  └─ fridgeConstants.ts    # 냉장고 상수 정의
@@ -193,9 +198,19 @@ lg-electronics-repair-3d/
     - `setDoorControls()`: 도어 컨트롤 설정
     - `setCameraControls()`: 카메라 컨트롤 설정
     - `setOnActionCompleted()`: 액션 완료 콜백 설정
+    - `setDamperCaseBodyAnimationService()`: 댐퍼 케이스 바디 애니메이션 서비스 설정
+    - `setAnimationHistoryService()`: 애니메이션 히스토리 서비스 설정
+    - `setActionVerbResolver()`: 액션 동사 해결사 설정
     - `processUserInput()`: 사용자 입력 처리 (메인 메서드)
     - `resetConversation()`: 대화 상태 초기화
     - `resetDoors()`: 모든 도어 상태 초기화
+    - `checkServiceStatus()`: Ollama 서비스 상태 확인
+    - `getServiceStatus()`: 현재 서비스 상태 반환
+    - `getAvailableModels()`: 사용 가능한 AI 모델 목록 반환
+    - `refreshServiceStatus()`: 서비스 상태 새로고침
+    - `getConversationState()`: 현재 대화 상태 반환
+    - `closeAllDoors()`: 모든 문 닫기
+
 - **AnimationHistoryService.ts**: 애니메이션 히스토리 서비스 - 애니메이션 히스토리를 저장/불러오고 실행 취소/다시 실행 기능을 제공합니다.
   - `addAnimationHistory()`: 애니메이션 히스토리 추가
   - `getAllHistory()`: 전체 히스토리 반환
@@ -210,6 +225,9 @@ lg-electronics-repair-3d/
   - `setCameraControls()`: 카메라 컨트롤 설정
   - `moveCameraToLeftDoorDamper()`: 왼쪽 도어 댐퍼 노드로 카메라 이동
   - `moveCameraCinematic()`: 시네마틱 카메라 워킹 (직선 → 하강 → 로우 앵글)
+  - `applyLeftDoorHighlights()`: 왼쪽 문 부품들에 하이라이트 적용
+  - `applyEmissive()`: 재질에 Emissive 효과 적용
+  - `getNodeByName()`: 이름으로 노드 찾기
 #### 5.3 assembly/ - 조립/분해 비즈니스 로직
 - **PartAssemblyService.ts**: 부품 조립 서비스 - GSAP Timeline을 활용한 정밀한 부품 조립/분해 애니메이션 관리합니다.
   - `animateLinearAssembly()`: 선형 조립 애니메이션
@@ -220,47 +238,72 @@ lg-electronics-repair-3d/
   - `pause()`, `resume()`, `reverse()`: 애니메이션 제어
   - `getProgress()`: 현재 진행률 반환
   - `movePartRelative()`: 특정 노드를 현재 위치에서 상대적으로 이동
+  - `dispose()`: 리소스 정리
 
 - **ManualAssemblyManager.ts**: 수동 조립 관리자 - 조립/분해 관련 함수를 중앙 집중식 관리합니다.
+  - `initialize()`: 서비스 초기화 (씬 루트 및 카메라 컨트롤 설정)
+  - `setAnimationHistoryService()`: 애니메이션 히스토리 서비스 설정
   - `disassembleDamperCover()`: 댐퍼 커버 분해
   - `getProgress()`: 진행률 반환
   - `isPlaying()`: 재생 중인지 확인
   - `getHoleCenters()`: 홈 중심점 정보 반환
+  - `getHoleCenterById()`: ID로 홈 중심점 찾기
+  - `getHoleCenterByIndex()`: 인덱스로 홈 중심점 찾기
+  - `getHoleCentersCount()`: 홈 중심점 개수 반환
   - `detectAndHighlightGrooves()`: 노드의 면 하이라이트 및 홈 탐지
   - `assembleDamperCover()`: 댐퍼 돌출부/홈 결합
+  - `restoreDamperCover()`: 댐퍼 커버를 본래 위치로 복구
   - `removeAssemblyNode()`: assemblyNode 제거
-  - `loosenScrew()`, `tightenScrew()`: 스크류 애니메이션
+  - `loosenScrew()`: 스크류 분리 애니메이션
+  - `tightenScrew()`: 스크류 조립 애니메이션
+  - `moveScrewLinearToDamperCaseBody()`: 스크류를 damperCaseBody 방향으로 선형 이동
+  - `moveScrewLinearReverse()`: 스크류를 원래 위치로 선형 이동 (조립용)
+  - `dispose()`: 리소스 정리
 
 - **DamperAssemblyService.ts**: 댐퍼 조립 서비스 - 디버깅용 노드 구조 출력 기능을 제공합니다.
   - `initialize()`: 서비스 초기화
   - `clearHighlights()`: 하이라이트 제거
   - `debugPrintDamperStructure()`: Damper Assembly와 Cover의 노드 구조 출력
+  - `dispose()`: 리소스 정리
 
 - **DamperCoverAssemblyService.ts**: 댐퍼 커버 조립 서비스 - 댐퍼 커버 조립 로직을 담당합니다.
+  - `initialize()`: 서비스 초기화
   - `assembleDamperCover()`: 댐퍼 돌출부/홈 결합
+  - `restoreDamperCover()`: 댐퍼 커버 복구
   - `getDetectedPlugs()`: 탐지된 돌출부(Plug) 정보 반환
   - `filterDuplicatePlugs()`: 탐지된 돌출부 중 너무 가까운 것들을 필터링
   - `removeAssemblyNode()`: assemblyNode를 3단계 애니메이션으로 제거
+  - `dispose()`: 리소스 정리
 
 #### 5.4 animation/ - 세부 부품 애니메이션 서비스
 - **DamperAnimationService.ts**: 댐퍼 애니메이션 서비스 - 댐퍼 서비스 명령을 생성하고 처리합니다.
   - `getFridgeDamperAnimationCommands()`: 댐퍼 애니메이션 명령 반환
-  - `areFridgeDamperCommands()`: 댐퍼 명령인지 확인
+  - `areFridgeDamperCommands()`: 댐퍼 명령 배열인지 확인
   - `isFridgeDamperCommand()`: 입력에 댐퍼 키워드 포함 여부 확인
 
 - **DamperCaseBodyAnimationService.ts**: 댐퍼 케이스 바디 애니메이션 서비스 - 댐퍼 케이스 바디의 선형 이동 애니메이션을 관리합니다.
+  - `setSceneRoot()`: 씬 루트 설정
   - `animateDamperCaseBodyLinearMove()`: 댐퍼 케이스 바디 선형 이동 애니메이션 실행
   - `getDamperCaseBodyNodeName()`: 댐퍼 케이스 바디 노드 이름 가져오기
   - `getAnimationConfig()`: 애니메이션 설정 가져오기
   - `getAnimationStages()`: 애니메이션 스테이지 정보 가져오기
 
 - **ScrewAnimationService.ts**: 스크류 애니메이션 서비스 - 스크류를 돌려서 빼는 애니메이션을 담당합니다.
+  - `initialize()`: 서비스 초기화
   - `isScrewNode()`: 스크류 노드인지 확인
   - `animateScrewRotation()`: 스크류 회전+이동 동시 애니메이션 (분해용)
   - `animateScrewRotationReverse()`: 스크류 회전+이동 역방향 애니메이션 (조립용)
-  - `pause()`, `resume()`, `reverse()`: 애니메이션 제어
+  - `isPlaying()`: 재생 중인지 확인
+  - `getProgress()`: 현재 진행률 반환
+  - `pause()`: 애니메이션 일시정지
+  - `resume()`: 애니메이션 재개
+  - `reverse()`: 애니메이션 역방향 재생
+  - `dispose()`: 리소스 정리
 
 - **ScrewLinearMoveAnimationService.ts**: 스크류 선형 이동 애니메이션 서비스 - 스크류의 선형 이동을 담당합니다.
+  - `setSceneRoot()`: 씬 루트 설정
+  - `animateScrewLinearMoveToDamperCaseBody()`: 스크류를 damperCaseBody 방향으로 선형 이동
+  - `animateScrewLinearMoveReverse()`: 스크류를 원래 위치로 선형 이동 (조립용)
   - 스크류 노드를 특정 방향으로 선형 이동
   - 원래 위치로 되돌리기 기능
 #### 5.5 detection/ - 탐지 및 핸들링 로직
@@ -314,6 +357,33 @@ lg-electronics-repair-3d/
   - `getInsertionOffset()`: 특정 어셈블리의 삽입 오프셋 반환
   - `getAnimationDuration()`: 애니메이션 Duration 반환
   - `getScrewAnimations()`: 스크류 애니메이션 설정 반환
+  - `getScrewAnimationConfig()`: 스크류 애니메이션 설정 조회
+  - `getDamperCaseBodyAnimationConfig()`: 댐퍼 케이스 바디 애니메이션 설정 조회
+  - `getScrewLinearMoveConfig()`: 스크류 선형 이동 설정 조회
+  - `getCameraSettings()`: 카메라 설정 조회
+  - `isLoaded()`: 메타데이터 로드 여부 확인
+
+- **MetadataRepository.ts**: 메타데이터 레포지토리 - JSON 파일을 로딩하고 원본 데이터를 캐싱
+  - `loadMetadata()`: 메타데이터 파일 로딩 (싱글톤 패턴)
+  - `getRawMetadata()`: 원본 메타데이터 반환
+  - `clearCache()`: 캐시 초기화
+
+- **MetadataService.ts**: 메타데이터 서비스 - 데이터를 가공하고 비즈니스 로직을 처리
+  - `initialize()`: 서비스 초기화
+  - `getAssemblyConfig()`: 특정 어셈블리 설정 반환
+  - `loadAssemblyConfig()`: 어셈블리 설정을 로드하고 Three.js 객체로 변환
+  - `getScrewAnimationConfig()`: 스크류 애니메이션 설정 조회
+  - `getDamperCaseBodyAnimationConfig()`: 댐퍼 케이스 바디 애니메이션 설정 조회
+  - `getScrewLinearMoveConfig()`: 스크류 선형 이동 설정 조회
+  - `getCameraSettings()`: 카메라 설정 조회
+  - `getInsertionOffset()`: 삽입 오프셋 반환
+  - `clearCache()`: 캐시 초기화
+
+- **MetadataTypes.ts**: 메타데이터 타입 정의
+  - `AssemblyOffsetMetadata`: 조립 오프셋 메타데이터 인터페이스
+  - `ScrewAnimationConfig`: 스크류 애니메이션 설정 인터페이스
+  - `LinearMovementAnimationConfig`: 선형 이동 애니메이션 설정 인터페이스
+  - `AssemblyConfig`: 어셈블리 설정 인터페이스
 
 - **NodeNameManager.ts**: 노드 이름 관리자
   - `enableMetadataMode()`: 메타데이터 사용 모드 활성화
@@ -330,13 +400,31 @@ lg-electronics-repair-3d/
   - `visualizeHoleCenters()`: 홈 중심점에 시각적 마커 표시
   - `getHoleCenters()`: 홈 중심점 정보 반환
   - `getHoleCenterById()`: ID로 홈 중심점 찾기
+  - `getHoleCenterByIndex()`: 인덱스로 홈 중심점 찾기
+  - `getHoleCentersCount()`: 홈 중심점 개수 반환
   - `clearHoleCenters()`: 모든 홈 중심점 정보 초기화
 
 - **AssemblyStateManager.ts**: 조립 상태 관리자
   - `updateProgress()`: 조립 진행률 업데이트
   - `getProgress()`: 조립 진행률 반환
+  - `isPlaying()`: 재생 중인지 확인
   - `startAssembly()`, `completeAssembly()`, `stopAssembly()`: 조립 상태 제어
   - `getState()`: 현재 상태 정보 반환
+  - `reset()`: 상태 초기화
+
+#### 5.8 orchestration/ - 오케스트레이션 서비스
+- **DamperServiceOrchestrator.ts**: 댐퍼 서비스 오케스트레이터 - 댐퍼 서비스 관련 모든 애니메이션 작업 흐름을 조율
+  - `execute()`: 댐퍼 서비스 전체 시퀀스 실행 (카메라 이동 → 댐퍼 조립 → 스크류 분리 → 선형 이동 → 스크류 조립)
+  - `moveCamera()`: 댐퍼 위치로 카메라 이동
+  - `assembleDamperCover()`: 댐퍼 돌출부/홈 결합
+  - `loosenScrews()`: 스크류 분리 애니메이션 실행
+  - `moveDamperCaseBody()`: 댐퍼 케이스 바디 선형 이동
+  - `moveScrew2()`: 스크류2 선형 이동
+  - `tightenScrews()`: 스크류 조립 애니메이션 실행
+  - `removeHolder()`: 댐퍼 홀더 제거
+  - `restoreDamperCover()`: 댐퍼 커버 복구
+  - `recordAnimationHistory()`: 애니메이션 히스토리 기록
+  - `getDefaultMessage()`: 액션별 기본 메시지 반환
 
 ### 6. src/shared/
 UI 컴포넌트가 아닌 공용 코드
@@ -350,16 +438,32 @@ TypeScript 타입 정의
 순수 함수형 유틸리티와 헬퍼 함수들 (상태가 없는 stateless 함수들)
 - **animationUtils.ts**: 애니메이션 관련 유틸리티
   - `CinematicSequence`: GSAP Timeline 기반 시네마틱 카메라 시퀀스 빌더
+    - `setCamera()`: 카메라 및 컨트롤 설정
+    - `setTarget()`: 타겟 중심점 설정
+    - `addCameraMove()`: 카메라 이동 추가
+    - `addBezierPath()`: 베지에 곡선 경로로 카메라 이동
+    - `addZoom()`: 줌 인/아웃 효과 추가
+    - `addHighlight()`: 하이라이트 효과 추가
+    - `addDelay()`: 지연 시간 추가
+    - `addCallback()`: 타임라인에 콜백 추가
+    - `play()`: 시퀀스 재생 (Promise 반환)
+    - `stop()`: 시퀀스 정지
+    - `reset()`: 시퀀스 리셋
+    - `progress`: 진행률 반환 (0~1)
   - `calculateCameraTargetPosition()`: 바운딩 박스 기반 카메라 타겟 위치 계산
-  - `createAnimationTimeline()`: 회전+이동 동시 애니메이션 생성
+  - `createAnimationTimeline()`: 회전+이동 동시 애니메이션 생성 (GSAP Timeline 기반)
 
 - **commonUtils.ts**: 일반적인 유틸리티 함수
-  - `getPreciseBoundingBox()`: 정확한 바운딩 박스 계산
+  - `getPreciseBoundingBox()`: 정확한 바운딩 박스 계산 (월드 매트릭스 업데이트 포함)
   - `debugFocusCamera()`: 카메라를 대상 박스로 포커스하는 애니메이션
   - `createHighlightMaterial()`: 하이라이트용 MeshBasicMaterial 생성
   - `getNodeHierarchy()`: Three.js 객체의 계층 구조 추출
   - `exportHierarchyToJson()`: 노드 계층 구조를 JSON 파일로 내보내기
+  - `extractMetadataKey()`: 노드 경로에서 메타데이터 키 추출
   - `degreesToRadians()`: 각도를 도에서 라디안으로 변환
+  - `initializeMetadata()`: 메타데이터 전역 초기화
+  - `visualizeScrewHeadCenter()`: 스크류 머리 중심 시각화
+  - `calculateScrewHeadCenter()`: 스크류 머리 중심 좌표 계산
 
 - **coordinateUtils.ts**: 좌표 변환 유틸리티 - 좌표계 변환 관련 함수들
 
@@ -421,7 +525,8 @@ TypeScript 타입 정의
 | `animation/` | 세부 부품 애니메이션 | DamperAnimationService, DamperCaseBodyAnimationService, ScrewAnimationService, ScrewLinearMoveAnimationService |
 | `detection/` | 탐지 및 핸들링 로직 | GrooveDetectionService, SnapDetectionService, SelectionHandler, NodeHeightDetector |
 | `visualization/` | 시각화 및 하이라이트 | NormalBasedHighlightService, AssemblyPathVisualizer, StencilOutlineHighlight, ClickPointMarker, DebugObjectManager |
-| `data/` | 데이터 로딩 및 상태 관리 | MetadataLoader, NodeNameManager, NodeNameLoader, HoleCenterManager, AssemblyStateManager |
+| `data/` | 데이터 로딩 및 상태 관리 | MetadataLoader, MetadataRepository, MetadataService, MetadataTypes, NodeNameManager, NodeNameLoader, HoleCenterManager, AssemblyStateManager |
+| `orchestration/` | 오케스트레이션 서비스 | DamperServiceOrchestrator |
 ### Shared 폴더 역할 명확화
 - **constants/**: 상수 정의 (`fridgeConstants.ts`)
 - **utils/**: 순수 유틸리티 함수만 유지 (서비스 클래스 제거)

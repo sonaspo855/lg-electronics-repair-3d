@@ -287,9 +287,8 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * Screw를 돌려서 조이는 애니메이션을 실행합니다.
+     * Screw를 돌려서 조이는 애니메이션을 실행
      * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
-     * @param options 애니메이션 옵션
      * @param options.extractDistance 스크류가 이동하는 거리 (cm 단위)
      */
     public async tightenScrew(

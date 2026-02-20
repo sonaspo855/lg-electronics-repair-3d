@@ -243,16 +243,16 @@ export class DamperServiceOrchestrator {
     ): Promise<void> {
         console.log('tightenScrews!!!');
 
-        // 왼쪽 스크류 1 조립 (회전+이동 역방향)
+        // 스크류 1 조립 (회전+이동 역방향)
         if (screw1NodeName) {
             await this.manualAssemblyManager.tightenScrew(screw1NodePath);
-            console.log('Left screw 1 tightened');
+            console.log('스크류 1 조립 완료!!!');
         }
 
-        // 왼쪽 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
+        // 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
         if (screw2NodeName) {
             await this.manualAssemblyManager.tightenScrew(screw2NodePath);
-            console.log('Left screw 2 tightened');
+            console.log('스크류 2 조립 완료!!!');
         }
 
         console.log('스크류 조립 애니메이션 완료!!!');
