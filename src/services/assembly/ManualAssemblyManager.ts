@@ -15,7 +15,6 @@ import { AnimationHistoryService } from '../core/AnimationHistoryService';
 import { AnimationAction } from '../core/AnimatorAgent';
 
 /**
- * 수동 조립 관리자
  * 조립/분해 관련 함수를 중앙 집중식 관리
  */
 export class ManualAssemblyManager {
@@ -127,7 +126,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * 저장된 홈 중심점의 개수를 반환합니다.
+     * 저장된 홈 중심점의 개수를 반환
      * @returns 홈 중심점 개수
      */
     public getHoleCentersCount(): number {
@@ -135,7 +134,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * 노드의 면을 하이라이트하고 홈을 찾아 중심점을 체크합니다.
+     * 노드의 면을 하이라이트하고 홈을 찾아 중심점을 체크
      * @param nodeName 대상 노드 이름
      */
     public async detectAndHighlightGrooves(nodeName: string): Promise<void> {
@@ -178,7 +177,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * assemblyNode를 3단계 애니메이션으로 제거합니다.
+     * assemblyNode 노드 분리 및 제거 함수
      */
     public async removeAssemblyNode(): Promise<{
         targetPosition: { x: number; y: number; z: number };
@@ -191,19 +190,19 @@ export class ManualAssemblyManager {
         extractDirection: [number, number, number];
     } | null> {
         if (!this.sceneRoot) {
-            console.warn('[ManualAssemblyManager] sceneRoot가 초기화되지 않았습니다.');
+            console.warn('sceneRoot가 초기화되지 않았습니다.');
             return null;
         }
 
         const assemblyNodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperAssembly');
         if (!assemblyNodeName) {
-            console.warn('[ManualAssemblyManager] damperAssembly 노드 이름을 찾을 수 없습니다.');
+            console.warn('damperAssembly 노드 이름을 찾을 수 없습니다.');
             return null;
         }
 
         const assemblyNode = this.sceneRoot.getObjectByName(assemblyNodeName);
         if (!assemblyNode) {
-            console.warn('[ManualAssemblyManager] assemblyNode를 찾을 수 없습니다.');
+            console.warn('assemblyNode를 찾을 수 없습니다.');
             return null;
         }
 
@@ -289,7 +288,6 @@ export class ManualAssemblyManager {
     /**
      * Screw를 돌려서 조이는 애니메이션을 실행
      * @param screwNodeNameOrPath 노드 이름 또는 경로 (예: 'fridge.leftDoorDamper.screw1Customized')
-     * @param options.extractDistance 스크류가 이동하는 거리 (cm 단위)
      */
     public async tightenScrew(
         screwNodePath: string,
@@ -344,7 +342,7 @@ export class ManualAssemblyManager {
     }
 
     /**
-     * 스크류 노드를 원래 위치로 선형 이동 애니메이션을 실행합니다 (조립용).
+     * 스크류 노드를 원래 위치로 선형 이동 애니메이션을 실행
      * @param screwNodePath 스크류 노드 경로 (예: 'fridge.leftDoorDamper.screw2Customized')
      * @param options 애니메이션 옵션
      */
@@ -425,7 +423,7 @@ export async function disassembleDamperCover(
 }
 
 /**
- * 노드의 면을 하이라이트하고 홈을 찾아 중심점을 체크합니다.
+ * 노드의 면을 하이라이트하고 홈을 찾아 중심점을 체크
  */
 export async function detectAndHighlightGrooves(
     sceneRoot: THREE.Object3D,

@@ -372,11 +372,11 @@ export class DamperCoverAssemblyService {
         };
     } | null> {
         if (!assemblyNode) {
-            console.warn('[DamperCoverAssemblyService] assemblyNode가 존재하지 않습니다.');
+            console.warn('assemblyNode가 존재하지 않습니다.');
             return null;
         }
 
-        console.log('[DamperCoverAssemblyService] 틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
+        console.log('틸팅 효과를 포함한 3단계 제거 애니메이션 시작:', assemblyNode.name);
 
         // 본래 위치 저장
         const originalPosition = {
@@ -390,12 +390,12 @@ export class DamperCoverAssemblyService {
         const config = this.metadataLoader.getAssemblyConfig(assemblyKey);
         const disassemblyConfig = config?.disassembly;
 
-        const liftDist = disassemblyConfig?.liftDistance ?? 0.01;
-        const slideDist = disassemblyConfig?.slideDistance ?? 0.05;
-        const liftDur = (disassemblyConfig?.liftDuration ?? 500) / 1000;
-        const slideDur = (disassemblyConfig?.slideDuration ?? 700) / 1000;
-        const fadeDur = (disassemblyConfig?.fadeDuration ?? 500) / 1000;
-        const tiltAngleDeg = disassemblyConfig?.tiltAngle ?? 35;
+        const liftDist = disassemblyConfig?.liftDistance ?? 0;
+        const slideDist = disassemblyConfig?.slideDistance ?? 0;
+        const liftDur = (disassemblyConfig?.liftDuration ?? 0) / 1000;
+        const slideDur = (disassemblyConfig?.slideDuration ?? 0) / 1000;
+        const fadeDur = (disassemblyConfig?.fadeDuration ?? 0) / 1000;
+        const tiltAngleDeg = disassemblyConfig?.tiltAngle ?? 0;
 
         // 1. 힌지(Pivot) 포인트 결정
         let hingeWorldPos = new THREE.Vector3();
@@ -452,11 +452,11 @@ export class DamperCoverAssemblyService {
         const tl = gsap.timeline({
             onComplete: () => {
                 assemblyNode.visible = false;
-                console.log('[DamperCoverAssemblyService] 제거 애니메이션 완료');
+                console.log('제거 애니메이션 완료');
             }
         });
 
-        // 1단계: 힌지를 고정하고 틸팅 (Pivot Rotation)
+        // 1단계: 힌지를 고정하고 틸팅
         const tiltAngle = THREE.MathUtils.degToRad(tiltAngleDeg);
         const startPos = assemblyNode.position.clone();
         const startRotY = assemblyNode.rotation.y;

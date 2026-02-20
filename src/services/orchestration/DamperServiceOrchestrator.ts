@@ -100,10 +100,10 @@ export class DamperServiceOrchestrator {
             // 스크류 노드(1,2)를 다시 조이는 코드
             await this.tightenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
 
-            return;
-
             // 댐퍼를 고정했던 홀더를 제거
             await this.removeHolder(commandsArray[0].door);
+
+            return;
 
             // coverNode 댐퍼 커버 노드의 원래 복구 애니메이션
             if (assemblyResult && assemblyResult.originalPosition) {
@@ -253,12 +253,10 @@ export class DamperServiceOrchestrator {
             await this.manualAssemblyManager.tightenScrew(screw2NodePath);
             console.log('스크류 2 조립 완료!!!');
         }
-
-        console.log('스크류 조립 애니메이션 완료!!!');
     }
 
     private async removeHolder(door: DoorType): Promise<any> {
-        console.log('Removing damper holder');
+        console.log('removeHolder!!!');
 
         const removeResult = await this.manualAssemblyManager.removeAssemblyNode();
 
@@ -270,8 +268,7 @@ export class DamperServiceOrchestrator {
                 '댐퍼 홀더 제거 완료'
             );
         }
-        console.log('Animation history after holder removal:', this.animationHistoryService.getAllHistory());
-        console.log('댐퍼 홀더 제거 애니메이션 완료!!!');
+        console.log('댐퍼 홀더 제거 히스토리: ', this.animationHistoryService.getAllHistory());
         return removeResult;
     }
 
