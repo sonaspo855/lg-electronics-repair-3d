@@ -1,4 +1,5 @@
 import { getNodeNameManager } from '../data/NodeNameManager';
+import { getMetadataLoader } from '../data/MetadataLoader';
 import { LEFT_DOOR_NODES } from '../../shared/constants/fridgeConstants';
 import * as THREE from 'three';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
@@ -28,6 +29,7 @@ export class CameraMovementService {
     private cameraControls: any;
     private sceneRoot: THREE.Object3D | null = null;
     private nodeNameManager = getNodeNameManager();
+    private metadataLoader = getMetadataLoader();
 
     constructor(cameraControls: any, sceneRoot?: THREE.Object3D) {
         this.cameraControls = cameraControls;
@@ -40,14 +42,39 @@ export class CameraMovementService {
     }
 
     // 카메라를 댐퍼 위치로 이동
-    public async moveCameraToLeftDoorDamper(options: CameraMoveOptions = {}): Promise<void> {
-        return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {
-            duration: options.duration,
-            direction: options.direction,
-            zoomRatio: options.zoomRatio,
-            easing: options.easing,
-            ...options
-        });
+    public async moveCameraToLeftDoorDamper(): Promise<{
+        duration: number;
+        easing: string;
+        direction: THREE.Vector3 | null;
+        distance: number | undefined;
+    } | null> {
+        const cameraSettings = this.metadataLoader.getCameraSettings('damperService');
+
+        const mergedOptions: CameraMoveOptions = {
+            duration: cameraSettings?.duration ?? 0,
+            easing: cameraSettings?.easing ?? 'power3.inOut',
+            distance: cameraSettings?.distance,
+        };
+
+        // direction 설정이 있으면 Vector3로 변환
+        if (cameraSettings?.direction && !mergedOptions.direction) {
+            mergedOptions.direction = new THREE.Vector3(
+                cameraSettings.direction.x,
+                cameraSettings.direction.y,
+                cameraSettings.direction.z
+            ).normalize();
+        }
+
+        await this.moveCameraCinematic(LEFT_DOOR_NODES[0], mergedOptions);
+
+        const result = {
+            duration: mergedOptions.duration || 0,
+            easing: mergedOptions.easing || 'power3.inOut',
+            direction: mergedOptions.direction || null,
+            distance: mergedOptions.distance
+        };
+
+        return result;
     }
 
     /**

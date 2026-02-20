@@ -117,29 +117,13 @@ export class DamperServiceOrchestrator {
 
     private async moveCamera(): Promise<void> {
         console.log('Moving camera to left door damper');
-        const cameraSettings = this.metadataLoader.getCameraSettings('damperService');
 
-        const cameraOptions: any = {
-            duration: cameraSettings?.duration,
-            easing: cameraSettings?.easing,
-            distance: cameraSettings?.distance
-        };
-
-        // direction 설정이 있으면 Vector3로 변환
-        if (cameraSettings?.direction) {
-            cameraOptions.direction = new THREE.Vector3(
-                cameraSettings.direction.x,
-                cameraSettings.direction.y,
-                cameraSettings.direction.z
-            ).normalize();
-        }
-
-        await this.cameraMovementService.moveCameraToLeftDoorDamper(cameraOptions);
+        const cameraResult = await this.cameraMovementService.moveCameraToLeftDoorDamper();
 
         this.recordAnimationHistory(
             AnimationAction.CAMERA_MOVE,
             DoorType.TOP_LEFT,
-            cameraOptions,
+            cameraResult,
             'Camera moved to damper position'
         );
         console.log('댐퍼 카메라 이동 히스토리:', this.animationHistoryService.getAllHistory());
