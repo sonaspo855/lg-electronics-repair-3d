@@ -98,10 +98,10 @@ export class DamperServiceOrchestrator {
             // 분리된 왼쪽 스크류2 노드의 위치에서 damperCaseBody 방향으로 선형이동
             await this.moveScrew2(screw2NodePath, commandsArray[0].door);
 
-            return;
-
             // 스크류 노드(1,2)를 다시 조이는 코드
             await this.tightenScrews(screw1NodeName, screw2NodeName, screw1NodePath, screw2NodePath);
+
+            return;
 
             // 댐퍼를 고정했던 홀더를 제거
             await this.removeHolder(commandsArray[0].door);
@@ -245,11 +245,12 @@ export class DamperServiceOrchestrator {
         screw1NodePath: string,
         screw2NodePath: string
     ): Promise<void> {
-        console.log('Tightening screws');
+        console.log('tightenScrews!!!');
 
         // 왼쪽 스크류 1 조립 (회전+이동 역방향)
         if (screw1NodeName) {
             const metadataKey1 = extractMetadataKey(screw1NodePath);
+            console.log('metadataKey1>>> ', metadataKey1);
             const config1 = this.metadataLoader.getScrewAnimationConfig(metadataKey1);
             await this.manualAssemblyManager.tightenScrew(screw1NodePath, config1 || {});
             console.log('Left screw 1 tightened');

@@ -13,7 +13,7 @@ export interface AssemblyOffsetMetadata {
         [nodeName: string]: ScrewAnimationConfig;
     };
     damperCaseBodyAnimations?: {
-        linearMovement: LinearMovementAnimationConfig;
+        [key: string]: LinearMovementAnimationConfig;
     };
     screwLinearMovements?: {
         [nodeName: string]: LinearMovementAnimationConfig;

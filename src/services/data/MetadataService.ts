@@ -114,9 +114,17 @@ export class MetadataService {
         return null;
     }
 
-    public getDamperCaseBodyAnimationConfig(): LinearMovementAnimationConfig | null {
+    public getDamperCaseBodyAnimationConfig(nodeName: string): LinearMovementAnimationConfig | null {
         const metadata = this.repository.getRawMetadata();
-        return metadata?.damperCaseBodyAnimations?.linearMovement || null;
+        if (!metadata?.damperCaseBodyAnimations) return null;
+
+        // 1. 노드 이름으로 직접 매칭 시도
+        if (metadata.damperCaseBodyAnimations[nodeName]) {
+            return metadata.damperCaseBodyAnimations[nodeName];
+        }
+
+        // 2. 하위 호환성을 위해 'linearMovement' 키 시도
+        return metadata.damperCaseBodyAnimations['linearMovement'] || null;
     }
 
     public getScrewLinearMoveConfig(metadataKey: string): LinearMovementAnimationConfig | null {

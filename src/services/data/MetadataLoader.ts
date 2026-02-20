@@ -47,7 +47,7 @@ export class MetadataLoader {
     }
 
     public getDamperCaseBodyAnimationConfig(nodeName: string): LinearMovementAnimationConfig | null {
-        return this.service.getDamperCaseBodyAnimationConfig();
+        return this.service.getDamperCaseBodyAnimationConfig(nodeName);
     }
 
     public getScrewLinearMoveConfig(metadataKey: string): LinearMovementAnimationConfig | null {
