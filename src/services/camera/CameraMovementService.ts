@@ -15,18 +15,23 @@ import {
 export interface HighlightConfig {
     nodePath: string;
     color: string | number;
+    intensity?: number;
 }
 
 export interface CameraMoveOptions {
-    duration?: number;           // milliseconds
-    zoomRatio?: number;          // Custom zoom ratio
-    distance?: number;           // Explicit distance from target
-    direction?: THREE.Vector3;   // Custom camera direction
-    easing?: string;             // GSAP easing name (default: 'power3.inOut')
-    bezierOffset?: number;       // Bezier curve control point offset multiplier
-    upThreshold?: number;        // Threshold for UP vector transition
-    highlights?: HighlightConfig[]; // Nodes to highlight after movement
-    onProgress?: (progress: number) => void;
+    duration?: number;           // 애니메이션 지속 시간 (밀리초 단위)
+    zoomRatio?: number;          // 사용자 지정 줌 비율
+    distance?: number;           // 타깃으로부터의 명시적 거리
+    direction?: THREE.Vector3;   // 사용자 지정 카메라 방향 벡터
+    easing?: string;             // GSAP 이징(easing) 이름 (기본값: 'power3.inOut')
+    bezierOffset?: number;       // 베지어 곡선의 제어점 오프셋 배율
+    midpointRatio?: number;      // 시작점과 끝점 사이의 중간 지점 비율
+    upThreshold?: number;        // UP 벡터 전환을 위한 임계값
+    nearThreshold?: number;      // 애니메이션을 생략할 거리 임계값
+    disableDamping?: boolean;    // 애니메이션 중 카메라 감속(damping) 비활성화 여부
+    emissiveIntensity?: number;  // 하이라이트용 기본 발광 강도
+    highlights?: HighlightConfig[]; // 이동 후 강조 표시할 노드 목록
+    onProgress?: (progress: number) => void; // 애니메이션 진행률 콜백 함수
 }
 
 // ============================================================================
@@ -56,7 +61,7 @@ export class CameraMovementService {
         direction: THREE.Vector3 | null;
         distance: number | undefined;
     } | null> {
-        return this.moveCameraCinematic(LEFT_DOOR_NODES[0], {});
+        return this.moveCameraCinematic(LEFT_DOOR_NODES[0]);
     }
 
     /**
@@ -65,7 +70,6 @@ export class CameraMovementService {
      */
     public async moveCameraCinematic(
         nodeName: string,
-        options: CameraMoveOptions = {}
     ): Promise<{
         duration: number;
         easing: string;
@@ -85,24 +89,27 @@ export class CameraMovementService {
             return null;
         }
 
-        // 메타데이터 로드
-        let mergedOptions: CameraMoveOptions = { ...options };
+        // 메타데이터 로드 및 옵션 병합
+        let mergedOptions: CameraMoveOptions = {};
 
         if (metadataKey) {
             const cameraSettings = this.metadataLoader.getCameraSettings(metadataKey);
             mergedOptions = {
-                duration: options.duration ?? cameraSettings?.duration ?? 0,
-                easing: options.easing ?? cameraSettings?.easing ?? 'power3.inOut',
-                distance: options.distance ?? cameraSettings?.distance,
-                zoomRatio: options.zoomRatio ?? cameraSettings?.zoomRatio ?? 0,
-                bezierOffset: options.bezierOffset ?? cameraSettings?.bezierOffset ?? 0,
-                upThreshold: options.upThreshold ?? cameraSettings?.upThreshold ?? 0,
-                highlights: options.highlights ?? cameraSettings?.highlights,
-                ...options
+                duration: cameraSettings?.duration ?? 0,
+                easing: cameraSettings?.easing ?? 'power3.inOut',
+                distance: cameraSettings?.distance,
+                zoomRatio: cameraSettings?.zoomRatio ?? 0,
+                bezierOffset: cameraSettings?.bezierOffset ?? 0,
+                midpointRatio: cameraSettings?.midpointRatio ?? 0,
+                upThreshold: cameraSettings?.upThreshold ?? 0,
+                nearThreshold: cameraSettings?.nearThreshold ?? 0,
+                disableDamping: cameraSettings?.disableDamping ?? true,
+                emissiveIntensity: cameraSettings?.emissiveIntensity ?? 0,
+                highlights: cameraSettings?.highlights,
             };
 
             // direction 설정이 있으면 Vector3로 변환
-            if (cameraSettings?.direction && !options.direction) {
+            if (cameraSettings?.direction) {
                 mergedOptions.direction = new THREE.Vector3(
                     cameraSettings.direction.x,
                     cameraSettings.direction.y,
@@ -133,17 +140,19 @@ export class CameraMovementService {
         const startPos = camera.position.clone();
 
         // 거리 체크 (너무 가까우면 즉시 이동)
-        if (startPos.distanceToSquared(endPos) < 0.0001) {
+        const nearThreshold = mergedOptions.nearThreshold ?? 0.0001;
+        if (startPos.distanceToSquared(endPos) < nearThreshold) {
             camera.position.copy(endPos);
             this.cameraControls.target.copy(targetCenter);
             this.cameraControls.update();
         } else {
             // 5. 제어점 계산 (L자형 곡선)
-            const bezierOffset = mergedOptions.bezierOffset ?? 0.3;
+            const bezierOffset = mergedOptions.bezierOffset ?? 0;
+            const midpointRatio = mergedOptions.midpointRatio ?? 0;
             const controlPos = new THREE.Vector3(
-                (startPos.x + endPos.x) / 2,
+                startPos.x + (endPos.x - startPos.x) * midpointRatio,
                 Math.max(startPos.y, endPos.y) + Math.max(size.y, maxDim) * bezierOffset,
-                (startPos.z + endPos.z) / 2
+                startPos.z + (endPos.z - startPos.z) * midpointRatio
             );
 
             // 6. 노드의 월드 회전 (UP 벡터 계산용)
@@ -156,16 +165,19 @@ export class CameraMovementService {
             sequence.setCamera(camera, this.cameraControls)
                 .setTarget(targetCenter);
 
-            // Damping 비활성화 (애니메이션 중 부드러운 전환을 위해)
+            // Damping 설정 (애니메이션 중 부드러운 전환을 위해 제어)
             const originalDamping = this.cameraControls.enableDamping;
             const originalSmoothTime = this.cameraControls.smoothTime;
-            this.cameraControls.enableDamping = false;
-            this.cameraControls.smoothTime = 0;
 
-            // 카메라 UP 벡터 초기화
+            if (mergedOptions.disableDamping) {
+                this.cameraControls.enableDamping = false;
+                this.cameraControls.smoothTime = 0;
+            }
+
+            // 카메라 UP 벡터 초기화 (설정화 가능하도록 유지)
             camera.up.set(0, 1, 0);
 
-            const upThreshold = mergedOptions.upThreshold ?? 0.8;
+            const upThreshold = mergedOptions.upThreshold ?? 0;
             const upTransition = (mergedOptions.direction && Math.abs(mergedOptions.direction.y) > upThreshold) ? {
                 startUp: new THREE.Vector3(0, 1, 0),
                 endUp: new THREE.Vector3(0, 1, 0), // 내부에서 계산됨
@@ -178,22 +190,24 @@ export class CameraMovementService {
                 control: controlPos,
                 end: endPos,
                 upTransition: upTransition,
-                duration: mergedOptions.duration || 2500,
+                duration: mergedOptions.duration || 0,
                 easing: mergedOptions.easing || 'power3.inOut',
                 onUpdate: mergedOptions.onProgress
             }).play();
 
             // 8. 후처리 (Damping 복구 및 하이라이트)
-            this.cameraControls.enableDamping = originalDamping;
-            this.cameraControls.smoothTime = originalSmoothTime;
+            if (mergedOptions.disableDamping) {
+                this.cameraControls.enableDamping = originalDamping;
+                this.cameraControls.smoothTime = originalSmoothTime;
+            }
         }
 
         if (mergedOptions.highlights) {
-            this.applyHighlights(mergedOptions.highlights);
+            this.applyHighlights(mergedOptions.highlights, mergedOptions.emissiveIntensity);
         }
 
         return {
-            duration: mergedOptions.duration || 2500,
+            duration: mergedOptions.duration || 0,
             easing: mergedOptions.easing || 'power3.inOut',
             direction: mergedOptions.direction || null,
             distance: mergedOptions.distance
@@ -203,7 +217,7 @@ export class CameraMovementService {
     /**
      * 메타데이터 설정에 따른 하이라이트 적용
      */
-    private applyHighlights(highlights: HighlightConfig[]): void {
+    private applyHighlights(highlights: HighlightConfig[], defaultIntensity: number = 0.8): void {
         highlights.forEach((config) => {
             const nodeName = this.nodeNameManager.getNodeName(config.nodePath);
             if (!nodeName) return;
@@ -211,17 +225,19 @@ export class CameraMovementService {
             const node = this.getNodeByName(nodeName);
             if (node) {
                 const color = typeof config.color === 'string' ? parseInt(config.color, 16) : config.color;
+                const intensity = config.intensity ?? defaultIntensity;
+
                 node.traverse((child) => {
                     if (child instanceof THREE.Mesh) {
                         if (Array.isArray(child.material)) {
                             child.material = child.material.map(m => {
                                 const newM = m.clone();
-                                this.applyEmissive(newM, color);
+                                this.applyEmissive(newM, color, intensity);
                                 return newM;
                             });
                         } else {
                             child.material = child.material.clone();
-                            this.applyEmissive(child.material, color);
+                            this.applyEmissive(child.material, color, intensity);
                         }
                     }
                 });
@@ -230,10 +246,10 @@ export class CameraMovementService {
     }
 
     // Helper 함수 (가독성을 위해 분리)
-    private applyEmissive(material: THREE.Material, color: number) {
+    private applyEmissive(material: THREE.Material, color: number, intensity: number) {
         if ('emissive' in material) {
             (material as any).emissive.setHex(color);
-            (material as any).emissiveIntensity = 0.8;
+            (material as any).emissiveIntensity = intensity;
             material.needsUpdate = true;
         }
     }

@@ -30,6 +30,10 @@ export interface AssemblyOffsetMetadata {
                 z: number;
             };
             bezierOffset?: number;
+            midpointRatio?: number;
+            nearThreshold?: number;
+            disableDamping?: boolean;
+            emissiveIntensity?: number;
             upThreshold?: number;
             highlights?: Array<{
                 nodePath: string;

@@ -85,7 +85,7 @@ export class DamperServiceOrchestrator {
             // 도어 열림 후 댐퍼로 카메라 이동
             await this.moveCamera();
 
-            return;
+
 
             // 댐퍼 돌출부/홈 결합 애니메이션 실행
             const assemblyResult = await this.assembleDamperCover(commandsArray[0].door);
