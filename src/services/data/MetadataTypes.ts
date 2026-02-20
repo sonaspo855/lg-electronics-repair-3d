@@ -41,6 +41,7 @@ export interface ScrewAnimationConfig {
     rotationAngle: number;
     extractDirection: [number, number, number];
     extractDistance: number;
+    screwPitch?: number;
     duration: number;
     easing: string;
 }

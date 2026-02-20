@@ -175,17 +175,13 @@ export class DamperServiceOrchestrator {
 
         // 스크류 1 분리
         if (screw1NodeName) {
-            const metadataKey1 = extractMetadataKey(screw1NodePath);
-            const config1 = this.metadataLoader.getScrewAnimationConfig(metadataKey1);
-            await this.manualAssemblyManager.loosenScrew(screw1NodePath, config1 || {});
+            await this.manualAssemblyManager.loosenScrew(screw1NodePath);
             console.log('스크류1 분리 완료!!!');
         }
 
         // 스크류 2 분리
         if (screw2NodeName) {
-            const metadataKey2 = extractMetadataKey(screw2NodePath);
-            const config2 = this.metadataLoader.getScrewAnimationConfig(metadataKey2);
-            await this.manualAssemblyManager.loosenScrew(screw2NodePath, config2 || {});
+            await this.manualAssemblyManager.loosenScrew(screw2NodePath);
             console.log('스크류2 분리 완료!!!');
         }
     }
@@ -249,18 +245,13 @@ export class DamperServiceOrchestrator {
 
         // 왼쪽 스크류 1 조립 (회전+이동 역방향)
         if (screw1NodeName) {
-            const metadataKey1 = extractMetadataKey(screw1NodePath);
-            console.log('metadataKey1>>> ', metadataKey1);
-            const config1 = this.metadataLoader.getScrewAnimationConfig(metadataKey1);
-            await this.manualAssemblyManager.tightenScrew(screw1NodePath, config1 || {});
+            await this.manualAssemblyManager.tightenScrew(screw1NodePath);
             console.log('Left screw 1 tightened');
         }
 
         // 왼쪽 스크류 2 조립 (회전+이동 역방향) - 선형 이동한 위치에서 조립
         if (screw2NodeName) {
-            const metadataKey2 = extractMetadataKey(screw2NodePath);
-            const config2 = this.metadataLoader.getScrewAnimationConfig(metadataKey2);
-            await this.manualAssemblyManager.tightenScrew(screw2NodePath, config2 || {});
+            await this.manualAssemblyManager.tightenScrew(screw2NodePath);
             console.log('Left screw 2 tightened');
         }
 

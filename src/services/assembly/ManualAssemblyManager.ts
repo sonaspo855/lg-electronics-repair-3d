@@ -217,16 +217,7 @@ export class ManualAssemblyManager {
      * @param options.extractDistance 스크류가 이동하는 거리 (cm 단위)
      */
     public async loosenScrew(
-        screwNodePath: string,
-        options?: {
-            duration?: number;
-            rotationAngle?: number;
-            rotationAxis?: 'x' | 'y' | 'z';
-            extractDirection?: [number, number, number];
-            extractDistance?: number;
-            screwPitch?: number;
-            onComplete?: () => void;
-        }
+        screwNodePath: string
     ): Promise<void> {
         // 경로를 이용하여 노드 이름 반환
         const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
@@ -241,11 +232,9 @@ export class ManualAssemblyManager {
             return;
         }
 
-        // console.log('options11>> ', options);
-
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
-        const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey, options);
+        const usedConfig = await this.screwAnimationService.animateScrewRotation(screwNodePath, metadataKey);
 
         console.log('usedConfig000>> ', usedConfig);
 
@@ -305,14 +294,6 @@ export class ManualAssemblyManager {
      */
     public async tightenScrew(
         screwNodePath: string,
-        options?: {
-            duration?: number;
-            rotationAngle?: number;
-            rotationAxis?: 'x' | 'y' | 'z';
-            extractDistance?: number;
-            screwPitch?: number;
-            onComplete?: () => void;
-        }
     ): Promise<void> {
         // 경로이면 실제 노드 이름으로 변환
         const actualNodeName = this.nodeNameManager.getNodeName(screwNodePath);
@@ -329,7 +310,7 @@ export class ManualAssemblyManager {
 
         // 메타데이터 키 추출 (경로에서 마지막 요소 사용: 'fridge.leftDoorDamper.screw1Customized' -> 'screw1Customized')
         const metadataKey = extractMetadataKey(screwNodePath);
-        const usedConfig = await this.screwAnimationService.animateScrewRotationReverse(screwNodePath, metadataKey, options);
+        const usedConfig = await this.screwAnimationService.animateScrewRotationReverse(screwNodePath, metadataKey);
 
         // 애니메이션 히스토리 기록
         if (this.animationHistoryService) {

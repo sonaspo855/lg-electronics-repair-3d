@@ -85,16 +85,13 @@ export class ScrewAnimationService {
 
     /**
      * Screw 회전+이동 동시 애니메이션을 실행
-     * 메타데이터가 있으면 메타데이터를 우선 사용
-     * @param nodeName 대상 노드 이름
+     * @param nodePath 대상 노드 경로
      * @param metadataKey 메타데이터 키 (예: 'screw1Customized')
-     * @param options 애니메이션 옵션
      * @returns Promise (애니메이션 완료 시 resolve, 실제 사용된 설정값 반환)
      */
     public async animateScrewRotation(
         nodePath: string,
-        metadataKey: string,
-        options: ScrewAnimationOptions = {}
+        metadataKey: string
     ): Promise<ScrewAnimationMetadata> {
         if (!this.sceneRoot) {
             console.error('Scene root not initialized.');
@@ -110,43 +107,36 @@ export class ScrewAnimationService {
         // 메타데이터가 로드될 때까지 대기
         await this.loadMetadata();
 
-        // console.log('nodePath>> ', nodePath);
-        // console.log('metadataKey>> ', metadataKey);
-
         // 메타데이터에서 설정 가져오기
-        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-        const hasMetadata = metadata !== null;
+        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey)!;
 
-        // 옵션과 메타데이터 병합 (options가 항상 전달되므로 metadata 기본값 불필요)
+        // 메타데이터 설정
         const config = {
-            duration: options.duration ?? 1500,
-            rotationAngle: options.rotationAngle ?? 720,
-            screwPitch: options.screwPitch ?? 0.005,
-            rotationAxis: options.rotationAxis ?? 'z',
-            easing: options.easing ?? 'power2.inOut',
-            extractDirection: options.extractDirection ?? [0, 0, 1],
-            ...options
+            duration: metadata.duration,
+            rotationAngle: metadata.rotationAngle,
+            screwPitch: metadata.screwPitch ?? 0,
+            rotationAxis: metadata.rotationAxis,
+            easing: metadata.easing,
+            extractDirection: metadata.extractDirection
         };
 
-        const screwNodeName = this.nodeNameManager.getNodeName(nodePath);  // `fridge.leftDoorDamper.screw2Customized` 로 노드 이름 추출
+        const screwNodeName = this.nodeNameManager.getNodeName(nodePath);
         if (!screwNodeName) {
             console.error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
             throw new Error(`노드 이름을 찾을 수 없습니다: ${nodePath}`);
         }
-        // console.log('screwNodeName>> ', screwNodeName);  // 4J01424B_Screw,Customized_4168029
 
         const screwNodeObj = this.sceneRoot.getObjectByName(screwNodeName);
-        // console.log('screwNodeObj>> ', screwNodeObj);
         if (!screwNodeObj) {
             console.error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
             throw new Error(`노드를 찾을 수 없습니다: ${screwNodeName}`);
         }
 
         const translationDistanceCm = calculateTranslationDistance(
-            options,
+            {},
             metadata,
-            config.screwPitch!,
-            config.rotationAngle!
+            config.screwPitch,
+            config.rotationAngle
         );
 
 
@@ -182,24 +172,15 @@ export class ScrewAnimationService {
                 {
                     onStart: () => {
                         this.isAnimating = true;
-                        console.log(`${screwNodeName} 회전 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                        console.log(`${screwNodeName} 회전 시작`);
                     },
                     onComplete: () => {
                         this.isAnimating = false;
                         // 최종 좌표 업데이트
                         usedConfig.finalPosition = screwNodeObj.position.clone();
                         usedConfig.finalRotation = screwNodeObj.rotation.clone();
-                        // console.log('최종 위치:', usedConfig.finalPosition);
-                        // console.log('최종 회전:', usedConfig.finalRotation);
 
-                        // 사용자 콜백 실행
-                        config.onComplete?.();
-
-                        // Promise 완료
                         resolve(usedConfig);
-                    },
-                    onProgress: (progress) => {
-                        config.onProgress?.(progress);
                     }
                 }
             );
@@ -250,13 +231,12 @@ export class ScrewAnimationService {
      * Screw 회전+이동 역방향 애니메이션을 실행
      * @param nodePath 노드 경로
      * @param metadataKey 메타데이터 키
-     * @param options 애니메이션 옵션
      */
     public async animateScrewRotationReverse(
         nodePath: string,
-        metadataKey: string,
-        options: ScrewAnimationOptions = {}
+        metadataKey: string
     ): Promise<ScrewAnimationMetadata> {
+        // console.log('animateScrewRotationReverse!!! nodePath>> ', nodePath, ' metadataKey>> ', metadataKey);
         if (!this.sceneRoot) {
             console.error('Scene root not initialized.');
             throw new Error('Scene root not initialized.');
@@ -272,18 +252,16 @@ export class ScrewAnimationService {
         await this.loadMetadata();
 
         // 메타데이터에서 설정 가져오기
-        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey);
-        const hasMetadata = metadata !== null;
+        const metadata = this.metadataLoader.getScrewAnimationConfig(metadataKey)!;
 
-        // 옵션과 메타데이터 병합
+        // 메타데이터 설정
         const config = {
-            duration: options.duration ?? 1500,
-            rotationAngle: options.rotationAngle ?? 720,
-            screwPitch: options.screwPitch ?? 0.005,
-            rotationAxis: options.rotationAxis ?? 'z',
-            easing: options.easing ?? 'power2.inOut',
-            extractDirection: options.extractDirection ?? [0, 0, 1],
-            ...options
+            duration: metadata.duration,
+            rotationAngle: metadata.rotationAngle,
+            screwPitch: metadata.screwPitch ?? 0,
+            rotationAxis: metadata.rotationAxis,
+            easing: metadata.easing,
+            extractDirection: metadata.extractDirection
         };
 
         const screwNodeName = this.nodeNameManager.getNodeName(nodePath);
@@ -299,16 +277,16 @@ export class ScrewAnimationService {
         }
 
         const translationDistanceCm = calculateTranslationDistance(
-            options,
+            {},
             metadata,
-            config.screwPitch!,
-            config.rotationAngle!
+            config.screwPitch,
+            config.rotationAngle
         );
 
-        // 역방향 벡터 계산 (extractDirection의 음수)
+        // 역방향 벡터 계산
         const reverseDirection = new THREE.Vector3(...config.extractDirection!).negate();
 
-        // 스크류의 본래 위치 좌표 저장 (애니메이션 시작 전)
+        // 스크류의 본래 위치 좌표 저장
         const originalPosition = screwNodeObj.position.clone();
 
         // 실제 사용된 설정값
@@ -340,7 +318,7 @@ export class ScrewAnimationService {
                 {
                     onStart: () => {
                         this.isAnimating = true;
-                        console.log(`${screwNodeName} 조립 시작 (메타데이터: ${hasMetadata ? '사용' : '미사용'})`);
+                        console.log(`${screwNodeName} 조립 시작`);
                     },
                     onComplete: () => {
                         this.isAnimating = false;
@@ -348,17 +326,8 @@ export class ScrewAnimationService {
                         // 최종 좌표 업데이트
                         usedConfig.finalPosition = screwNodeObj.position.clone();
                         usedConfig.finalRotation = screwNodeObj.rotation.clone();
-                        // console.log('최종 위치:', usedConfig.finalPosition);
-                        // console.log('최종 회전:', usedConfig.finalRotation);
 
-                        // 사용자 콜백 실행
-                        config.onComplete?.();
-
-                        // Promise 완료
                         resolve(usedConfig);
-                    },
-                    onProgress: (progress) => {
-                        config.onProgress?.(progress);
                     }
                 }
             );
