@@ -12,12 +12,20 @@ import {
 // Camera movement options
 // ============================================================================
 
+export interface HighlightConfig {
+    nodePath: string;
+    color: string | number;
+}
+
 export interface CameraMoveOptions {
     duration?: number;           // milliseconds
     zoomRatio?: number;          // Custom zoom ratio
     distance?: number;           // Explicit distance from target
     direction?: THREE.Vector3;   // Custom camera direction
     easing?: string;             // GSAP easing name (default: 'power3.inOut')
+    bezierOffset?: number;       // Bezier curve control point offset multiplier
+    upThreshold?: number;        // Threshold for UP vector transition
+    highlights?: HighlightConfig[]; // Nodes to highlight after movement
     onProgress?: (progress: number) => void;
 }
 
@@ -54,6 +62,10 @@ export class CameraMovementService {
             duration: cameraSettings?.duration ?? 0,
             easing: cameraSettings?.easing ?? 'power3.inOut',
             distance: cameraSettings?.distance,
+            zoomRatio: cameraSettings?.zoomRatio ?? 0,
+            bezierOffset: cameraSettings?.bezierOffset ?? 0,
+            upThreshold: cameraSettings?.upThreshold ?? 0,
+            highlights: cameraSettings?.highlights
         };
 
         // direction 설정이 있으면 Vector3로 변환
@@ -68,7 +80,7 @@ export class CameraMovementService {
         await this.moveCameraCinematic(LEFT_DOOR_NODES[0], mergedOptions);
 
         const result = {
-            duration: mergedOptions.duration || 0,
+            duration: mergedOptions.duration || 2500,
             easing: mergedOptions.easing || 'power3.inOut',
             direction: mergedOptions.direction || null,
             distance: mergedOptions.distance
@@ -104,11 +116,9 @@ export class CameraMovementService {
 
         // 2. 목적지 방향 결정
         let direction = options.direction || new THREE.Vector3(0, -1, 0);
-        const damperCoverBodyNode = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.damperCoverBody');
 
-        if (nodeName === damperCoverBodyNode && !options.direction) {
-            direction = new THREE.Vector3(0.5, -1, 0.5).normalize();
-        }
+
+
 
         // 3. 목적지 및 거리 계산
         const { position: endPos } = calculateCameraTargetPosition(camera, targetBox, {
@@ -119,7 +129,6 @@ export class CameraMovementService {
 
         // 4. 시작 위치 및 상태 저장
         const startPos = camera.position.clone();
-        // const startTarget = this.cameraControls.target.clone();
 
         // 거리 체크 (너무 가까우면 즉시 이동)
         if (startPos.distanceToSquared(endPos) < 0.0001) {
@@ -130,11 +139,14 @@ export class CameraMovementService {
         }
 
         // 5. 제어점 계산 (L자형 곡선)
+        const bezierOffset = options.bezierOffset ?? 0.3;
         const controlPos = new THREE.Vector3(
             (startPos.x + endPos.x) / 2,
-            Math.max(startPos.y, endPos.y) + Math.max(size.y, maxDim) * 0.3,
+            Math.max(startPos.y, endPos.y) + Math.max(size.y, maxDim) * bezierOffset,
             (startPos.z + endPos.z) / 2
         );
+
+
 
         // 6. 노드의 월드 회전 (UP 벡터 계산용)
         const nodeQuat = new THREE.Quaternion();
@@ -155,7 +167,8 @@ export class CameraMovementService {
         // 카메라 UP 벡터 초기화
         camera.up.set(0, 1, 0);
 
-        const upTransition = (options.direction && Math.abs(options.direction.y) > 0.8) ? {
+        const upThreshold = options.upThreshold ?? 0.8;
+        const upTransition = (options.direction && Math.abs(options.direction.y) > upThreshold) ? {
             startUp: new THREE.Vector3(0, 1, 0),
             endUp: new THREE.Vector3(0, 1, 0), // 내부에서 계산됨
             nodeY: nodeY,
@@ -176,36 +189,33 @@ export class CameraMovementService {
         this.cameraControls.enableDamping = originalDamping;
         this.cameraControls.smoothTime = originalSmoothTime;
 
-        this.applyLeftDoorHighlights();
+        if (options.highlights) {
+            this.applyHighlights(options.highlights);
+        }
     }
 
     /**
-     * 왼쪽 문 부품들에 하이라이트 적용 (애니메이션 완료 후 비즈니스 로직)
+     * 메타데이터 설정에 따른 하이라이트 적용
      */
-    private applyLeftDoorHighlights(): void {
-        const nodeColors = [
-            0x325311, // 녹색 (Cover Body)
-            0xff3333, // 빨간색 (Damper Assembly)
-            0x3333ff, // 파란색 (Screw 1)
-            0xffff33  // 노란색 (Screw 2)
-        ];
-
-        LEFT_DOOR_NODES.forEach((nodeName, index) => {
-            if (index > 1) return; // 0, 1번 인덱스만 적용 (CoverBody, Assembly)
+    private applyHighlights(highlights: HighlightConfig[]): void {
+        highlights.forEach((config) => {
+            const nodeName = this.nodeNameManager.getNodeName(config.nodePath);
+            if (!nodeName) return;
 
             const node = this.getNodeByName(nodeName);
             if (node) {
+                const color = typeof config.color === 'string' ? parseInt(config.color, 16) : config.color;
                 node.traverse((child) => {
                     if (child instanceof THREE.Mesh) {
                         if (Array.isArray(child.material)) {
                             child.material = child.material.map(m => {
                                 const newM = m.clone();
-                                this.applyEmissive(newM, nodeColors[index]);
+                                this.applyEmissive(newM, color);
                                 return newM;
                             });
                         } else {
                             child.material = child.material.clone();
-                            this.applyEmissive(child.material, nodeColors[index]);
+                            this.applyEmissive(child.material, color);
                         }
                     }
                 });

@@ -29,6 +29,12 @@ export interface AssemblyOffsetMetadata {
                 y: number;
                 z: number;
             };
+            bezierOffset?: number;
+            upThreshold?: number;
+            highlights?: Array<{
+                nodePath: string;
+                color: string;
+            }>;
         };
     };
 }
