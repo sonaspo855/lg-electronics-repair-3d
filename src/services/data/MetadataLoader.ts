@@ -72,13 +72,18 @@ export class MetadataLoader {
      * 애플리케이션 시작 시 메타데이터를 한 번만 로드
      */
     public async initialize(): Promise<void> {
-        if (!this.isLoaded()) {
-            try {
-                await this.loadMetadata();
-                console.log('메타데이터 전역 초기화 완료');
-            } catch (error) {
-                console.error('메타데이터 로드 실패:', error);
+        try {
+            // 1. 노드 이름 데이터 로드
+            const nodeNameLoader = (await import('./NodeNameLoader')).NodeNameLoader.getInstance();
+            if (!nodeNameLoader.isLoadedData()) {
+                await nodeNameLoader.loadNodeNames();
             }
+
+            // 2. 어셈블리 메타데이터 로드
+            await this.loadMetadata();
+            console.log('메타데이터 전역 초기화 완료');
+        } catch (error) {
+            console.error('메타데이터 로드 실패:', error);
         }
     }
 }

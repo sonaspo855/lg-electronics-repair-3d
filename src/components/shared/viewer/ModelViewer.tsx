@@ -11,6 +11,7 @@ import { resetClickPointMarker } from "../../../services/visualization/ClickPoin
 import { SelectionHandler } from "../../../services/detection/SelectionHandler";
 import "./ModelViewer.css";
 import { getDamperCaseBodyAnimationService } from '../../../services/animation/DamperCaseBodyAnimationService';
+import { getPanelDrawerAnimationService } from '../../../services/animation/PanelDrawerAnimationService';
 import { selectedNodeHeight } from "../../../services/detection/NodeHeightDetector";
 import { getDamperAssemblyService } from '../../../services/assembly/DamperAssemblyService';
 import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
@@ -532,6 +533,10 @@ export default function ModelViewer({
     const damperCaseBodyAnimationService = getDamperCaseBodyAnimationService();
     damperCaseBodyAnimationService.setSceneRoot(sceneRoot);
     animatorAgent.setDamperCaseBodyAnimationService(damperCaseBodyAnimationService);
+
+    // PanelDrawerAnimationService 초기화
+    const panelDrawerAnimationService = getPanelDrawerAnimationService();
+    panelDrawerAnimationService.setSceneRoot(sceneRoot);
 
     // ManualAssemblyManager 초기화
     const manualAssemblyManager = getManualAssemblyManager();

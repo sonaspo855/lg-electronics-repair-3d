@@ -25,8 +25,9 @@
         "snapZoneHelper": "SnapZoneHelper"
     },
     "drumWashing": {
-        "panelDrawer": {
-            "drawerAssembly": "1D1M02_Panel_Drawer"
+        "detergentStorageParts": {
+            "drawerAssembly": "1D1M02_Panel_Drawer",
+            "drawer": "1D1M04_Drawer"
         }
     }
 }

@@ -1,69 +1,86 @@
-# Metadata 로드 호출 흐름 분석
+# 코드 수정 결과
 
-## 1. 호출 흐름 다이어그램
+## 1. drawerAssemblyName, drawerName 중복 선언 문제 해결
 
-```mermaid
-flowchart TD
-    A["DamperServiceOrchestrator.execute()<br/>await this.metadataLoader.loadMetadata()"] --> B["MetadataLoader.loadMetadata()<br/>await this.service.initialize()"]
-    B --> C["MetadataService.initialize()<br/>await this.repository.loadMetadata()"]
-    C --> D["MetadataRepository.loadMetadata()<br/>fetch('/metadata/assembly-offsets.json')"]
-    D --> E["JSON 데이터 파싱 및 반환"]
-    E --> F["메타데이터 반환<br/>애니메이션 실행"]
-```
+### 수정 전 문제점
+| 파일 | 함수 | 라인 | 문제 |
+|------|------|------|------|
+| SelectionHandler.ts | handleDefaultClick | 59-60 | NodeNameLoader 호출 |
+| PanelDrawerAnimationService.ts | disassembleDrawer | 70-71 | NodeNameLoader 호출 |
+| PanelDrawerAnimationService.ts | assembleDrawer | 154-155 | NodeNameLoader 호출 |
 
-## 2. 상세 호출 순서
+→ **총 3곳에서 동일한 키로 메타데이터 조회 발생**
 
-| 순서 | 클래스 | 메서드 | 역할 |
-|------|--------|--------|------|
-| 1 | `DamperServiceOrchestrator` | `execute()` | 오케스트레이터 실행, 메타데이터 선행 로드 보장 |
-| 2 | `MetadataLoader` | `loadMetadata()` | 메타데이터 서비스 초기화 및 원본 데이터 반환 |
-| 3 | `MetadataService` | `initialize()` | 레포지토리에 데이터 로딩 요청 |
-| 4 | `MetadataRepository` | `loadMetadata()` | JSON 파일을 HTTP fetch로 로드하고 캐싱 |
+### 수정 후 구조
 
-## 3. 코드 위치
-
-### DamperServiceOrchestrator.ts (Line 83)
+#### PanelDrawerAnimationService.ts
 ```typescript
-await this.metadataLoader.loadMetadata();
-```
+/** 노드 이름 캐싱: 중복 호출 방지 */
+private drawerNodeNames: { assembly: string | null; drawer: string | null } | null = null;
 
-### MetadataLoader.ts (Line 27-31)
-```typescript
-public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
-    await this.service.initialize();
-    return (this.service as any).repository.getRawMetadata() as AssemblyOffsetMetadata;
-}
-```
-
-### MetadataService.ts (Line 28-30)
-```typescript
-public async initialize(): Promise<void> {
-    await this.repository.loadMetadata();
-}
-```
-
-### MetadataRepository.ts (Line 24-42)
-```typescript
-public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
-    if (this.metadata) {
-        return this.metadata;
+/**
+ * 캐싱된 노드 이름 반환
+ * 최초 1회만 NodeNameLoader를 호출하고 이후에는 캐싱된 값을 사용
+ */
+public getDrawerNodeNames(): { assembly: string | null; drawer: string | null } {
+    if (!this.drawerNodeNames) {
+        const loader = NodeNameLoader.getInstance();
+        this.drawerNodeNames = {
+            assembly: loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly'),
+            drawer: loader.getNodeName('drumWashing.detergentStorageParts.drawer')
+        };
     }
-    try {
-        const cacheBuster = `?t=${Date.now()}`;
-        const response = await fetch(this.filePath + cacheBuster);
-        this.metadata = await response.json() as AssemblyOffsetMetadata;
-        return this.metadata;
-    } catch (error) {
-        console.error('메타데이터 로딩 실패:', error);
-        throw error;
-    }
+    return this.drawerNodeNames;
 }
 ```
 
-## 4. 핵심 포인트
+#### SelectionHandler.ts
+```typescript
+// Before: 직접 NodeNameLoader 호출
+const drawerAssemblyName = this.loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly');
+const drawerName = this.loader.getNodeName('drumWashing.detergentStorageParts.drawer');
 
-1. **선행 로드 보장**: `DamperServiceOrchestrator.execute()` 메서드 시작 시점에 `await this.metadataLoader.loadMetadata()`를 호출하여 모든 후속 애니메이션 작업 전에 메타데이터가 로드됨을 보장
+// After: 캐싱된 노드 이름 사용
+const { assembly: drawerAssemblyName, drawer: drawerName } = getPanelDrawerAnimationService().getDrawerNodeNames();
+```
 
-2. **캐싱机制**: `MetadataRepository`는 첫 로드 시 JSON 파일을 fetch하고 `this.metadata`에 캐싱하여 중복 로드 방지
+### 개선 효과
+| 항목 | 개선 전 | 개선 후 |
+|------|---------|---------|
+| NodeNameLoader 호출 횟수 | 3회 | 1회 (캐싱) |
+| DRY 원칙 | 위반 | 준수 |
+| 유지보수성 | 키 변경 시 3곳 수정 | 1곳만 수정 |
 
-3. **캐시 버스터**: 브라우저 캐시를 우회하기 위해 `?t=${Date.now()}` 쿼리 파라미터 추가
+---
+
+## 2. current 변수 사용 여부 확인
+
+### 분석 결과: **current 변수는 정상적으로 사용 중**
+
+```typescript
+// 65번째 줄: 순회 시작점 설정
+let current: THREE.Object3D | null = clickedObject;
+
+// 68-76번째 줄: while 루프에서 부모 노드 순회
+while (current) {
+    if ((drawerName && current.name === drawerName) || ...) {
+        isDrawer = true;
+        break;
+    }
+    current = current.parent;  // ← 여기서 current 사용
+}
+```
+
+### 변수 역할 정리
+| 변수 | 역할 | 값 변화 |
+|------|------|---------|
+| `clickedObject` | 클릭된 원본 메쉬 저장 | 변하지 않음 |
+| `current` | 부모 노드 순회용 임시 변수 | while 루프에서 계속 변경됨 |
+
+---
+
+## 3. 추가 정리 사항
+
+SelectionHandler.ts에서 더 이상 사용하지 않는 코드 제거:
+- `NodeNameLoader` import 제거
+- `private loader` 속성 제거

@@ -352,6 +352,7 @@ export class AnimatorAgent {
 
   // Process input with LLM
   private async processWithLLM(input: string): Promise<LLMResponse | null> {
+    console.log('processWithLLM>>> ', input);
     try {
       if (!(await this.isOllamaAvailable())) {
         return null;
@@ -625,6 +626,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
       // Try LLM first, fall back to rule-based if not available
       const llmResponse = await this.processWithLLM(input);
+      console.log('llmResponse>>> ', llmResponse);
       if (llmResponse) {
         return llmResponse;
       }
@@ -632,7 +634,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
       // Fall back to rule-based system
       console.log('LLM not available, using rule-based system');
       if (this.isDoorCommand(input)) {
-        console.log('Input recognized as door command');
+
         return await this.handleDoorCommand(input);
       }
 
@@ -652,6 +654,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Check if input is a door-related command
   private isDoorCommand(input: string): boolean {
+    console.log('isDoorCommand!!! input>>> ', input);
     // If we're in an active conversation, accept any input
     if (this.conversationState.currentDoor ||
       this.conversationState.awaitingDegrees ||
@@ -666,6 +669,7 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Handle door-related commands
   private async handleDoorCommand(input: string): Promise<LLMResponse> {
+    console.log('handleDoorCommand>> ', input);
     // Check for complete commands (all parameters provided)
     const completeCommand = await this.parseCompleteCommand(input);
     if (completeCommand) {
@@ -794,8 +798,8 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Parse complete commands (all parameters in one input)
   private async parseCompleteCommand(input: string): Promise<AnimationCommand | AnimationCommand[] | null> {
-
-    // Damper service command detection
+    console.log('parseCompleteCommand>>> ', input);
+    // 댐퍼 키워드 포함 여부 확인
     // Open the refrigerator door to service the left damper.
     // Open the refrigerator door to service the right damper.
     if (isFridgeDamperCommand(input)) {
@@ -899,12 +903,6 @@ REMEMBER: ONLY JSON, NO OTHER TEXT!`;
 
   // Execute animation command
   private async executeAnimationCommand(commands: AnimationCommand | AnimationCommand[]): Promise<LLMResponse> {
-    const screw1NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw1Customized');
-    const screw2NodeName = this.nodeNameManager.getNodeName('fridge.leftDoorDamper.screw2Customized');
-    const screw1NodePath = 'fridge.leftDoorDamper.screw1Customized';
-    const screw2NodePath = 'fridge.leftDoorDamper.screw2Customized';
-
-
     if (!this.doorControls) {
       return {
         type: 'error',
