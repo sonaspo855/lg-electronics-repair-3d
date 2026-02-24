@@ -125,7 +125,8 @@ export class PanelDrawerAnimationService {
             });
 
             targetNodes.forEach(node => {
-                const offset = new THREE.Vector3(0, 0, pullDistance);
+                // drawerAssembly 노드를 뒤로 빼내는 방향
+                const offset = new THREE.Vector3(0, -pullDistance, 0);
                 node.updateMatrixWorld();
                 const worldTargetPosition = node.localToWorld(offset.clone());
                 const localTargetPosition = worldTargetPosition.clone();
