@@ -21,8 +21,6 @@ export class NodeNameManager {
     }
 
     private initializeNodeNames(): void {
-        // 메타데이터 모드가 활성화되면 node-names.json에서 노드 이름을 로드합니다.
-        // 기본적으로는 빈 맵으로 시작합니다.
     }
 
     /**
@@ -63,44 +61,12 @@ export class NodeNameManager {
     }
 
     /**
-     * 노드 이름 설정 (런타임 동적 추가)
-     * @param key 노드 키
-     * @param name 노드 이름
-     */
-    public setNodeName(key: string, name: string): void {
-        this.nodeNames.set(key, name);
-    }
-
-    /**
-     * 모든 노드 이름 가져오기
-     * @returns 노드 이름 맵
-     */
-    public getAllNodeNames(): Map<string, string> {
-        return new Map(this.nodeNames);
-    }
-
-    /**
      * 노드 이름 존재 여부 확인
      * @param key 노드 키
      * @returns 존재하면 true
      */
     public hasNodeName(key: string): boolean {
         return this.nodeNames.has(key);
-    }
-
-    /**
-     * 노드 이름 삭제
-     * @param key 노드 키
-     */
-    public removeNodeName(key: string): void {
-        this.nodeNames.delete(key);
-    }
-
-    /**
-     * 모든 노드 이름 초기화
-     */
-    public clear(): void {
-        this.nodeNames.clear();
     }
 }
 

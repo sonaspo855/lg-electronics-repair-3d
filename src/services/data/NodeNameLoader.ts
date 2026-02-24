@@ -6,6 +6,7 @@ export class NodeNameLoader {
     private static instance: NodeNameLoader;
     private nodeNames: any = null;
     private isLoaded: boolean = false;
+    private nodeNamesPath: any = '/metadata/node-names.json';
 
     private constructor() { }
 
@@ -20,9 +21,9 @@ export class NodeNameLoader {
      * 노드 이름 메타데이터 로드
      * @param path 메타데이터 파일 경로
      */
-    public async loadNodeNames(path: string = '/metadata/node-names.json'): Promise<void> {
+    public async loadNodeNames(): Promise<void> {
         try {
-            const response = await fetch(path);
+            const response = await fetch(this.nodeNamesPath);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
