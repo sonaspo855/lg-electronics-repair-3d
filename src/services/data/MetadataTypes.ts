@@ -1,6 +1,20 @@
 import * as THREE from 'three';
 
 /**
+ * 패널 드로어 애니메이션 설정 인터페이스
+ */
+export interface PanelDrawerAnimationConfig {
+    direction?: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    pullDistance: number;
+    duration: number;
+    easing: string;
+}
+
+/**
  * 조립 오프셋 메타데이터 인터페이스
  */
 export interface AssemblyOffsetMetadata {
@@ -40,6 +54,9 @@ export interface AssemblyOffsetMetadata {
                 color: string;
             }>;
         };
+    };
+    panelDrawerAnimations?: {
+        [key: string]: PanelDrawerAnimationConfig;
     };
 }
 

@@ -4,7 +4,8 @@ import { getNodeNameLoader } from './NodeNameLoader';
 import {
     AssemblyConfig,
     ScrewAnimationConfig,
-    LinearMovementAnimationConfig
+    LinearMovementAnimationConfig,
+    PanelDrawerAnimationConfig
 } from './MetadataTypes';
 
 /**
@@ -147,6 +148,25 @@ export class MetadataService {
             return null;
         }
         return settings;
+    }
+
+    /**
+     * 패널 드로어 애니메이션 설정을 반환
+     */
+    public getPanelDrawerAnimationConfig(key: string): PanelDrawerAnimationConfig | null {
+        const metadata = this.repository.getRawMetadata();
+        if (!metadata?.panelDrawerAnimations) {
+            console.warn('[MetadataService] 패널 드로어 애니메이션 메타데이터가 없습니다');
+            return null;
+        }
+
+        const config = metadata.panelDrawerAnimations[key];
+        if (!config) {
+            console.warn(`[MetadataService] '${key}' 키에 해당하는 패널 드로어 설정을 찾을 수 없음`);
+            return null;
+        }
+
+        return config;
     }
 
     public getInsertionOffset(assemblyName: string): THREE.Vector3 | null {

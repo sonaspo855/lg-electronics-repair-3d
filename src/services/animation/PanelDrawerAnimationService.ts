@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { NodeNameLoader } from '../data/NodeNameLoader';
+import { getMetadataLoader, PanelDrawerAnimationConfig } from '../data/MetadataLoader';
 
 /**
  * 드럼 세탁기 세제함(Panel Drawer) 분리 애니메이션을 담당하는 서비스 클래스
@@ -12,9 +13,13 @@ export class PanelDrawerAnimationService {
     private originalPositions: Map<string, THREE.Vector3> = new Map();
     private isDisassembled: boolean = false;
     private loader = NodeNameLoader.getInstance();
+    private metadataLoader = getMetadataLoader();
 
     /** 노드 이름 캐싱: 중복 호출 방지 */
     private drawerNodeNames: { assembly: string | null; drawer: string | null } | null = null;
+
+    /** 애니메이션 설정 캐싱 */
+    private animationConfig: PanelDrawerAnimationConfig | null = null;
 
     private constructor() { }
 
@@ -30,6 +35,17 @@ export class PanelDrawerAnimationService {
             };
         }
         return this.drawerNodeNames;
+    }
+
+    /**
+     * 캐싱된 애니메이션 설정 반환
+     * 최초 1회만 MetadataLoader를 호출하고 이후에는 캐싱된 값을 사용
+     */
+    public getAnimationConfig(): PanelDrawerAnimationConfig | null {
+        if (!this.animationConfig) {
+            this.animationConfig = this.metadataLoader.getPanelDrawerAnimationConfig('drawerPullOut');
+        }
+        return this.animationConfig;
     }
 
     /**
@@ -81,7 +97,18 @@ export class PanelDrawerAnimationService {
                 return;
             }
 
-            const { duration = 1500, pullDistance = 200 } = options;
+            // 메타데이터에서 애니메이션 설정 로드
+            const config = this.getAnimationConfig();
+            const metadataDuration = config?.duration ?? 0;
+            const metadataPullDistance = config?.pullDistance ?? 0;
+            const metadataEasing = config?.easing ?? 'power2.out';
+            const metadataDirection = config?.direction
+                ? new THREE.Vector3(config.direction.x, config.direction.y, config.direction.z)
+                : new THREE.Vector3(0, -1, 0);
+
+            // 사용자 옵션이 있으면 메타데이터 값을 덮어씀
+            const duration = options.duration ?? metadataDuration;
+            const pullDistance = options.pullDistance ?? metadataPullDistance;
 
             const { assembly: drawerAssemblyName, drawer: drawerName } = this.getDrawerNodeNames();
 
@@ -125,8 +152,9 @@ export class PanelDrawerAnimationService {
             });
 
             targetNodes.forEach(node => {
-                // drawerAssembly 노드를 뒤로 빼내는 방향
-                const offset = new THREE.Vector3(0, -pullDistance, 0);
+                const direction = metadataDirection.clone();
+                const offset = direction.multiplyScalar(pullDistance);  // drawerAssembly 노드 뒤로 빼내는 방향
+
                 node.updateMatrixWorld();
                 const worldTargetPosition = node.localToWorld(offset.clone());
                 const localTargetPosition = worldTargetPosition.clone();
@@ -140,7 +168,7 @@ export class PanelDrawerAnimationService {
                     y: localTargetPosition.y,
                     z: localTargetPosition.z,
                     duration: duration / 1000,
-                    ease: 'power2.out'
+                    ease: metadataEasing
                 }, 0);
             });
         });
@@ -164,7 +192,13 @@ export class PanelDrawerAnimationService {
                 return;
             }
 
-            const { duration = 1500 } = options;
+            // 메타데이터에서 애니메이션 설정 로드
+            const config = this.getAnimationConfig();
+            const metadataDuration = config?.duration ?? 1500;
+            const metadataEasing = config?.easing ?? 'power2.out';
+
+            // 사용자 옵션이 있으면 메타데이터 값을 덮어씀
+            const duration = options.duration ?? metadataDuration;
 
             // 캐싱된 노드 이름 사용
             const { assembly: drawerAssemblyName, drawer: drawerName } = this.getDrawerNodeNames();
@@ -202,7 +236,7 @@ export class PanelDrawerAnimationService {
                         y: originalPos.y,
                         z: originalPos.z,
                         duration: duration / 1000,
-                        ease: 'power2.out'
+                        ease: metadataEasing
                     }, 0);
                 }
             });
