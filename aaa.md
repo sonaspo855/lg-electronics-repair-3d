@@ -1,2 +1,0 @@
-- commonUtils.ts visualizeScrewHeadCenter 함수는 나의 프로젝트에서 사용하고 있는 곳이 없어 보인다. 불필요한 코드인지 확인해줘.
-- 만약 불필요한 코드라면 visualizeScrewHeadCenter 함수 및 관련 속성들을 제거해줘.

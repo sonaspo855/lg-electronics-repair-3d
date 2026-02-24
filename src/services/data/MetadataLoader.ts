@@ -66,6 +66,21 @@ export class MetadataLoader {
         // 실제 로딩 여부 확인 로직
         return true;
     }
+
+    /**
+     * 메타데이터 전역 초기화 함수
+     * 애플리케이션 시작 시 메타데이터를 한 번만 로드
+     */
+    public async initialize(): Promise<void> {
+        if (!this.isLoaded()) {
+            try {
+                await this.loadMetadata();
+                console.log('메타데이터 전역 초기화 완료');
+            } catch (error) {
+                console.error('메타데이터 로드 실패:', error);
+            }
+        }
+    }
 }
 
 export function getMetadataLoader(): MetadataLoader {

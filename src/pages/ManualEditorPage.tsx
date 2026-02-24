@@ -12,7 +12,7 @@ import {
   ManualAssemblyManager,
   getManualAssemblyManager
 } from "@/services/assembly/ManualAssemblyManager";
-import { initializeMetadata } from "@/shared/utils/commonUtils";
+import { getMetadataLoader } from "@/services/data/MetadataLoader";
 import "./ManualEditorPage.css";
 
 type ManualEditorPageProps = {
@@ -235,6 +235,9 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
   const animationHistoryService = useMemo(() => new AnimationHistoryService(), []);
   const [manualAssemblyManager, setManualAssemblyManager] = useState<ManualAssemblyManager | null>(null);
   const [isAssemblyPlaying, setIsAssemblyPlaying] = useState(false);
+  const metadataLoader = getMetadataLoader();
+
+
 
   // 로컬 스토리지에서 히스토리 로드
   useEffect(() => {
@@ -533,7 +536,7 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
 
   // 메타데이터 전역 초기화 (애플리케이션 시작 시 한 번만 로드)
   useEffect(() => {
-    initializeMetadata();
+    metadataLoader.initialize();
   }, []);
 
   // 브라우저 초기 렌더링시 Hierarchy 구조 출력 및 파일로 저장
