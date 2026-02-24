@@ -35,13 +35,6 @@ export class NodeNameManager {
     }
 
     /**
-     * 메타데이터 사용 모드 비활성화
-     */
-    public disableMetadataMode(): void {
-        this.useMetadata = false;
-    }
-
-    /**
      * 노드 이름 가져오기
      * @param key 노드 키 (점 표기법 지원: 'fridge.leftDoorDamper.damperCoverBody')
      * @returns 노드 이름 (없으면 null)
@@ -60,14 +53,6 @@ export class NodeNameManager {
         return this.nodeNames.get(key) || null;
     }
 
-    /**
-     * 노드 이름 존재 여부 확인
-     * @param key 노드 키
-     * @returns 존재하면 true
-     */
-    public hasNodeName(key: string): boolean {
-        return this.nodeNames.has(key);
-    }
 }
 
 // 싱글톤 인스턴스 내보내기
