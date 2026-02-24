@@ -149,7 +149,13 @@ export const getNodeHierarchy = (node: THREE.Object3D): any => {
  * @param hierarchy 계층 구조 정보
  * @param filename 저장할 파일 이름 (기본값: scene_hierarchy.json)
  */
-export const exportHierarchyToJson = (hierarchy: any, filename: string = "scene_hierarchy.json") => {
+export const exportHierarchyToJson = (scene: THREE.Object3D | null, filename: string = "scene_hierarchy.json") => {
+    if (!scene) {
+        console.warn('exportHierarchyToJson: scene is null or undefined');
+        return;
+    }
+
+    const hierarchy = getNodeHierarchy(scene);
     const json = JSON.stringify(hierarchy, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);

@@ -24,5 +24,9 @@
     "helpers": {
         "snapZoneHelper": "SnapZoneHelper"
     },
-    "drumWashing": {}
+    "drumWashing": {
+        "panelDrawer": {
+            "drawerAssembly": "1D1M02_Panel_Drawer"
+        }
+    }
 }

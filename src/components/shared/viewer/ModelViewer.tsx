@@ -7,14 +7,16 @@ import { animatorAgent } from "../../../services/core/AnimatorAgent";
 import { PartAssemblyService } from "../../../services/assembly/PartAssemblyService";
 import { getManualAssemblyManager } from "../../../services/assembly/ManualAssemblyManager";
 import { resetClickPointMarker } from "../../../services/visualization/ClickPointMarker";
-import { selectedNodeHeight } from "../../../services/detection/NodeHeightDetector";
 
 import { SelectionHandler } from "../../../services/detection/SelectionHandler";
 import "./ModelViewer.css";
-import { getDamperAssemblyService } from '../../../services/assembly/DamperAssemblyService';
 import { getDamperCaseBodyAnimationService } from '../../../services/animation/DamperCaseBodyAnimationService';
+import { selectedNodeHeight } from "../../../services/detection/NodeHeightDetector";
+import { getDamperAssemblyService } from '../../../services/assembly/DamperAssemblyService';
 import { removeClickedNode } from "../../../shared/utils/removeClickedNode";
 // import { findNodeHeight } from "../../../shared/utils/findNodeHeight";
+import { exportHierarchyToJson } from '@/shared/utils/commonUtils';
+
 
 
 const DEFAULT_MODEL = "/models/M-Next3.glb";
@@ -345,7 +347,13 @@ export default function ModelViewer({
       return;
     }
     useGLTF.preload(modelUrl);
-  }, [modelUrl]);
+
+
+    /* if (sceneRoot) {
+      exportHierarchyToJson(sceneRoot);
+    } */
+
+  }, [modelUrl, sceneRoot]);
 
   useEffect(() => {
     setIsLoading(Boolean(modelUrl));
