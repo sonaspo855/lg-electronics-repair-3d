@@ -23,5 +23,6 @@
     },
     "helpers": {
         "snapZoneHelper": "SnapZoneHelper"
-    }
+    },
+    "drumWashing": {}
 }

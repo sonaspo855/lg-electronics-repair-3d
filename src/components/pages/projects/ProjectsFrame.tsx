@@ -37,11 +37,11 @@ const projects: Project[] = [
   {
     id: "washer",
     name: "washing machine",
-    glb: "washing machine.gbl",
+    glb: "WM_FX_FH25EAE.AKOR.glb",
     guide: "guide01.html",
     bom: "bom.csv",
     date: "2026.01.01",
-    modelPath: undefined,
+    modelPath: "/models/WM_FX_FH25EAE.AKOR.glb",
     details: {
       titleA: "",
       itemsA: [

@@ -174,7 +174,7 @@ export function extractMetadataKey(nodePath: string): string {
 }
 
 /**
- * 각도를 도에서 라디안으로 변환합니다.
+ * 각도를 도에서 라디안으로 변환
  * @param degrees 도 단위 각도
  * @returns 라디안 단위 각도
  */
@@ -184,13 +184,13 @@ export function degreesToRadians(degrees: number): number {
 
 /**
  * 메타데이터 전역 초기화 함수
- * 애플리케이션 시작 시 메타데이터를 한 번만 로드합니다.
+ * 애플리케이션 시작 시 메타데이터를 한 번만 로드
  */
 export async function initializeMetadata(): Promise<void> {
     const metadataLoader = getMetadataLoader();
     if (!metadataLoader.isLoaded()) {
         try {
-            await metadataLoader.loadMetadata('/metadata/assembly-offsets.json');
+            await metadataLoader.loadMetadata();
             console.log('메타데이터 전역 초기화 완료');
         } catch (error) {
             console.error('메타데이터 로드 실패:', error);
@@ -199,7 +199,7 @@ export async function initializeMetadata(): Promise<void> {
 }
 
 /**
- * 스크류 머리 중심을 시각화합니다.
+ * 스크류 머리 중심을 시각화
  * @param sceneRoot 씬 루트 노드
  * @param screwNode 스크류 노드
  * @param targetWorldPosition 타겟 월드 위치

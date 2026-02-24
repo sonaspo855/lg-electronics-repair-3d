@@ -1,2 +1,2 @@
-- Gemini cli 을 사용하고 있다. gemini_settings.json 파일은 나의 Gemini cli 설정이다.
-- 추가적으로 제어하면 좋을 옵션들이 있는지 확인하고 gemini_settings.json 파일에 추가해줘.
+- commonUtils.ts visualizeScrewHeadCenter 함수는 나의 프로젝트에서 사용하고 있는 곳이 없어 보인다. 불필요한 코드인지 확인해줘.
+- 만약 불필요한 코드라면 visualizeScrewHeadCenter 함수 및 관련 속성들을 제거해줘.

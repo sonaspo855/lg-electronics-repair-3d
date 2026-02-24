@@ -462,7 +462,6 @@ TypeScript 타입 정의
   - `extractMetadataKey()`: 노드 경로에서 메타데이터 키 추출
   - `degreesToRadians()`: 각도를 도에서 라디안으로 변환
   - `initializeMetadata()`: 메타데이터 전역 초기화
-  - `visualizeScrewHeadCenter()`: 스크류 머리 중심 시각화
   - `calculateScrewHeadCenter()`: 스크류 머리 중심 좌표 계산
 
 - **coordinateUtils.ts**: 좌표 변환 유틸리티 - 좌표계 변환 관련 함수들

@@ -1,31 +1,69 @@
-### gemini_settings.json 추가 옵션 설정 내용
+# Metadata 로드 호출 흐름 분석
 
-Gemini CLI의 기능을 보다 효율적으로 제어하기 위해 다음과 같은 유용한 옵션들을 추가했습니다.
+## 1. 호출 흐름 다이어그램
 
-1. **보안 설정 (Security)**
-   - `environmentVariableRedaction`: true (환경 변수 노출 방지)
-   - `disableYoloMode`: false (기본값, 도구 실행 전 확인 절차 유지)
+```mermaid
+flowchart TD
+    A["DamperServiceOrchestrator.execute()<br/>await this.metadataLoader.loadMetadata()"] --> B["MetadataLoader.loadMetadata()<br/>await this.service.initialize()"]
+    B --> C["MetadataService.initialize()<br/>await this.repository.loadMetadata()"]
+    C --> D["MetadataRepository.loadMetadata()<br/>fetch('/metadata/assembly-offsets.json')"]
+    D --> E["JSON 데이터 파싱 및 반환"]
+    E --> F["메타데이터 반환<br/>애니메이션 실행"]
+```
 
-2. **일반 설정 (General)**
-   - `vimMode`: false (Vim 키바인딩 사용 여부)
+## 2. 상세 호출 순서
 
-3. **UI 및 시각적 설정 (UI)**
-   - `inlineThinkingMode`: true (모델의 생각 과정을 실시간으로 확인)
-   - `hideBanner`: false (CLI 시작 배너 표시 여부)
-   - `hideTips`: false (도움말 팁 표시 여부)
-   - `footer.hideCWD`: false (하단바에 현재 디렉토리 표시 여부)
+| 순서 | 클래스 | 메서드 | 역할 |
+|------|--------|--------|------|
+| 1 | `DamperServiceOrchestrator` | `execute()` | 오케스트레이터 실행, 메타데이터 선행 로드 보장 |
+| 2 | `MetadataLoader` | `loadMetadata()` | 메타데이터 서비스 초기화 및 원본 데이터 반환 |
+| 3 | `MetadataService` | `initialize()` | 레포지토리에 데이터 로딩 요청 |
+| 4 | `MetadataRepository` | `loadMetadata()` | JSON 파일을 HTTP fetch로 로드하고 캐싱 |
 
-4. **도구 설정 (Tools)**
-   - `allowed`: 자동 승인할 도구 목록 (필요시 추가 가능)
-   - `exclude`: 실행을 금지할 도구 목록
+## 3. 코드 위치
 
-5. **실험적 기능 (Experimental)**
-   - `jitContext`: true (Just-In-Time 컨텍스트 관리로 효율적인 리소스 사용)
+### DamperServiceOrchestrator.ts (Line 83)
+```typescript
+await this.metadataLoader.loadMetadata();
+```
 
-6. **컨텍스트 설정 (Context)**
-   - `fileFiltering`: `.gitignore` 및 `.geminiignore` 파일을 존중하도록 명시적 설정 추가
+### MetadataLoader.ts (Line 27-31)
+```typescript
+public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
+    await this.service.initialize();
+    return (this.service as any).repository.getRawMetadata() as AssemblyOffsetMetadata;
+}
+```
 
-7. **모델 설정 (Model)**
-   - `maxSessionTurns`: 50 (한 세션당 최대 대화 횟수 제한 설정)
+### MetadataService.ts (Line 28-30)
+```typescript
+public async initialize(): Promise<void> {
+    await this.repository.loadMetadata();
+}
+```
 
-이 옵션들을 통해 CLI의 동작 방식, 보안 수준, 그리고 시각적인 피드백을 사용자 취향에 맞게 세밀하게 조정할 수 있습니다.
+### MetadataRepository.ts (Line 24-42)
+```typescript
+public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
+    if (this.metadata) {
+        return this.metadata;
+    }
+    try {
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(this.filePath + cacheBuster);
+        this.metadata = await response.json() as AssemblyOffsetMetadata;
+        return this.metadata;
+    } catch (error) {
+        console.error('메타데이터 로딩 실패:', error);
+        throw error;
+    }
+}
+```
+
+## 4. 핵심 포인트
+
+1. **선행 로드 보장**: `DamperServiceOrchestrator.execute()` 메서드 시작 시점에 `await this.metadataLoader.loadMetadata()`를 호출하여 모든 후속 애니메이션 작업 전에 메타데이터가 로드됨을 보장
+
+2. **캐싱机制**: `MetadataRepository`는 첫 로드 시 JSON 파일을 fetch하고 `this.metadata`에 캐싱하여 중복 로드 방지
+
+3. **캐시 버스터**: 브라우저 캐시를 우회하기 위해 `?t=${Date.now()}` 쿼리 파라미터 추가

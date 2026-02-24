@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { getMetadataLoader } from '@/services/data/MetadataLoader';
 import { getNodeNameManager } from '@/services/data/NodeNameManager';
-// import { visualizeScrewHeadCenter } from '@/shared/utils/commonUtils';
 import gsap from 'gsap';
 
 export class ScrewLinearMoveAnimationService {
@@ -136,14 +135,6 @@ export class ScrewLinearMoveAnimationService {
                     duration: metaOptions.duration / 1000,
                     ease: metaOptions.easing,
                     onComplete: () => {
-                        /* // 스크류 머리 중심 시각화 - 이동된 위치에서 시각화
-                        visualizeScrewHeadCenter(
-                            this.sceneRoot!,
-                            screwNode,
-                            targetWorldPosition,
-                            localExtractDir
-                        ); */
-
                         if (metaOptions.onComplete) {
                             metaOptions.onComplete();
                         }
