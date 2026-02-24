@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { CoordinateUtils } from '../../shared/utils/coordinateUtils';
-import { SnapDetectionService } from '../detection/SnapDetectionService';
 import { getPreciseBoundingBox } from '../../shared/utils/commonUtils';
 
 /**
