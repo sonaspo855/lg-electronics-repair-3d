@@ -102,7 +102,7 @@ export class SelectionHandler {
         }
 
         // 2. highlightNode 함수를 사용하여 하이라이트 적용
-        highlightNode(clickedObject, root, camera || this.options.camera);
+        highlightNode(clickedObject, root, { camera: camera || this.options.camera });
 
         // this.options.onNodeSelect?.(clickedObject);
     }

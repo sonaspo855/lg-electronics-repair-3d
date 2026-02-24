@@ -81,7 +81,7 @@ export class PanelDrawerAnimationService {
      * 세제함을 당겨서 분리하는 애니메이션 실행
      * @param options 애니메이션 옵션 (duration: ms, pullDistance: 단위 이동거리)
      */
-    public async disassembleDrawer(options: { duration?: number, pullDistance?: number } = {}): Promise<void> {
+    public async disassembleDrawer(): Promise<void> {
         console.log('disassembleDrawer!!!');
 
         return new Promise<void>((resolve, reject) => {
@@ -99,6 +99,7 @@ export class PanelDrawerAnimationService {
 
             // 메타데이터에서 애니메이션 설정 로드
             const config = this.getAnimationConfig();
+
             const metadataDuration = config?.duration ?? 0;
             const metadataPullDistance = config?.pullDistance ?? 0;
             const metadataEasing = config?.easing ?? 'power2.out';
@@ -107,8 +108,8 @@ export class PanelDrawerAnimationService {
                 : new THREE.Vector3(0, -1, 0);
 
             // 사용자 옵션이 있으면 메타데이터 값을 덮어씀
-            const duration = options.duration ?? metadataDuration;
-            const pullDistance = options.pullDistance ?? metadataPullDistance;
+            const duration = metadataDuration;
+            const pullDistance = metadataPullDistance;
 
             const { assembly: drawerAssemblyName, drawer: drawerName } = this.getDrawerNodeNames();
 
@@ -178,7 +179,7 @@ export class PanelDrawerAnimationService {
      * 세제함을 원래 위치로 조립(복구)하는 애니메이션 실행
      * @param options 애니메이션 옵션 (duration: ms)
      */
-    public async assembleDrawer(options: { duration?: number } = {}): Promise<void> {
+    public async assembleDrawer(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             if (!this.sceneRoot) {
                 console.error('[Assembly] Scene Root가 설정되지 않았습니다.');
@@ -198,7 +199,7 @@ export class PanelDrawerAnimationService {
             const metadataEasing = config?.easing ?? 'power2.out';
 
             // 사용자 옵션이 있으면 메타데이터 값을 덮어씀
-            const duration = options.duration ?? metadataDuration;
+            const duration = metadataDuration;
 
             // 캐싱된 노드 이름 사용
             const { assembly: drawerAssemblyName, drawer: drawerName } = this.getDrawerNodeNames();
