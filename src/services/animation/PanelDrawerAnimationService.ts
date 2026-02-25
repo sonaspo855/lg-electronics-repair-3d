@@ -59,11 +59,23 @@ export class PanelDrawerAnimationService {
     }
 
     /**
+     * 서비스 상태 초기화 (모델 변경 시 호출)
+     */
+    public resetState(): void {
+        this.drawerNodeNames = null;
+        this.animationConfig = null;
+        this.originalPositions.clear();
+        this.isDisassembled = false;
+        console.log('[PanelDrawerAnimationService] 상태 초기화됨');
+    }
+
+    /**
      * Scene Root를 설정
      * @param sceneRoot Three.js Scene Root 객체
      */
     public setSceneRoot(sceneRoot: THREE.Object3D): void {
         this.sceneRoot = sceneRoot;
+        this.resetState(); // Scene Root가 변경되면 상태 초기화
     }
 
     /**

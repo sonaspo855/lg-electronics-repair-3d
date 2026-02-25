@@ -74,8 +74,9 @@ export class MetadataLoader {
     /**
      * 메타데이터 전역 초기화 함수
      * 애플리케이션 시작 시 메타데이터를 한 번만 로드
+     * @param metadataPath 메타데이터 파일 경로 (기본값: '/metadata/assembly-offsets.json')
      */
-    public async initialize(): Promise<void> {
+    public async initialize(metadataPath?: string): Promise<void> {
         try {
             // 1. 노드 이름 데이터 로드
             const nodeNameLoader = (await import('./NodeNameLoader')).NodeNameLoader.getInstance();
@@ -83,9 +84,13 @@ export class MetadataLoader {
                 await nodeNameLoader.loadNodeNames();
             }
 
-            // 2. 어셈블리 메타데이터 로드
+            // 2. 어셈블리 메타데이터 경로 설정 및 로드
+            if (metadataPath) {
+                this.service.setMetadataPath(metadataPath);
+            }
+
             await this.loadMetadata();
-            console.log('메타데이터 전역 초기화 완료');
+            console.log(`메타데이터 전역 초기화 완료 (${metadataPath || 'default'})`);
         } catch (error) {
             console.error('메타데이터 로드 실패:', error);
         }

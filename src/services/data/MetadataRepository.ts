@@ -19,6 +19,16 @@ export class MetadataRepository {
     }
 
     /**
+     * 메타데이터 파일 경로 설정
+     */
+    public setFilePath(path: string): void {
+        if (this.filePath !== path) {
+            this.filePath = path;
+            this.clearCache();
+        }
+    }
+
+    /**
      * 메타데이터 파일을 로딩
      */
     public async loadMetadata(): Promise<AssemblyOffsetMetadata> {

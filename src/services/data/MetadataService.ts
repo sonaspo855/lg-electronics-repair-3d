@@ -31,6 +31,14 @@ export class MetadataService {
     }
 
     /**
+     * 메타데이터 파일 경로 설정
+     */
+    public setMetadataPath(path: string): void {
+        this.repository.setFilePath(path);
+        this.assemblyCache.clear();
+    }
+
+    /**
      * 특정 어셈블리 설정을 반환
      */
     public getAssemblyConfig(assemblyName: string): AssemblyConfig | null {
