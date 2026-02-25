@@ -54,7 +54,7 @@ export class SelectionHandler {
     private handleDefaultClick(hit: THREE.Intersection) {
         const clickedObject = hit.object;
 
-        // PanelDrawerAnimationService의 캐싱된 노드 이름 사용
+        // 세제함 노드 이름 추출
         const { assembly: drawerAssemblyName, drawer: drawerName } = getPanelDrawerAnimationService().getDrawerNodeNames();
 
         if (!drawerName && !drawerAssemblyName) return;

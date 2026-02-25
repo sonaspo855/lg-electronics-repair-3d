@@ -1,0 +1,14 @@
+{
+    "panelDrawerAnimations": {
+        "drawerPullOut": {
+            "direction": {
+                "x": 0,
+                "y": -1,
+                "z": 0
+            },
+            "pullDistance": 500,
+            "duration": 1500,
+            "easing": "power2.out"
+        }
+    }
+}

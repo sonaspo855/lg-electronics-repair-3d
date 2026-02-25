@@ -27,7 +27,6 @@ export class MetadataLoader {
 
     public async loadMetadata(): Promise<AssemblyOffsetMetadata> {
         await this.service.initialize();
-        // MetadataService 내부의 repository에서 데이터를 가져옴
         return (this.service as any).repository.getRawMetadata() as AssemblyOffsetMetadata;
     }
 
