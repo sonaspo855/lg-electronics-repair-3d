@@ -8,7 +8,8 @@
             },
             "pullDistance": 500,
             "duration": 1500,
-            "easing": "power2.out"
+            "easing": "power2.out",
+            "description": "위로: new THREE.Vector3(0, pullDistance, 0) / 아래로: new THREE.Vector3(0, -pullDistance, 0) / 왼쪽으로: new THREE.Vector3(-pullDistance, 0, 0) / 오른쪽으로: new THREE.Vector3(pullDistance, 0, 0)"
         }
     }
 }
