@@ -29,7 +29,7 @@ export class SelectionHandler {
         }
 
         const hit = event.intersections[0];
-        const clickedObject = hit.object;
+        // const clickedObject = hit.object;
         // console.log('클릭된 원본 노드: ', clickedObject.name);
 
         // shift + click: 기존 기능 (구 마커 생성)
