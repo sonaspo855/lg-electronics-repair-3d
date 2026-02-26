@@ -23,7 +23,9 @@ export class PanelDrawerAnimationService {
     /** 애니메이션 설정 캐싱 */
     private animationConfig: PanelDrawerAnimationConfig | null = null;
 
-    private constructor() { }
+    private constructor() {
+        this.initializeMetadata();
+    }
 
     /**
      * 메타데이터 초기화 (PanelDrawerServiceOrchestrator와 동일 로직)
@@ -31,7 +33,7 @@ export class PanelDrawerAnimationService {
      */
     public initializeMetadata(): void {
         if (this.isMetadataInitialized) {
-            console.log('[PanelDrawerAnimationService] 메타데이터가 이미 초기화되어 있습니다.');
+            console.log('메타데이터가 이미 초기화되어 있습니다.');
             return;
         }
 
@@ -45,13 +47,9 @@ export class PanelDrawerAnimationService {
         // 메타데이터 초기화
         this.metadataLoader.initialize(metadataPath);
         this.isMetadataInitialized = true;
-        console.log('[PanelDrawerAnimationService] 메타데이터 전역 초기화 완료');
+        console.log('메타데이터 전역 초기화 완료');
     }
 
-    /**
-     * 캐싱된 노드 이름 반환
-     * 최초 1회만 NodeNameLoader를 호출하고 이후에는 캐싱된 값을 사용
-     */
     public getDrawerNodeNames(): { assembly: string | null; drawer: string | null } {
         if (!this.drawerNodeNames) {
             this.drawerNodeNames = {
@@ -63,8 +61,7 @@ export class PanelDrawerAnimationService {
     }
 
     /**
-     * 캐싱된 애니메이션 설정 반환
-     * 최초 1회만 MetadataLoader를 호출하고 이후에는 캐싱된 값을 사용
+     * metadata 애니메이션 설정 반환
      */
     public getAnimationConfig(): PanelDrawerAnimationConfig | null {
         if (!this.animationConfig) {
@@ -74,17 +71,6 @@ export class PanelDrawerAnimationService {
             }
 
             this.animationConfig = this.metadataLoader.getPanelDrawerAnimationConfig('drawerPullOut');
-
-            // 메타데이터가 없을 경우 기본값 설정
-            if (!this.animationConfig) {
-                console.warn('[PanelDrawerAnimationService] 메타데이터가 없습니다. 기본값을 사용합니다.');
-                this.animationConfig = {
-                    duration: 1500,
-                    pullDistance: 0.5,
-                    easing: 'power2.out',
-                    direction: { x: 0, y: -1, z: 0 }
-                };
-            }
         }
         return this.animationConfig;
     }
@@ -107,7 +93,7 @@ export class PanelDrawerAnimationService {
         this.animationConfig = null;
         this.originalPositions.clear();
         this.isDisassembled = false;
-        console.log('[PanelDrawerAnimationService] 상태 초기화됨');
+        console.log('상태 초기화됨');
     }
 
     /**
