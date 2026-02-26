@@ -1,86 +1,50 @@
-# 코드 수정 결과
+# PanelDrawerServiceOrchestrator.ts 사용되지 않는 함수 분석
 
-## 1. drawerAssemblyName, drawerName 중복 선언 문제 해결
+## 함수별 사용 여부
 
-### 수정 전 문제점
-| 파일 | 함수 | 라인 | 문제 |
-|------|------|------|------|
-| SelectionHandler.ts | handleDefaultClick | 59-60 | NodeNameLoader 호출 |
-| PanelDrawerAnimationService.ts | disassembleDrawer | 70-71 | NodeNameLoader 호출 |
-| PanelDrawerAnimationService.ts | assembleDrawer | 154-155 | NodeNameLoader 호출 |
+| 함수명 | 사용 여부 | 비고 |
+|--------|----------|------|
+| `getPanelDrawerServiceOrchestrator()` | ✅ 사용 중 | SelectionHandler.ts에서 호출 |
+| `handleDrawerClick()` | ✅ 사용 중 | SelectionHandler.ts의 handleDefaultClick에서 간접 호출 |
 
-→ **총 3곳에서 동일한 키로 메타데이터 조회 발생**
+---
 
-### 수정 후 구조
+## ❌ 사용되지 않는 함수
 
-#### PanelDrawerAnimationService.ts
+### 1. `getDrawerNodeNames()`
 ```typescript
-/** 노드 이름 캐싱: 중복 호출 방지 */
-private drawerNodeNames: { assembly: string | null; drawer: string | null } | null = null;
-
-/**
- * 캐싱된 노드 이름 반환
- * 최초 1회만 NodeNameLoader를 호출하고 이후에는 캐싱된 값을 사용
- */
 public getDrawerNodeNames(): { assembly: string | null; drawer: string | null } {
-    if (!this.drawerNodeNames) {
-        const loader = NodeNameLoader.getInstance();
-        this.drawerNodeNames = {
-            assembly: loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly'),
-            drawer: loader.getNodeName('drumWashing.detergentStorageParts.drawer')
-        };
-    }
-    return this.drawerNodeNames;
+    return this.panelDrawerAnimationService.getDrawerNodeNames();
 }
 ```
+- **이유**: `handleDrawerClick()` 메서드 내부에서 이미 사용되고 있어 외부에서 별도로 호출할 필요가 없음
 
-#### SelectionHandler.ts
+### 2. `setSceneRoot()`
 ```typescript
-// Before: 직접 NodeNameLoader 호출
-const drawerAssemblyName = this.loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly');
-const drawerName = this.loader.getNodeName('drumWashing.detergentStorageParts.drawer');
-
-// After: 캐싱된 노드 이름 사용
-const { assembly: drawerAssemblyName, drawer: drawerName } = getPanelDrawerAnimationService().getDrawerNodeNames();
+public setSceneRoot(sceneRoot: THREE.Object3D): void {
+    this.panelDrawerAnimationService.setSceneRoot(sceneRoot);
+}
 ```
+- **이유**: 현재 SelectionHandler에서 sceneRoot를 직접 PanelDrawerAnimationService에 설정하는 코드가 없음
 
-### 개선 효과
-| 항목 | 개선 전 | 개선 후 |
-|------|---------|---------|
-| NodeNameLoader 호출 횟수 | 3회 | 1회 (캐싱) |
-| DRY 원칙 | 위반 | 준수 |
-| 유지보수성 | 키 변경 시 3곳 수정 | 1곳만 수정 |
+### 3. `resetState()`
+```typescript
+public resetState(): void {
+    this.panelDrawerAnimationService.resetState();
+}
+```
+- **이유**: 서비스 상태 초기화 로직이 현재 호출되지 않음
 
 ---
 
-## 2. current 변수 사용 여부 확인
+## 권장 사항
 
-### 분석 결과: **current 변수는 정상적으로 사용 중**
+현재 프로젝트에서 `setSceneRoot()`와 `resetState()`가 호출되지 않는 이유는 `PanelDrawerAnimationService`가 Singleton으로 작동하기 때문입니다. 
 
-```typescript
-// 65번째 줄: 순회 시작점 설정
-let current: THREE.Object3D | null = clickedObject;
+만약 이 함수들이 나중에 필요하다면:
+1. `ManualEditorPage.tsx` 또는 모델 초기화 시 `setSceneRoot()` 호출 필요
+2. 모델 변경 시 `resetState()` 호출 필요
 
-// 68-76번째 줄: while 루프에서 부모 노드 순회
-while (current) {
-    if ((drawerName && current.name === drawerName) || ...) {
-        isDrawer = true;
-        break;
-    }
-    current = current.parent;  // ← 여기서 current 사용
-}
-```
+ atau
 
-### 변수 역할 정리
-| 변수 | 역할 | 값 변화 |
-|------|------|---------|
-| `clickedObject` | 클릭된 원본 메쉬 저장 | 변하지 않음 |
-| `current` | 부모 노드 순회용 임시 변수 | while 루프에서 계속 변경됨 |
-
----
-
-## 3. 추가 정리 사항
-
-SelectionHandler.ts에서 더 이상 사용하지 않는 코드 제거:
-- `NodeNameLoader` import 제거
-- `private loader` 속성 제거
+단순화하고 싶다면 `PanelDrawerServiceOrchestrator`를 제거하고 [`SelectionHandler.ts`](src/services/detection/SelectionHandler.ts:1)에서 직접 [`PanelDrawerAnimationService`](src/services/animation/PanelDrawerAnimationService.ts:1)를 사용해도 됩니다.

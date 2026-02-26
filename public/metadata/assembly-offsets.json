@@ -1,6 +1,4 @@
 {
-    "version": "1.0.0",
-    "lastUpdated": "2024-01-23T12:00:00Z",
     "assemblies": {
         "damper_cover_assembly": {
             "targetNode": "ref:fridge.leftDoorDamper.damperAssembly",

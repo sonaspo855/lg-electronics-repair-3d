@@ -74,7 +74,7 @@ export class MetadataLoader {
     /**
      * 메타데이터 전역 초기화 함수
      * 애플리케이션 시작 시 메타데이터를 한 번만 로드
-     * @param metadataPath 메타데이터 파일 경로 (기본값: '/metadata/assembly-offsets.json')
+     * @param metadataPath 메타데이터 파일 경로 (기본값: '/metadata/xxx.json')
      */
     public async initialize(metadataPath?: string): Promise<void> {
         try {

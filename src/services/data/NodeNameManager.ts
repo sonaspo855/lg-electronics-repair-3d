@@ -24,7 +24,7 @@ export class NodeNameManager {
     }
 
     /**
-     * 메타데이터 사용 모드 활성화
+     * NodeName 메타데이터 사용 모드 활성화
      */
     public async enableMetadataMode(): Promise<void> {
         const loader = getNodeNameLoader();

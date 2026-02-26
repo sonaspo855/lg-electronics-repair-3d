@@ -18,7 +18,7 @@ export class NodeNameLoader {
     }
 
     /**
-     * 노드 이름 메타데이터 로드
+     * NodeName 메타데이터 로드
      * @param path 메타데이터 파일 경로
      */
     public async loadNodeNames(): Promise<void> {

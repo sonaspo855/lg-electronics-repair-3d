@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { getClickPointMarker } from '../visualization/ClickPointMarker';
 import { highlightNode } from './NodeHeightDetector';
-import { getPanelDrawerAnimationService } from '../animation/PanelDrawerAnimationService';
+import { getPanelDrawerServiceOrchestrator } from '../orchestration/PanelDrawerServiceOrchestrator';
 
 export interface SelectionHandlerOptions {
     scene: THREE.Object3D;
@@ -54,29 +54,9 @@ export class SelectionHandler {
     private handleDefaultClick(hit: THREE.Intersection) {
         const clickedObject = hit.object;
 
-        // 세제함 노드 이름 추출
-        const { assembly: drawerAssemblyName, drawer: drawerName } = getPanelDrawerAnimationService().getDrawerNodeNames();
-
-        if (!drawerName && !drawerAssemblyName) return;
-
-        // 클릭된 객체 또는 부모 중에 drawerName이나 drawerAssemblyName이 있는지 확인
-        let current: THREE.Object3D | null = clickedObject;
-
-        let isDrawer = false;
-        while (current) {
-            if ((drawerName && current.name === drawerName) || (drawerAssemblyName && current.name === drawerAssemblyName)) {
-
-                isDrawer = true;
-                break;
-            }
-
-            current = current.parent;
-        }
-
-        if (isDrawer) {
-            console.log('세제함 클릭됨 - 토글 애니메이션 실행');
-            getPanelDrawerAnimationService().toggleDrawer();
-        }
+        // 1. 세제함 분리 애니메이션
+        const orchestrator = getPanelDrawerServiceOrchestrator();
+        orchestrator.handleDrawerClick(clickedObject);
     }
 
     private handleShiftClick(hit: THREE.Intersection, sceneRoot?: THREE.Object3D) {
