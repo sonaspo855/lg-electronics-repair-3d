@@ -28,6 +28,10 @@
         "detergentStorageParts": {
             "drawerAssembly": "1D1M02_Panel_Drawer",
             "drawer": "1D1M04_Drawer"
+        },
+        "plateTopIntExtFilter": {
+            "plateTopExternalFilter": "BRep_1_212",
+            "plateTopInternalFilter": ""
         }
     }
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { NodeNameLoader } from '../data/NodeNameLoader';
 import { getMetadataLoader, PanelDrawerAnimationConfig } from '../data/MetadataLoader';
+import { getNodeNameManager } from '../data/NodeNameManager';
 
 /**
  * 드럼 세탁기 세제함(Panel Drawer) 분리 애니메이션을 담당하는 서비스 클래스
@@ -14,6 +15,7 @@ export class PanelDrawerAnimationService {
     private isDisassembled: boolean = false;
     private loader = NodeNameLoader.getInstance();
     private metadataLoader = getMetadataLoader();
+    private isMetadataInitialized: boolean = false;
 
     /** 노드 이름 캐싱: 중복 호출 방지 */
     private drawerNodeNames: { assembly: string | null; drawer: string | null } | null = null;
@@ -22,6 +24,29 @@ export class PanelDrawerAnimationService {
     private animationConfig: PanelDrawerAnimationConfig | null = null;
 
     private constructor() { }
+
+    /**
+     * 메타데이터 초기화 (PanelDrawerServiceOrchestrator와 동일 로직)
+     * Singleton 패턴이므로 최초 1회만 초기화
+     */
+    public initializeMetadata(): void {
+        if (this.isMetadataInitialized) {
+            console.log('[PanelDrawerAnimationService] 메타데이터가 이미 초기화되어 있습니다.');
+            return;
+        }
+
+        // 기본 메타데이터 경로 설정
+        const metadataPath = '/metadata/washing-metadata.json';
+
+        // NodeName 메타데이터 미리 로드
+        const nodeNameManager = getNodeNameManager();
+        nodeNameManager.enableMetadataMode();
+
+        // 메타데이터 초기화
+        this.metadataLoader.initialize(metadataPath);
+        this.isMetadataInitialized = true;
+        console.log('[PanelDrawerAnimationService] 메타데이터 전역 초기화 완료');
+    }
 
     /**
      * 캐싱된 노드 이름 반환
@@ -43,7 +68,23 @@ export class PanelDrawerAnimationService {
      */
     public getAnimationConfig(): PanelDrawerAnimationConfig | null {
         if (!this.animationConfig) {
+            // 메타데이터가 초기화되지 않은 경우 초기화 수행
+            if (!this.isMetadataInitialized) {
+                this.initializeMetadata();
+            }
+
             this.animationConfig = this.metadataLoader.getPanelDrawerAnimationConfig('drawerPullOut');
+
+            // 메타데이터가 없을 경우 기본값 설정
+            if (!this.animationConfig) {
+                console.warn('[PanelDrawerAnimationService] 메타데이터가 없습니다. 기본값을 사용합니다.');
+                this.animationConfig = {
+                    duration: 1500,
+                    pullDistance: 0.5,
+                    easing: 'power2.out',
+                    direction: { x: 0, y: -1, z: 0 }
+                };
+            }
         }
         return this.animationConfig;
     }

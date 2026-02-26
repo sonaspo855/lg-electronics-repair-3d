@@ -22,7 +22,7 @@ export class DamperAssemblyService {
         this.normalHighlight = new NormalBasedHighlightService();
         this.normalHighlight.initialize(sceneRoot);
 
-        // 메타데이터 미리 로드
+        // NodeName 메타데이터 미리 로드
         const nodeNameManager = getNodeNameManager();
         nodeNameManager.enableMetadataMode();
     }

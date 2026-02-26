@@ -30,7 +30,7 @@ export class SelectionHandler {
 
         const hit = event.intersections[0];
         const clickedObject = hit.object;
-        console.log('클릭된 원본 노드: ', clickedObject.name);
+        // console.log('클릭된 원본 노드: ', clickedObject.name);
 
         // shift + click: 기존 기능 (구 마커 생성)
         if (event.shiftKey) {
@@ -73,7 +73,7 @@ export class SelectionHandler {
 
     private handleCtrlClick(hit: THREE.Intersection, sceneRoot?: THREE.Object3D, camera?: THREE.PerspectiveCamera) {
         const clickedObject = hit.object;
-        console.log('handleCtrlClick>>> ', clickedObject);
+        console.log('handleCtrlClick name>>> ', clickedObject.name);
 
         // 1. 씬 루트 찾기
         let root = sceneRoot || clickedObject;

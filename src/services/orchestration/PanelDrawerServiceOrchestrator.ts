@@ -4,8 +4,6 @@ import { getMetadataLoader } from '../data/MetadataLoader';
 import { getNodeNameManager } from '../data/NodeNameManager';
 
 /**
- * Panel Drawer 선택 및 애니메이션 오케스트레이션을 담당하는 서비스 클래스
- * 
  * SelectionHandler에서 분리된 세제함(Panel Drawer) 체크 로직을 담당
  */
 export class PanelDrawerServiceOrchestrator {
@@ -22,9 +20,10 @@ export class PanelDrawerServiceOrchestrator {
      */
     private initializeMetadata(): void {
         // 기본 메타데이터 경로 설정
-        let metadataPath = '/metadata/assembly-offsets.json';
+        const metadataPath = '/metadata/washing-metadata.json';
 
-        // NodeName 메타데이터 미리 로드 (DamperAssemblyService 참고)
+
+        // NodeName 메타데이터 미리 로드
         const nodeNameManager = getNodeNameManager();
         nodeNameManager.enableMetadataMode();
 
