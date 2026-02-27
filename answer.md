@@ -1,50 +1,71 @@
-# PanelDrawerServiceOrchestrator.ts 사용되지 않는 함수 분석
+# PanelDrawerServiceOrchestrator - initializeMetadata 적용 결과
 
-## 함수별 사용 여부
+## 개요
+`PanelDrawerServiceOrchestrator.ts` 내의 모든 함수에서 `initializeMetadata`를 호출하도록 수정했습니다.
 
-| 함수명 | 사용 여부 | 비고 |
-|--------|----------|------|
-| `getPanelDrawerServiceOrchestrator()` | ✅ 사용 중 | SelectionHandler.ts에서 호출 |
-| `handleDrawerClick()` | ✅ 사용 중 | SelectionHandler.ts의 handleDefaultClick에서 간접 호출 |
+## 수정된 파일
 
----
+### 1. PanelDrawerServiceOrchestrator.ts
 
-## ❌ 사용되지 않는 함수
+**변경 전:**
+```typescript
+public handleDrawerClick(clickedObject: THREE.Object3D): boolean {
+    // 세제함 노드 이름 추출
+    const { assembly: drawerAssemblyName, drawer: drawerName } = this.panelDrawerAnimationService.getDrawerNodeNames();
+    // ...
+}
+```
 
-### 1. `getDrawerNodeNames()`
+**변경 후:**
+```typescript
+public handleDrawerClick(clickedObject: THREE.Object3D): boolean {
+    // 메타데이터 초기화 상태 확인 및 필요시 초기화
+    this.initializeMetadata();
+
+    // 세제함 노드 이름 추출
+    const { assembly: drawerAssemblyName, drawer: drawerName } = this.panelDrawerAnimationService.getDrawerNodeNames();
+    // ...
+}
+```
+
+### 2. PanelDrawerAnimationService.ts
+
+**변경 전:**
 ```typescript
 public getDrawerNodeNames(): { assembly: string | null; drawer: string | null } {
-    return this.panelDrawerAnimationService.getDrawerNodeNames();
+    if (!this.drawerNodeNames) {
+        this.drawerNodeNames = {
+            assembly: this.loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly'),
+            drawer: this.loader.getNodeName('drumWashing.detergentStorageParts.drawer')
+        };
+    }
+    return this.drawerNodeNames;
 }
 ```
-- **이유**: `handleDrawerClick()` 메서드 내부에서 이미 사용되고 있어 외부에서 별도로 호출할 필요가 없음
 
-### 2. `setSceneRoot()`
+**변경 후:**
 ```typescript
-public setSceneRoot(sceneRoot: THREE.Object3D): void {
-    this.panelDrawerAnimationService.setSceneRoot(sceneRoot);
+public getDrawerNodeNames(): { assembly: string | null; drawer: string | null } {
+    // 메타데이터 초기화 상태 확인 및 필요시 초기화
+    if (!this.isMetadataInitialized) {
+        this.initializeMetadata();
+    }
+
+    if (!this.drawerNodeNames) {
+        this.drawerNodeNames = {
+            assembly: this.loader.getNodeName('drumWashing.detergentStorageParts.drawerAssembly'),
+            drawer: this.loader.getNodeName('drumWashing.detergentStorageParts.drawer')
+        };
+    }
+    return this.drawerNodeNames;
 }
 ```
-- **이유**: 현재 SelectionHandler에서 sceneRoot를 직접 PanelDrawerAnimationService에 설정하는 코드가 없음
 
-### 3. `resetState()`
-```typescript
-public resetState(): void {
-    this.panelDrawerAnimationService.resetState();
-}
-```
-- **이유**: 서비스 상태 초기화 로직이 현재 호출되지 않음
+## 동작 방식
 
----
+1. **Singleton 패턴 적용**: `initializeMetadata()`는 `isMetadataInitialized` 플래그를 통해 최초 1회만 초기화됩니다.
+2. **이중 확인**: `handleDrawerClick`과 `getDrawerNodeNames` 모두에서 초기화 상태를 확인하여 안전한 메타데이터 로드를 보장합니다.
+3. **자동 초기화**: `PanelDrawerAnimationService.getAnimationConfig()` 메서드에서도 이미 초기화 확인이 구현되어 있었습니다.
 
-## 권장 사항
-
-현재 프로젝트에서 `setSceneRoot()`와 `resetState()`가 호출되지 않는 이유는 `PanelDrawerAnimationService`가 Singleton으로 작동하기 때문입니다. 
-
-만약 이 함수들이 나중에 필요하다면:
-1. `ManualEditorPage.tsx` 또는 모델 초기화 시 `setSceneRoot()` 호출 필요
-2. 모델 변경 시 `resetState()` 호출 필요
-
- atau
-
-단순화하고 싶다면 `PanelDrawerServiceOrchestrator`를 제거하고 [`SelectionHandler.ts`](src/services/detection/SelectionHandler.ts:1)에서 직접 [`PanelDrawerAnimationService`](src/services/animation/PanelDrawerAnimationService.ts:1)를 사용해도 됩니다.
+## 결론
+모든 함수에서 명시적으로 `initializeMetadata`를 호출하도록 변경되었으며, 중복 초기화는 `isMetadataInitialized` 플래그로 방지됩니다.

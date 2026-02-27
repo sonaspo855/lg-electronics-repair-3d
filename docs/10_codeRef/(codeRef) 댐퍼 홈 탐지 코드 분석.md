@@ -3,11 +3,11 @@ tags:
 상태: Todo
 중요: 1
 생성일: 26-01-30T15:01:51
-수정일: 26-01-30T15:12:30
+수정일: 26-02-10T12:20:36
 종료일:
 라벨:
-  - Ref
   - 냉장고
+  - codeRef
 ---
 ## 0. 참고 레퍼런스
 - 
@@ -148,3 +148,14 @@ flowchart TD
 - `HoleCenterManager.ts`: 홈 중심점 관리자
 - `NormalBasedHighlight.ts`: 법선 기반 하이라이트
 - `GrooveDetectionUtils.ts`: 홈 탐지 유틸리티
+
+
+
+
+
+| 구분               | 현재 구현                        | 올바른 구현                       |
+|------------------|------------------------------|------------------------------|
+| Bounding Box 사용  | ❌ 사용 안 함                     | ✅ getPreciseBoundingBox 사용   |
+| 기준점              | screw2Customized 노드 위치       | Bounding Box 중심점             |
+| 오프셋 적용           | localToWorld 변환              | Bounding Box 중심점 기준 직접 적용    |
+| Metadata Mapping | ✅ 사용 (assembly-offsets.json) | ✅ 사용 (assembly-offsets.json) |

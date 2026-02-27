@@ -1,42 +1,48 @@
 ---
 tags:
-상태: Updated
-중요: 1
+상태: Todo
+중요:
 생성일: 26-02-04T16:54:55
-수정일: 26-02-04T17:10:00
+수정일: 26-02-10T16:22:10
 종료일:
 라벨:
   - 냉장고
-  - Ref
-summary: docs 폴더 내의 참고 자료들을 바탕으로 DamperCaseBody 선형 이동 애니메이션 구현 계획서 보완 완료
+  - codeRef
+summary:
 ---
 ## 0. 참고 레퍼런스
-- `docs/(Ref) 스크류 분리 애니메이션 코드 분석.md` - GSAP Timeline 기반 애니메이션 구현 패턴
-- `docs/(Ref) 스크류-분리-애니메이션-구현-분석.md` - 메타데이터 우선 설정 및 공통 재활용 코드
-- `docs/(Ref) 돌출부 노드를 홈 노드로 결합 코드 분석.md` - 월드 좌표계 기반 벡터 계산 및 오프셋 조정
-- `docs/(Ref) Bounding Box & Offset 기반 + Metadata Mapping 방식.md` - 좌표계 변환 및 메타데이터 활용
-- `.kilocode/rules/README_2601231159.md` - 카메라 이동 고려사항 (월드 좌표계 기준)
-- `.kilocode/rules/home-area-identification-and-protrusion-insertion.md` - 홈 영역 파악 및 오프셋 계산
-- `src/shared/utils/NodeNameManager.ts` - 노드 이름 관리자
-- `src/shared/utils/MetadataLoader.ts` - 메타데이터 로더
-- `src/shared/utils/CoordinateTransformUtils.ts` - 좌표계 변환 유틸리티
-- `src/shared/utils/animationUtils.ts` - GSAP 기반 애니메이션 유틸리티
-- `src/services/fridge/ScrewAnimationService.ts` - 스크류 애니메이션 서비스 (구현 패턴 참고)
+- 
 ##  ■■ Description ■■
 - 
 # DamperCaseBody 선형 이동 애니메이션 구현 계획서
 ## 1. 개요
-### 1.1 목적
+### 1-1 목적
 - `damperCaseBody` 노드를 힌지 반대 방향으로 선형 이동시켜 분리했던 스크류 바로 옆의 구멍과 일치시키는 애니메이션 구현
 - 재사용 가능한 컴포넌트로 구현하여 유지보수성 향상
 - 기존 프로젝트의 유틸리티와 서비스를 적극 활용
-### 1.2 요구사항
+### 1-2 요구사항
 1. `public/metadata/node-names.json`에 `fridge.leftDoorDamper.damperCaseBody`에 `MBN66561101_Case,Body_18065`가 추가됨
 2. `damperCaseBody` 노드를 힌지 반대 방향으로 약간 옮겨 분리했던 스크류 바로 옆의 구멍과 일치하도록 선형이동
 3. `src/services/AnimatorAgent.ts:1001`에 `damperCaseBody 힌지 반대 방향으로 선형이동 애니메이션` 주석 아래에 코드 추가
 4. 선형이동 코드는 새로운 컴포넌트 파일로 작성하여 관리
 5. 프로젝트에서 재활용 가능한 속성이나 함수 등을 찾아보고 활용
 6. `src/shared/utils/NodeNameManager.ts`를 임포트하여 `private nodeNameManager = getNodeNameManager();`로 노드를 호출하여 사용
+### 1-3. Todo 리스트
+1. **메타데이터 설정 확인 및 추가**
+    - `node-names.json`에 `damperCaseBody` 노드 이름 확인
+    - `assembly-offsets.json`에 `damperCaseBodyAnimations` 섹션 추가
+    - `MetadataLoader.ts`에 `getDamperCaseBodyAnimationConfig()` 메서드 추가
+2. **새로운 서비스 파일 생성**
+    - `DamperCaseBodyAnimationService.ts` 파일 생성
+    - `NodeNameManager`를 활용하여 노드 이름 관리
+    - `animateDamperCaseBodyLinearMove()` 메서드 구현
+3. **AnimatorAgent.ts 통합**
+    - 서비스 인스턴스 추가
+    - 초기화 코드 추가
+    - line 1001 주석 아래에 애니메이션 실행 코드 추가
+4. **테스트**
+    - 힌지 반대 방향으로 이동하는지 확인
+    - 스크류 바로 옆의 구멍과 일치하는지 확인
 ## 2. 기존 프로젝트 분석
 ### 2.1 재활용 가능한 유틸리티 및 서비스
 #### 2.1.1 `PartAssemblyService.ts`
@@ -777,16 +783,24 @@ export class AnimatorAgent {
 
 ## 10. 공통 재활용 코드 분석 (스크류 애니메이션 구현 분석 참고)
 ### 9-1. 이미 독립적으로 분리된 공통 모듈
-| 모듈 | 파일 | 용도 |
-|-----|------|-----|
-| **isFastenerNodeName()** | `src/shared/utils/isFastener.ts` | 노드 이름으로 나사/볼트인지 검증 |
-| **isFastenerNode()** | `src/shared/utils/isFastener.ts` | THREE.Object3D가 나사/볼트인지 검증 |
-| **MetadataLoader** | `src/shared/utils/MetadataLoader.ts` | 메타데이터 로딩 및 캐싱 |
-| **getScrewAnimationConfig()** | `src/shared/utils/MetadataLoader.ts:269` | 스크류 애니메이션 설정 조회 |
-| **AssemblyStateManager** | `src/shared/utils/AssemblyStateManager.ts` | 진행률 및 재생 상태 관리 |
-| **ScrewAnimationService** | `src/services/fridge/ScrewAnimationService.ts` | 스크류 애니메이션 핵심 로직 |
+| 모듈                            | 파일                                             | 용도                         |
+| ----------------------------- | ---------------------------------------------- | -------------------------- |
+| **isFastenerNodeName()**      | `src/shared/utils/isFastener.ts`               | 노드 이름으로 나사/볼트인지 검증         |
+| **isFastenerNode()**          | `src/shared/utils/isFastener.ts`               | THREE.Object3D가 나사/볼트인지 검증 |
+| **MetadataLoader**            | `src/shared/utils/MetadataLoader.ts`           | 메타데이터 로딩 및 캐싱              |
+| **getScrewAnimationConfig()** | `src/shared/utils/MetadataLoader.ts:269`       | 스크류 애니메이션 설정 조회            |
+| **AssemblyStateManager**      | `src/shared/utils/AssemblyStateManager.ts`     | 진행률 및 재생 상태 관리             |
+| **ScrewAnimationService**     | `src/services/fridge/ScrewAnimationService.ts` | 스크류 애니메이션 핵심 로직            |
 
 ### 9-2. DamperCaseBody 애니메이션에서 재활용 가능한 코드 조각
+#### 9-2-1. 노드 경로 → 실제 노드 이름 변환
+```typescript
+// ManualAssemblyManager.ts:161 (재활용 가능)
+function resolveNodeName(nodePath: string): string {
+    const nodeNameLoader = getNodeNameLoader();
+    return nodeNameLoader.getNodeName(nodePath) || nodePath;
+}
+```
 #### 9-2-2. 메타데이터 키 추출
 ```typescript
 // ManualAssemblyManager.ts:170-172 (재활용 가능)
@@ -853,15 +867,15 @@ function calculateOffsetDistance(
 }
 ```
 
-### 9-3. 추천 공통化管理 파일
+### 9-3. 추천 공통관리 파일
 현재 코드에서 재활용 가능한 코드들을 아래와 같이 공통 파일로 분리할 것을 권장합니다:
 
 | 파일명 | 위치 | 포함 함수/클래스 |
 |-------|------|----------------|
-| `linearMoveAnimationUtils.ts` | `src/shared/utils/` | `createLinearMoveTimeline`, `calculateOffsetDistance`, `extractMetadataKey` |
+| `linearMoveAnimationUtils.ts` | `src/shared/utils/` | `createLinearMoveTimeline`, `calculateOffsetDistance`, `resolveNodeName`, `extractMetadataKey` |
 | `gsapAnimationUtils.ts` | `src/shared/utils/` | `createAnimationTimeline`, `degreesToRadians` |
 
-### 9-4. 현재 공통化管理 상태 요약
+### 9-4. 현재 공통관리 파일 상태 요약
 - ✅ **isFastener.ts**: 이미 독립적인 유틸리티로 분리됨
 - ✅ **MetadataLoader.ts**: 싱글톤으로 관리, `getScrewAnimationConfig()` 제공
 - ✅ **AssemblyStateManager.ts**: 진행률/상태 관리 독립화
