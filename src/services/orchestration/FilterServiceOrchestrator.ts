@@ -9,22 +9,23 @@ export class FilterServiceOrchestrator {
     private filterAnimationService = getFilterAnimationService();
 
     /**
-     * 클릭된 객체가 필터 노드인지 확인하고 토글 애니메이션 실행
+     * 클릭된 객체가 필터 관련 노드인지 확인하고 토글 애니메이션 실행
      * @param clickedObject 클릭된 Three.js 객체
      * @returns 필터 토글 애니메이션이 실행된 경우 true, 아니면 false
      */
     public handleFilterClick(clickedObject: THREE.Object3D): boolean {
-        const { external: externalFilterName, internal: internalFilterName } = this.filterAnimationService.getFilterNodeNames();
+        const { handle: handleName, coverAssembly: assemblyName, coverFilter: filterName } = this.filterAnimationService.getFilterNodeNames();
         
-        if (!externalFilterName && !internalFilterName) {
+        if (!handleName && !assemblyName && !filterName) {
             return false;
         }
 
-        // 부모 노드까지 순회하며 필터 노드 확인
+        const targetNames = [handleName, assemblyName, filterName].filter(Boolean) as string[];
+
+        // 부모 노드까지 순회하며 필터 관련 노드 확인
         let current: THREE.Object3D | null = clickedObject;
         while (current) {
-            if ((externalFilterName && current.name === externalFilterName) || 
-                (internalFilterName && current.name === internalFilterName)) {
+            if (targetNames.includes(current.name)) {
                 this.filterAnimationService.toggleFilters();
                 return true;
             }

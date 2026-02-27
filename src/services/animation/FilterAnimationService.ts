@@ -19,11 +19,11 @@ export class FilterAnimationService {
     private isMetadataInitialized: boolean = false;
 
     /** 노드 이름 캐싱: 중복 호출 방지 */
-    private filterNodeNames: { external: string | null; internal: string | null } | null = null;
+    private filterNodeNames: { handle: string | null; coverAssembly: string | null; coverFilter: string | null } | null = null;
 
     /** 애니메이션 설정 캐싱 */
-    private externalFilterConfig: FilterAnimationConfig | null = null;
-    private internalFilterConfig: FilterAnimationConfig | null = null;
+    private handleConfig: FilterAnimationConfig | null = null;
+    private coverConfig: FilterAnimationConfig | null = null;
 
     private constructor() {
         this.initializeMetadata();
@@ -46,38 +46,39 @@ export class FilterAnimationService {
     }
 
     /**
-     * 필터 노드 이름 가져오기
+     * 필터 관련 노드 이름 가져오기
      */
-    public getFilterNodeNames(): { external: string | null; internal: string | null } {
+    public getFilterNodeNames(): { handle: string | null; coverAssembly: string | null; coverFilter: string | null } {
         if (!this.filterNodeNames) {
             this.filterNodeNames = {
-                external: this.loader.getNodeName('drumWashing.plateTopIntExtFilter.plateTopExternalFilter'),
-                internal: this.loader.getNodeName('drumWashing.plateTopIntExtFilter.plateTopInternalFilter')
+                handle: this.loader.getNodeName('drumWashing.plateTopIntExtFilter.HandleAssembly'),
+                coverAssembly: this.loader.getNodeName('drumWashing.plateTopIntExtFilter.CoverAssembly'),
+                coverFilter: this.loader.getNodeName('drumWashing.plateTopIntExtFilter.CoverFilter')
             };
         }
         return this.filterNodeNames;
     }
 
     /**
-     * 외부 필터 애니메이션 설정 반환
+     * 핸들 누르기 애니메이션 설정 반환
      */
-    public getExternalFilterConfig(): FilterAnimationConfig | null {
-        if (!this.externalFilterConfig) {
+    public getHandleConfig(): FilterAnimationConfig | null {
+        if (!this.handleConfig) {
             if (!this.isMetadataInitialized) this.initializeMetadata();
-            this.externalFilterConfig = this.metadataLoader.getFilterAnimationConfig('externalFilter');
+            this.handleConfig = this.metadataLoader.getFilterAnimationConfig('handlePress');
         }
-        return this.externalFilterConfig;
+        return this.handleConfig;
     }
 
     /**
-     * 내부 필터 애니메이션 설정 반환
+     * 커버 분리 애니메이션 설정 반환
      */
-    public getInternalFilterConfig(): FilterAnimationConfig | null {
-        if (!this.internalFilterConfig) {
+    public getCoverConfig(): FilterAnimationConfig | null {
+        if (!this.coverConfig) {
             if (!this.isMetadataInitialized) this.initializeMetadata();
-            this.internalFilterConfig = this.metadataLoader.getFilterAnimationConfig('internalFilter');
+            this.coverConfig = this.metadataLoader.getFilterAnimationConfig('coverDisassembly');
         }
-        return this.internalFilterConfig;
+        return this.coverConfig;
     }
 
     /**
@@ -95,8 +96,8 @@ export class FilterAnimationService {
      */
     public resetState(): void {
         this.filterNodeNames = null;
-        this.externalFilterConfig = null;
-        this.internalFilterConfig = null;
+        this.handleConfig = null;
+        this.coverConfig = null;
         this.originalPositions.clear();
         this.isDisassembled = false;
     }
@@ -121,33 +122,33 @@ export class FilterAnimationService {
     }
 
     /**
-     * 필터 분리 애니메이션 (외부 → 내부 순서)
+     * 필터 분리 애니메이션
+     * 1. HandleAssembly 누르기 (Press)
+     * 2. CoverAssembly 및 CoverFilter 그룹화하여 분리
      */
     public async disassembleFilters(): Promise<void> {
         if (!this.sceneRoot || this.isDisassembled) return;
 
-        const { external: externalName, internal: internalName } = this.getFilterNodeNames();
-        const externalBaseNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
-        const internalBaseNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
+        const { handle: handleName, coverAssembly: assemblyName, coverFilter: filterName } = this.getFilterNodeNames();
 
-        if (!externalBaseNode || !internalBaseNode) {
-            console.error('필터 노드를 찾을 수 없습니다.');
+        const handleNode = handleName ? this.sceneRoot.getObjectByName(handleName) : null;
+        const assemblyNode = assemblyName ? this.sceneRoot.getObjectByName(assemblyName) : null;
+        const filterNode = filterName ? this.sceneRoot.getObjectByName(filterName) : null;
+
+        if (!handleNode || !assemblyNode || !filterNode) {
+            console.error('필터 관련 노드를 찾을 수 없습니다.');
             return;
         }
 
-        // [수정] 노드 자체가 아니라 부모(그룹)를 타겟으로 설정
-        // 보통 BRep_... 노드는 메시이며, 그 부모가 전체 그룹임
-        const externalNode = externalBaseNode.parent || externalBaseNode;
-        const internalNode = internalBaseNode.parent || internalBaseNode;
-
         // 원래 위치 저장
         if (this.originalPositions.size === 0) {
-            this.originalPositions.set(externalNode.name, externalNode.position.clone());
-            this.originalPositions.set(internalNode.name, internalNode.position.clone());
+            this.originalPositions.set(handleNode.name, handleNode.position.clone());
+            this.originalPositions.set(assemblyNode.name, assemblyNode.position.clone());
+            this.originalPositions.set(filterNode.name, filterNode.position.clone());
         }
 
-        const externalConfig = this.getExternalFilterConfig();
-        const internalConfig = this.getInternalFilterConfig();
+        const handleConfig = this.getHandleConfig();
+        const coverConfig = this.getCoverConfig();
 
         this.timeline = gsap.timeline({
             onComplete: () => {
@@ -155,32 +156,74 @@ export class FilterAnimationService {
             }
         });
 
-        // 1. 외부 필터 분리
-        if (externalConfig) {
-            this.animateNode(externalNode, externalConfig, 0);
+        // 1. HandleAssembly 누르기 (들어갔다 나옴)
+        if (handleConfig) {
+            const pressDirection = new THREE.Vector3(handleConfig.direction?.x, handleConfig.direction?.y, handleConfig.direction?.z);
+            const pressOffset = pressDirection.multiplyScalar(handleConfig.pullDistance);
+
+            const originalPos = this.originalPositions.get(handleNode.name)!;
+            const pressedPos = originalPos.clone().add(pressOffset);
+
+            this.timeline.to(handleNode.position, {
+                x: pressedPos.x,
+                y: pressedPos.y,
+                z: pressedPos.z,
+                duration: (handleConfig.duration / 2) / 1000,
+                ease: "power2.in"
+            });
+
+            this.timeline.to(handleNode.position, {
+                x: originalPos.x,
+                y: originalPos.y,
+                z: originalPos.z,
+                duration: (handleConfig.duration / 2) / 1000,
+                ease: "power2.out"
+            });
         }
 
-        // 2. 내부 필터 분리 (약간의 간격 후)
-        if (internalConfig) {
-            this.animateNode(internalNode, internalConfig, 0.3);
+        // 2. CoverAssembly 및 CoverFilter 분리 (그룹화하여 동시 이동)
+        if (coverConfig) {
+            const nodes = [assemblyNode, filterNode];
+            const startTime = ">"; // 핸들 애니메이션 종료 후 즉시 시작
+
+            nodes.forEach(node => {
+                const direction = new THREE.Vector3(coverConfig.direction?.x, coverConfig.direction?.y, coverConfig.direction?.z);
+                const offset = direction.multiplyScalar(coverConfig.pullDistance);
+
+                node.updateMatrixWorld();
+                const worldTargetPosition = node.localToWorld(offset.clone());
+                const localTargetPosition = worldTargetPosition.clone();
+                if (node.parent) {
+                    node.parent.updateMatrixWorld();
+                    node.parent.worldToLocal(localTargetPosition);
+                }
+
+                this.timeline!.to(node.position, {
+                    x: localTargetPosition.x,
+                    y: localTargetPosition.y,
+                    z: localTargetPosition.z,
+                    duration: coverConfig.duration / 1000,
+                    ease: coverConfig.easing
+                }, startTime);
+            });
         }
     }
 
     /**
-     * 필터 조립 애니메이션 (내부 → 외부 역순)
+     * 필터 조립 애니메이션 (역순)
      */
     public async assembleFilters(): Promise<void> {
         if (!this.sceneRoot || !this.isDisassembled) return;
 
-        const { external: externalName, internal: internalName } = this.getFilterNodeNames();
-        const externalBaseNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
-        const internalBaseNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
+        const { handle: handleName, coverAssembly: assemblyName, coverFilter: filterName } = this.getFilterNodeNames();
+        const handleNode = handleName ? this.sceneRoot.getObjectByName(handleName) : null;
+        const assemblyNode = assemblyName ? this.sceneRoot.getObjectByName(assemblyName) : null;
+        const filterNode = filterName ? this.sceneRoot.getObjectByName(filterName) : null;
 
-        if (!externalBaseNode || !internalBaseNode) return;
+        if (!handleNode || !assemblyNode || !filterNode) return;
 
-        // [수정] 부모(그룹)를 타겟으로 설정
-        const externalNode = externalBaseNode.parent || externalBaseNode;
-        const internalNode = internalBaseNode.parent || internalBaseNode;
+        const handleConfig = this.getHandleConfig();
+        const coverConfig = this.getCoverConfig();
 
         this.timeline = gsap.timeline({
             onComplete: () => {
@@ -188,30 +231,44 @@ export class FilterAnimationService {
             }
         });
 
-        // 1. 내부 필터 조립
-        const internalPos = this.originalPositions.get(internalNode.name);
-        if (internalPos) {
-            const config = this.getInternalFilterConfig();
-            this.timeline.to(internalNode.position, {
-                x: internalPos.x,
-                y: internalPos.y,
-                z: internalPos.z,
-                duration: (config?.duration ?? 1000) / 1000,
-                ease: config?.easing ?? 'power2.out'
-            }, 0);
-        }
+        // 1. 커버들 조립 (먼저 복귀)
+        const nodes = [assemblyNode, filterNode];
+        nodes.forEach(node => {
+            const originalPos = this.originalPositions.get(node.name);
+            if (originalPos) {
+                this.timeline!.to(node.position, {
+                    x: originalPos.x,
+                    y: originalPos.y,
+                    z: originalPos.z,
+                    duration: (coverConfig?.duration ?? 1000) / 1000,
+                    ease: coverConfig?.easing ?? "power2.inOut"
+                }, 0);
+            }
+        });
 
-        // 2. 외부 필터 조립 (약간의 간격 후)
-        const externalPos = this.originalPositions.get(externalNode.name);
-        if (externalPos) {
-            const config = this.getExternalFilterConfig();
-            this.timeline.to(externalNode.position, {
-                x: externalPos.x,
-                y: externalPos.y,
-                z: externalPos.z,
-                duration: (config?.duration ?? 1000) / 1000,
-                ease: config?.easing ?? 'power2.out'
-            }, 0.3);
+        // 2. HandleAssembly 누르기 피드백 (조립 완료 후)
+        if (handleConfig) {
+            const pressDirection = new THREE.Vector3(handleConfig.direction?.x, handleConfig.direction?.y, handleConfig.direction?.z);
+            const pressOffset = pressDirection.multiplyScalar(handleConfig.pullDistance);
+
+            const originalPos = this.originalPositions.get(handleNode.name)!;
+            const pressedPos = originalPos.clone().add(pressOffset);
+
+            this.timeline.to(handleNode.position, {
+                x: pressedPos.x,
+                y: pressedPos.y,
+                z: pressedPos.z,
+                duration: (handleConfig.duration / 2) / 1000,
+                ease: "power2.in"
+            }, ">");
+
+            this.timeline.to(handleNode.position, {
+                x: originalPos.x,
+                y: originalPos.y,
+                z: originalPos.z,
+                duration: (handleConfig.duration / 2) / 1000,
+                ease: "power2.out"
+            });
         }
     }
 
@@ -219,7 +276,7 @@ export class FilterAnimationService {
      * 노드 애니메이션 수행 유틸리티
      */
     private animateNode(node: THREE.Object3D, config: FilterAnimationConfig, startTime: number): void {
-        const direction = config.direction 
+        const direction = config.direction
             ? new THREE.Vector3(config.direction.x, config.direction.y, config.direction.z)
             : new THREE.Vector3(0, 0, 1);
         const offset = direction.multiplyScalar(config.pullDistance);
