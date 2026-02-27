@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getClickPointMarker } from '../visualization/ClickPointMarker';
 import { highlightNode } from './NodeHeightDetector';
 import { getPanelDrawerServiceOrchestrator } from '../orchestration/PanelDrawerServiceOrchestrator';
+import { getFilterServiceOrchestrator } from '../orchestration/FilterServiceOrchestrator';
 
 export interface SelectionHandlerOptions {
     scene: THREE.Object3D;
@@ -43,7 +44,7 @@ export class SelectionHandler {
             this.handleCtrlClick(hit, sceneRoot, camera);
         }
 
-        // 일반 클릭: 세제함(Panel Drawer) 체크
+        // 일반 클릭: 세제함(Panel Drawer) 또는 필터 체크
         else {
             this.handleDefaultClick(hit);
         }
@@ -54,7 +55,13 @@ export class SelectionHandler {
     private handleDefaultClick(hit: THREE.Intersection) {
         const clickedObject = hit.object;
 
-        // 1. 세제함 분리 애니메이션
+        // 1. 필터 분리 애니메이션 (최우선 체크)
+        const filterOrchestrator = getFilterServiceOrchestrator();
+        if (filterOrchestrator.handleFilterClick(clickedObject)) {
+            return;
+        }
+
+        // 2. 세제함 분리 애니메이션
         const orchestrator = getPanelDrawerServiceOrchestrator();
         orchestrator.handleDrawerClick(clickedObject);
     }

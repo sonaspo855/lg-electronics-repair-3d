@@ -4,7 +4,8 @@ import {
     AssemblyConfig,
     ScrewAnimationConfig,
     LinearMovementAnimationConfig,
-    PanelDrawerAnimationConfig
+    PanelDrawerAnimationConfig,
+    FilterAnimationConfig
 } from './MetadataTypes';
 import * as THREE from 'three';
 
@@ -62,6 +63,10 @@ export class MetadataLoader {
         return this.service.getPanelDrawerAnimationConfig(key);
     }
 
+    public getFilterAnimationConfig(key: string): FilterAnimationConfig | null {
+        return this.service.getFilterAnimationConfig(key);
+    }
+
     public clearCache(): void {
         this.service.clearCache();
     }
@@ -102,4 +107,4 @@ export function getMetadataLoader(): MetadataLoader {
 }
 
 // 타입 재내보내기 (하위 호환성)
-export type { AssemblyOffsetMetadata, AssemblyConfig, ScrewAnimationConfig, LinearMovementAnimationConfig, PanelDrawerAnimationConfig };
+export type { AssemblyOffsetMetadata, AssemblyConfig, ScrewAnimationConfig, LinearMovementAnimationConfig, PanelDrawerAnimationConfig, FilterAnimationConfig };

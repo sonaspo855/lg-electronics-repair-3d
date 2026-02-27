@@ -5,7 +5,8 @@ import {
     AssemblyConfig,
     ScrewAnimationConfig,
     LinearMovementAnimationConfig,
-    PanelDrawerAnimationConfig
+    PanelDrawerAnimationConfig,
+    FilterAnimationConfig
 } from './MetadataTypes';
 
 /**
@@ -171,6 +172,25 @@ export class MetadataService {
         const config = metadata.panelDrawerAnimations[key];
         if (!config) {
             console.warn(`[MetadataService] '${key}' 키에 해당하는 패널 드로어 설정을 찾을 수 없음`);
+            return null;
+        }
+
+        return config;
+    }
+
+    /**
+     * 필터 애니메이션 설정을 반환
+     */
+    public getFilterAnimationConfig(key: string): FilterAnimationConfig | null {
+        const metadata = this.repository.getRawMetadata();
+        if (!metadata?.filterAnimations) {
+            console.warn('[MetadataService] 필터 애니메이션 메타데이터가 없습니다');
+            return null;
+        }
+
+        const config = metadata.filterAnimations[key];
+        if (!config) {
+            console.warn(`[MetadataService] '${key}' 키에 해당하는 필터 애니메이션 설정을 찾을 수 없음`);
             return null;
         }
 
