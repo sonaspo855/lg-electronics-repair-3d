@@ -127,13 +127,18 @@ export class FilterAnimationService {
         if (!this.sceneRoot || this.isDisassembled) return;
 
         const { external: externalName, internal: internalName } = this.getFilterNodeNames();
-        const externalNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
-        const internalNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
+        const externalBaseNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
+        const internalBaseNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
 
-        if (!externalNode || !internalNode) {
+        if (!externalBaseNode || !internalBaseNode) {
             console.error('필터 노드를 찾을 수 없습니다.');
             return;
         }
+
+        // [수정] 노드 자체가 아니라 부모(그룹)를 타겟으로 설정
+        // 보통 BRep_... 노드는 메시이며, 그 부모가 전체 그룹임
+        const externalNode = externalBaseNode.parent || externalBaseNode;
+        const internalNode = internalBaseNode.parent || internalBaseNode;
 
         // 원래 위치 저장
         if (this.originalPositions.size === 0) {
@@ -168,10 +173,14 @@ export class FilterAnimationService {
         if (!this.sceneRoot || !this.isDisassembled) return;
 
         const { external: externalName, internal: internalName } = this.getFilterNodeNames();
-        const externalNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
-        const internalNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
+        const externalBaseNode = externalName ? this.sceneRoot.getObjectByName(externalName) : null;
+        const internalBaseNode = internalName ? this.sceneRoot.getObjectByName(internalName) : null;
 
-        if (!externalNode || !internalNode) return;
+        if (!externalBaseNode || !internalBaseNode) return;
+
+        // [수정] 부모(그룹)를 타겟으로 설정
+        const externalNode = externalBaseNode.parent || externalBaseNode;
+        const internalNode = internalBaseNode.parent || internalBaseNode;
 
         this.timeline = gsap.timeline({
             onComplete: () => {

@@ -30,8 +30,9 @@
             "drawer": "1D1M04_Drawer"
         },
         "plateTopIntExtFilter": {
-            "plateTopExternalFilter": "BRep_1_212",
-            "plateTopInternalFilter": "BRep_1_210"
+            "DecorHandle": "BRep_1_210",
+            "CoverAssembly": "1D0n0206_Cover_Assembly",
+            "CoverFilter": "1D0n0203_Cover_Filter"
         }
     }
 }
