@@ -534,23 +534,6 @@ export default function ManualEditorPage({ modelPath, onBack }: ManualEditorPage
     }
   }, [sceneRoot]);
 
-  // 메타데이터 전역 초기화
-  useEffect(() => {
-    // 모델 경로에 따라 메타데이터 파일 경로 결정
-    let metadataPath = '/metadata/assembly-offsets.json';
-
-    // 현재 메타데이터 로드방식: modelPath 에 `WM_` 포함 되어 있을 경우 세탁기로 인식하여, washing-metadata.json 로드 되게 수정
-    if (modelPath) {
-      const fileName = modelPath.split('/').pop() || '';
-      if (fileName.startsWith('WM_') || fileName.includes('Washing')) {
-        metadataPath = '/metadata/washing-metadata.json';
-        console.log(`세탁기 모델 감지: ${metadataPath} 로드`);
-      }
-    }
-
-    metadataLoader.initialize(metadataPath);
-  }, [modelPath]);
-
   // 브라우저 초기 렌더링시 Hierarchy 구조 출력 및 파일로 저장
   /* useE ffect(() => {
     if (sceneRoot) {
