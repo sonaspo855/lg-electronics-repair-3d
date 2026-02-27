@@ -31,7 +31,7 @@
         },
         "plateTopIntExtFilter": {
             "plateTopExternalFilter": "BRep_1_212",
-            "plateTopInternalFilter": ""
+            "plateTopInternalFilter": "BRep_1_210"
         }
     }
 }
